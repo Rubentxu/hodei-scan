@@ -1,0 +1,58 @@
+[package]
+name = "hodei-scan"
+version = "2.0.0"
+edition = "2021"
+authors = ["hodei-scan Team"]
+description = "Advanced Static Code Analysis with IR Architecture"
+license = "MIT"
+repository = "https://github.com/hodei-scan/hodei-scan"
+keywords = ["static-analysis", "security", "sast", "ir"]
+categories = ["development-tools::debugging"]
+
+[dependencies]
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+tokio-util = "0.7"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# UUID and identifiers
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# Date and time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Hash maps and concurrent data structures
+dashmap = "5.0"
+
+# Collections
+im = "15.0"
+
+# Logging
+env_logger = "0.10"
+log = "0.4"
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json"] }
+
+# String manipulation
+regex = "1.0"
+lazy_static = "1.4"
+
+[dev-dependencies]
+# Testing
+tempfile = "3.0"
+assert_matches = "1.5"
+mockall = "0.12"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "ir_benchmarks"
+harness = false
