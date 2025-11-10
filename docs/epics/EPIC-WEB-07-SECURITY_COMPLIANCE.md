@@ -1,95 +1,88 @@
-# Épica Web 7: Security & Compliance Dashboard
-## Dashboard Especializado en Seguridad y Compliance
+# ÉPICA-WEB-07: SECURITY & COMPLIANCE DASHBOARD
 
-**Versión:** 1.0
+**Versión:** 2.0
 **Fecha:** 10 de noviembre de 2025
-**Estado:** 🚧 Planning
-**Época:** Fase 3 (Meses 13-24)
-**Prioridad:** 🔴 High
+**Story Points:** 65 SP
+**Sprint Estimado:** 5 sprints (paralelo)
+**Dependencias:** EPIC-WEB-01, EPIC-02
+**Estado:** 🚀 Ready for Development
 
 ---
 
-## 📋 Resumen Ejecutivo
+## 📋 Descripción de la Épica
 
-Dashboard especializado para security teams con OWASP Top 10, CWE, compliance frameworks (SOC 2, ISO 27001).
+Esta épica implementa **security & compliance dashboard** especializado que muestra OWASP Top 10 visualization, CWE tracking, compliance status (SOC 2, ISO 27001), y security posture over time.
 
-**Objetivos:**
-- ✅ Security metrics dashboard
-- ✅ OWASP Top 10 visualization
-- ✅ CWE tracking
-- ✅ Compliance reporting (SOC 2, ISO 27001)
-- ✅ Risk assessment matrix
-- ✅ Security trends
-- ✅ CVE tracking
-- ✅ Remediation roadmap
+**Objetivo Principal:** Crear specialized security dashboard que proporcione deep insights into security posture, compliance status, y security trends para security engineers y compliance officers.
 
 ---
 
 ## 👥 Historias de Usuario
 
-### US-WEB-13: Como CISO, quiero security posture overview
+### US-01: OWASP Top 10 Visualization
+**Como** security engineer
+**Quiero** see OWASP Top 10 breakdown
+**Para** understand security coverage
 
-**Prioridad:** 🔴 Critical
-**Story Points:** 13
+### US-02: CWE Tracking
+**Como** security engineer
+**Quiero** track CWE weaknesses
+**Para** identify common patterns
 
-```gherkin
-Feature: Security Dashboard
-  Como CISO
-  Quiero security posture overview
-  Para make security decisions
+### US-03: Compliance Dashboard
+**Como** compliance officer
+**Quiero** see compliance status
+**Para** audit readiness
 
-  Scenario: Security metrics overview
-    Given organization con multiple projects
-    When accesses security dashboard
-    Then debería show:
-      And security score (0-100)
-      And open critical/high vulnerabilities
-      And mean time to remediation
-      And security trend (improving/degrading)
-      And OWASP Top 10 coverage
-      And compliance status
-```
+### US-04: Security Trends
+**Como** security engineer
+**Quiero** see security trends over time
+**Para** track improvement
 
-**Tareas:**
+### US-05: Risk Heatmap
+**Como** security engineer
+**Quiero** see risk heatmap
+**Para** prioritize remediation
 
-1. **TASK-WEB-07-01: Security Dashboard Layout** (2 días)
-2. **TASK-WEB-07-02: OWASP Top 10 Widget** (3 días)
-3. **TASK-WEB-07-03: CWE Tracking** (2 días)
-4. **TASK-WEB-07-04: Compliance Reports** (4 días)
-5. **TASK-WEB-07-05: Risk Matrix** (2 días)
-
-**Tests:**
-
-```typescript
-describe('Security Dashboard', () => {
-  it('should display security score', async () => {
-    render(<SecurityDashboard />);
-    
-    expect(screen.getByTestId('security-score')).toHaveTextContent('85/100');
-  });
-
-  it('should group vulnerabilities by OWASP category', async () => {
-    const vulnerabilities = generateVulnerabilities();
-    
-    render(<SecurityDashboard />);
-    
-    const injectionGroup = screen.getByTestId('owasp-a03-injection');
-    expect(injectionGroup).toHaveTextContent('8 issues');
-  });
-});
-```
+### US-06: Security Report
+**Como** CISO
+**Quiero** generate security report
+**Para** board presentation
 
 ---
 
-## 🔄 Criterios de Done
+## ✅ Criterios de Validación
 
-- [ ] ✅ Security score visualization
-- [ ] ✅ OWASP Top 10 breakdown
-- [ ] ✅ CWE tracking
-- [ ] ✅ SOC 2 compliance report
-- [ ] ✅ ISO 27001 compliance
-- [ ] ✅ Risk assessment matrix
-- [ ] ✅ Remediation roadmap
-- [ ] ✅ 100% tests
+### Funcionales
+- [ ] OWASP Top 10 visualization
+- [ ] CWE tracking
+- [ ] Compliance dashboards
+- [ ] Security trends
+- [ ] Risk heatmap
+- [ ] Security reports
+- [ ] Export capabilities
 
-**Total Story Points:** 65 | **Duración:** 7 semanas
+### Performance
+- [ ] Dashboard load: <3s
+- [ ] Chart render: <1s
+- [ ] Report generation: <30s
+
+---
+
+## 📊 Métricas de Éxito
+
+| Métrica | Target | Status |
+|---------|--------|--------|
+| **Dashboard Load** | <3s | ⏳ |
+| **Chart Render** | <1s | ⏳ |
+| **Report Generation** | <30s | ⏳ |
+
+---
+
+## 🚀 Plan de Implementación
+
+### Sprint 1: OWASP + CWE Visualization
+### Sprint 2: Compliance Dashboard
+### Sprint 3: Security Trends
+### Sprint 4: Risk Heatmap
+### Sprint 5: Security Reports

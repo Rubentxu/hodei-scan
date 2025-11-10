@@ -1,850 +1,905 @@
-# EPIC-02: Security Analysis (SAST)
-## IR-Based Universal Security Rules with Cross-Language Detection
+# ÉPICA-02: SECURITY ANALYSIS (SAST)
 
-**Epic ID:** EPIC-02
-**Version:** 2.0
-**Created:** 2025-11-10
-**Story Points:** 149
-**Priority:** P0 (Critical)
-**Status:** 🚧 In Progress
-
----
-
-## 📋 Epic Overview
-
-### Objective
-Implement comprehensive SAST (Static Application Security Testing) using IR architecture to enable universal security rules across all supported languages. Target: 90%+ accuracy, <10% false positives, OWASP Top 10 2021 and CWE Top 25 2024 coverage.
-
-### Key Deliverables
-1. **OWASP Top 10 (2021) Rules** - 100% coverage with IR-based detection
-2. **CWE Top 25 (2024) Rules** - Universal cross-language rules
-3. **Taint Analysis Engine** - Cross-language data flow tracking
-4. **Framework-Specific Rules** - React, Spring, Django, Flask support
-5. **Cryptographic Validation** - Algorithm and key management checks
-6. **Security Correlation** - Cross-domain analysis with SCA and Coverage
-
-### Success Criteria
-- [ ] OWASP Top 10 (2021): 100% coverage
-- [ ] CWE Top 25 (2024): Universal rules via IR
-- [ ] Framework-Specific: React, Spring, Django, Flask via IR facts
-- [ ] Taint Analysis: Cross-language via IR
-- [ ] Accuracy: >90% (vs 60-70% SonarQube)
-- [ ] False Positives: <10% (vs 30-40% SonarQube)
-- [ ] Analysis Speed: <10s for 1M LOC
-- [ ] Language Support: JavaScript, TypeScript, Python, Go, Rust, Java, C#
+**Versión:** 2.0
+**Fecha:** 10 de noviembre de 2025
+**Story Points:** 72 SP
+**Sprint Estimado:** 5 sprints
+**Dependencias:** EPIC-01-CORE_STATIC_ANALYSIS_ENGINE
+**Estado:** 🚀 Ready for Development
 
 ---
 
-## 🎯 User Stories & BDD Specifications
+## 📋 Descripción de la Épica
 
-### US-01: As a Security Engineer, I want OWASP Top 10 2021 coverage via IR rules
+Esta épica implementa el **motor de análisis de seguridad (SAST) basado en IR** que proporciona reglas universales multi-lenguaje con taint analysis. Utiliza la arquitectura IR para detectar vulnerabilidades de seguridad con **90%+ accuracy** y **<10% false positives**, superando las limitaciones de herramientas tradicionales.
 
-**Priority:** P0
-**Story Points:** 34
-**Component:** OWASP Security Rules
-
-#### BDD Specification (Gherkin)
-
-```gherkin
-Feature: OWASP Top 10 2021 Coverage
-
-  Scenario: A01-Broken Access Control (IDOR detection)
-    Given I have API endpoints with user IDs
-    When the extractor processes route handlers
-    Then it should detect missing authorization checks
-    And generate AccessControl facts with missing checks
-
-  Scenario: A02-Cryptographic Failures (weak crypto)
-    Given I have cryptographic operations
-    When the extractor processes crypto APIs
-    Then it should detect:
-      | algorithm         | severity  | requirement           |
-      | MD5               | critical  | Use SHA-256+          |
-      | SHA1              | high      | Use SHA-256+          |
-      | DES               | critical  | Use AES-256+          |
-      | ECB mode          | high      | Use CBC/GCM           |
-      | RSA <2048 bits    | high      | Use RSA-2048+         |
-
-  Scenario: A03-Injection (SQL, NoSQL, OS command)
-    Given I have untrusted data reaching sinks
-    When the extractor processes:
-      | source        | sink         | sanitization     |
-      | user input   | SQL query   | parameterized    |
-      | request body | OS command | input validation |
-      | URL param    | eval()     | NONE             |
-    Then it should detect injection vulnerabilities
-    And check for proper sanitization
-
-  Scenario: A04-Insecure Design (business logic flaws)
-    Given I have business logic
-    When the extractor processes authentication flows
-    Then it should detect:
-      | flaw              | detection method            |
-      | weak password     | < 8 chars, no complexity   |
-      | missing MFA       | no second factor check     |
-      | session flaws     | no expiration, weak tokens |
-
-  Scenario: A05-Security Misconfiguration
-    Given I have configuration files
-    When the extractor processes:
-      | config type | check for                    | severity |
-      | CORS        | wildcard origins            | critical |
-      | Headers     | missing security headers    | high     |
-      | TLS         | weak ciphers, old versions  | critical |
-
-  Scenario: A06-Vulnerable Components (SCA integration)
-    Given I have dependencies
-    When the extractor processes package manifests
-    Then it should correlate SCA findings with SAST
-    And generate VulnerableDependency facts
-
-  Scenario: A07-Identity/Authentication Failures
-    Given I have authentication code
-    When the extractor processes auth handlers
-    Then it should detect:
-      | issue            | detection                       |
-      | weak passwords   | no complexity requirements     |
-      | missing lockout  | no brute force protection      |
-      | weak sessions    | no secure session management   |
-
-  Scenario: A08-Software/Data Integrity Failures
-    Given I have update mechanisms
-    When the extractor processes:
-      | mechanism  | check for               | severity |
-      | auto-update| no signature verification| critical |
-      | plugins    | no integrity checks     | high     |
-
-  Scenario: A09-Security Logging/Monitoring
-    Given I have logging code
-    When the extractor processes log statements
-    Then it should verify:
-      | check                  | requirement         |
-      | sensitive data logging | must be masked      |
-      | failed auth logging    | must be present     |
-      | security events        | must be monitored   |
-
-  Scenario: A10-Server-Side Request Forgery (SSRF)
-    Given I have HTTP requests from user input
-    When the extractor processes:
-      | API              | check for              | severity |
-      | fetch()          | URL validation          | high     |
-      | urllib.request   | URL validation          | high     |
-      | requests.get()   | URL validation          | high     |
-    Then it should detect SSRF vulnerabilities
-```
-
-#### Implementation Tasks
-
-**Task 1.1: Implement OWASP A01-A03 Rules**
-- Create access control detection logic
-- Implement cryptographic validation
-- Build injection detection engine
-- Add taint analysis for data flow
-
-**Task 1.2: Implement OWASP A04-A07 Rules**
-- Create business logic analysis
-- Build configuration scanner
-- Implement dependency correlation
-- Add authentication testing
-
-**Task 1.3: Implement OWASP A08-A10 Rules**
-- Create integrity verification
-- Build logging analyzer
-- Implement SSRF detection
-
-#### Test Suite (Unit Tests - 100% Coverage)
-
-```rust
-// tests/security/owasp_top10_test.rs
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_detect_sql_injection() {
-        let code = r#"
-            const userId = req.query.id;
-            const query = `SELECT * FROM users WHERE id = ${userId}`;
-            db.query(query);
-        "#;
-        
-        let facts = extractor.extract(code, "vuln.js").await;
-        let findings = security_engine.scan(&facts).await;
-        
-        let sql_injection = findings.find(|f| f.rule == "A03-001-SQL-INJECTION");
-        assert!(sql_injection.is_some());
-        assert_eq!(sql_injection.severity, Severity::CRITICAL);
-    }
-
-    #[tokio::test]
-    async fn test_detect_weak_crypto() {
-        let code = r#"
-            const hash = crypto.createHash('md5').update(data).digest();
-            const cipher = crypto.createCipher('des', key);
-        "#;
-        
-        let facts = extractor.extract(code, "crypto.js").await;
-        let findings = security_engine.scan(&facts).await;
-        
-        assert!(findings.iter().any(|f| f.rule == "A02-001-MD5-USAGE"));
-        assert!(findings.iter().any(|f| f.rule == "A02-002-DES-USAGE"));
-    }
-
-    #[tokio::test]
-    async fn test_validate_sanitization() {
-        let code = r#"
-            const userId = req.query.id;
-            const sanitized = validator.escape(userId);
-            const query = `SELECT * FROM users WHERE id = '${sanitized}'`;
-        "#;
-        
-        let facts = extractor.extract(code, "safe.js").await;
-        let findings = security_engine.scan(&facts).await;
-        
-        assert!(!findings.iter().any(|f| f.rule.contains("INJECTION")));
-    }
-}
-```
+**Objetivo Principal:** Implementar detección de vulnerabilidades de seguridad universal mediante IR facts y reglas DSL, cubriendo OWASP Top 10 (2021) y CWE Top 25 (2024) con correlación cross-language.
 
 ---
 
-### US-02: As a Security Researcher, I want CWE Top 25 2024 detection
+## 🎯 Objetivos y Alcance
 
-**Priority:** P0
-**Story Points:** 21
-**Component:** CWE Security Rules
+### Objetivos Estratégicos
+1. **OWASP Top 10 2021 Coverage** - 100% coverage con correlaciones
+2. **CWE Top 25 2024 Support** - Universal rules via IR
+3. **Taint Analysis Engine** - Seguimiento cross-language via IR
+4. **Framework-Specific Rules** - React, Spring, Django, Flask
+5. **Cryptographic Analysis** - Weak algorithms, key management
+6. **90%+ Accuracy** - vs 60-70% SonarQube
+7. **<10% False Positives** - vs 30-40% SonarQube
 
-#### BDD Scenarios
+### Alcance Funcional
+- ✅ **OWASP Top 10 (2021)**: Injection, Broken Auth, Sensitive Data, XXE, Broken Access, Security Misconfig, XSS, Insecure Deserialization, Using Components, Insufficient Logging
+- ✅ **CWE Top 25 (2024)**: Universal rules via IR
+- ✅ **Taint Analysis**: Source → Sink → Sanitization
+- ✅ **Framework Detection**: Auto-detect y apply framework-specific rules
+- ✅ **Cryptographic Rules**: Algorithm detection, key strength, certificate validation
+- ✅ **Multi-language**: JS, Python, Go, TypeScript, Rust, Java
+- ✅ **IR Correlation**: Security + Coverage + SCA combined
 
-```gherkin
-Feature: CWE Top 25 2024 Coverage
+### Fuera de Alcance
+- ❌ DAST (Dynamic Analysis) - Separate product
+- ❌ Infrastructure security - Beyond code analysis
+- ❌ Runtime protection - Static analysis only
 
-  Scenario: CWE-787 Out-of-bounds Write
-    Given I have array access
-    When the extractor processes array operations
-    Then it should detect unsafe array access without bounds checking
+---
 
-  Scenario: CWE-79 Cross-site Scripting (XSS)
-    Given I have untrusted output
-    When the extractor processes:
-      | sink           | context   | detection           |
-      | innerHTML      | HTML      | missing escape      |
-      | document.write | HTML      | missing encode      |
-      | eval()         | JS        | always vulnerable   |
-    Then it should detect XSS vulnerabilities
+## 👥 Historias de Usuario
 
-  Scenario: CWE-89 SQL Injection
-    Given I have database queries
-    When the extractor processes:
-      | query type | detection                            |
-      | string concat | missing parameterized      |
-      | template literal | missing sanitization |
-      | dynamic SQL | missing validation           |
-    Then it should detect SQL injection
+### US-01: OWASP A01 - Injection Detection
+**Como** security engineer
+**Quiero** detectar vulnerabilidades de inyección (SQL, NoSQL, LDAP, OS commands)
+**Para** prevenir ataques que permiten acceso no autorizado a datos
 
-  Scenario: CWE-20 Improper Input Validation
-    Given I have input parameters
-    When the extractor processes user inputs
-    Then it should verify:
-      | check type   | requirement       |
-      | type         | validate data type|
-      | range        | validate bounds   |
-      | format       | validate pattern  |
+**Criterios de Aceptación:**
+```
+GIVEN código con query SQL concatenation: "SELECT * FROM users WHERE id=" + userInput
+WHEN se analiza con taint analysis
+THEN se detecta SQL Injection con severidad critical
 
-  Scenario: CWE-125 Out-of-bounds Read
-    Given I have buffer operations
-    When the extractor processes:
-      | operation | check for        | severity |
-      | memcpy    | size validation  | high     |
-      | array[]   | bounds checking  | high     |
-      | pointer   | null check       | high     |
-    Then it should detect unsafe reads
+GIVEN un input no confiable que llega a SQL sink sin sanitización
+WHEN se evalúa la regla de inyección
+THEN se genera finding con 95%+ confidence
 
-  Scenario: CWE-78 OS Command Injection
-    Given I have system calls
-    When the extractor processes:
-      | API      | detection                  |
-      | exec()   | unvalidated input          |
-      | system() | missing shell escaping     |
-      | eval()   | command execution          |
-    Then it should detect command injection
+GIVEN el mismo patrón en JavaScript, Python y Go
+WHEN se analizan
+THEN se detectan las 3 vulnerabilidades (universal rules)
 
-  Scenario: CWE-416 Use After Free
-    Given I have memory management
-    When the extractor processes:
-      | language | check for           |
-      | C/C++    | free without null   |
-      | Rust     | use after drop      |
-    Then it should detect use-after-free
-
-  Scenario: CWE-22 Path Traversal
-    Given I have file operations
-    When the extractor processes:
-      | API        | check for         | severity |
-      | open()     | "../" in path     | high     |
-      | file()     | absolute path     | medium   |
-      | include()  | directory change  | high     |
-    Then it should detect path traversal
-
-  Scenario: CWE-352 CSRF
-    Given I have state-changing requests
-    When the extractor processes:
-      | check          | requirement           |
-      | CSRF token     | must be validated     |
-      | SameSite       | must be set           |
-      | Origin header  | must be checked       |
-    Then it should detect CSRF vulnerabilities
-
-  Scenario: CWE-434 Unrestricted Upload
-    Given I have file upload
-    When the extractor processes upload handlers
-    Then it should verify:
-      | check           | requirement         |
-      | file type       | must be validated   |
-      | file size       | must be limited     |
-      | file content    | must be scanned     |
-
-  Scenario: CWE-862 Missing Authorization
-    Given I have protected resources
-    When the extractor processes route handlers
-    Then it should verify:
-      | check          | requirement           |
-      | auth required  | must be checked       |
-      | role check     | must be validated     |
-      | ownership      | must be verified      |
+GIVEN código con parameterized queries
+WHEN se evalúa
+THEN NO se reporta false positive
 ```
 
-#### Test Suite
+**Tareas Técnicas:**
+- [ ] Implementar taint analysis engine sobre IR
+- [ ] Crear source detection (user input, network, file)
+- [ ] Crear sink detection (SQL, NoSQL, system commands)
+- [ ] Implementar sanitization detection (validation, encoding, escaping)
+- [ ] Crear universal SQL injection rule en DSL
+- [ ] Implementar confidence scoring
+- [ ] Crear framework-specific injection patterns
+- [ ] Escribir tests con vulnerabilidades reales
 
+**TDD Tests:**
 ```rust
 #[cfg(test)]
-mod tests {
-    #[tokio::test]
-    async fn test_cwe_79_xss_detection() {
-        let code = r#"
-            document.getElementById('output').innerHTML = userInput;
-        "#;
-        
-        let facts = extractor.extract(code, "xss.js").await;
-        let findings = security_engine.scan(&facts).await;
-        
-        assert!(findings.iter().any(|f| f.cwe_id == "CWE-79"));
-        assert_eq!(findings[0].severity, Severity::HIGH);
+mod injection_tests {
+    #[test]
+    fn should_detect_sql_injection() {
+        // Given: SQL concatenation con user input
+        // When: Se analiza
+        // Then: Finding crítico de SQL injection
     }
 
-    #[tokio::test]
-    async fn test_cwe_862_missing_authorization() {
-        let code = r#"
-            app.get('/admin/users', (req, res) => {
-                res.json(getAllUsers());
-            });
-        "#;
-        
-        let facts = extractor.extract(code, "auth.js").await;
-        let findings = security_engine.scan(&facts).await;
-        
-        assert!(findings.iter().any(|f| f.cwe_id == "CWE-862"));
+    #[test]
+    fn should_detect_nosql_injection() {
+        // Given: MongoDB query con user input
+        // When: Se analiza
+        // Then: Finding crítico de NoSQL injection
+    }
+
+    #[test]
+    fn should_detect_command_injection() {
+        // Given: system() call con user input
+        // When: Se analiza
+        // Then: Finding crítico de command injection
+    }
+
+    #[test]
+    fn should_not_flag_parameterized_queries() {
+        // Given: Query con prepared statements
+        // When: Se analiza
+        // Then: NO finding (not vulnerable)
+    }
+
+    #[test]
+    fn should_detect_sanitization() {
+        // Given: Input sanitized con whitelist
+        // When: Se analiza
+        // Then: Finding con confianza reducida
+    }
+
+    #[test]
+    fn should_work_cross_language() {
+        // Given: Mismo patrón en JS, Python, Go
+        // When: Se analizan
+        // Then: 3 findings idénticos (universal)
     }
 }
 ```
 
 ---
 
-### US-03: As a Developer, I want cross-language taint analysis via IR
+### US-02: OWASP A02 - Broken Authentication
+**Como** security engineer
+**Quiero** detectar debilidades de autenticación y gestión de sesiones
+**Para** prevenir evasión de controles de acceso
 
-**Priority:** P0
-**Story Points:** 13
-**Component:** Taint Analysis Engine
+**Criterios de Aceptación:**
+```
+GIVEN código con weak session token generation: rand(1000)
+WHEN se analiza
+THEN se detecta weak random number generator
 
-#### BDD Scenarios
+GIVEN token que expira en >24 horas
+WHEN se evalúa
+THEN se reporta como weak session management
 
-```gherkin
-Feature: Cross-Language Taint Analysis
+GIVEN código que guarda password en plaintext
+WHEN se analiza
+THEN se detecta weak password storage
 
-  Scenario: Track taint from JavaScript to Python
-    Given I have a multi-language project
-    When data flows from:
-      """
-      JavaScript: req.query.userId → API call
-      Python: receives userId → database query
-      """
-    Then IR should track taint across language boundary
-    And security rules should apply to both languages
-
-  Scenario: Taint propagation through function calls
-    Given I have taint source
-    When the taint flows through:
-      | source   | transformations           | sink        |
-      | input    | sanitize() -> toString()  | SQL query   |
-      | query    | escapeHtml() -> concat()  | innerHTML   |
-    Then IR should track transformation effectiveness
-    And mark as sanitized if transformation is effective
-
-  Scenario: Taint through data structures
-    Given I have taint in data structures
-    When the extractor processes:
-      | structure | check for      | tracking         |
-      | array     | tainted index  | track each item  |
-      | object    | tainted key    | track properties |
-      | map       | key/value pair | track both       |
-    Then IR should track taint through structures
-
-  Scenario: Taint with inter-procedural analysis
-    Given I have taint source
-    When the taint flows through function calls:
-      """
-      function processInput(userInput) {
-        return sanitize(userInput);
-      }
-      
-      const safe = processInput(req.query.id);
-      db.query(`SELECT * FROM users WHERE id = '${safe}'`);
-      """
-    Then IR should:
-      - Track taint at source
-      - Mark as sanitized after sanitize()
-      - Apply to sink with sanitized taint
+GIVEN JWT sin signed o con algoritmo "none"
+WHEN se evalúa
+THEN se reporta JWT misconfiguration
 ```
 
-#### Implementation Tasks
+**Tareas Técnicas:**
+- [ ] Implementar authentication weakness detection
+- [ ] Crear session management analyzer
+- [ ] Implementar password storage checker
+- [ ] Crear JWT security validator
+- [ ] Implementar token entropy analyzer
+- [ ] Crear password policy checker
+- [ ] Implementar MFA detection
+- [ ] Escribir tests de authentication flows
 
-**Task 3.1: Build Taint Tracking Engine**
-- Create taint source identification
-- Implement taint propagation logic
-- Add taint sink detection
-- Build transformation tracking
-
-**Task 3.2: Cross-Language Taint Flow**
-- Track taint across language boundaries
-- Handle API calls between languages
-- Maintain taint context in IR facts
-- Enable cross-language correlation
-
-#### Test Suite
-
+**TDD Tests:**
 ```rust
 #[cfg(test)]
-mod tests {
-    #[tokio::test]
-    async fn test_taint_propagation() {
-        let code = r#"
-            const userId = req.query.id;  // Taint source
-            const query = `SELECT * FROM users WHERE id = ${userId}`;  // Taint sink
-        "#;
-        
-        let facts = extractor.extract(code, "taint.js").await;
-        let taint_flow = find_taint_flow(&facts);
-        
-        assert!(taint_flow.is_some());
-        assert_eq!(taint_flow.sanitized, false);
+mod auth_tests {
+    #[test]
+    fn should_detect_weak_session_token() {
+        // Given: rand(1000) para session token
+        // When: Se analiza
+        // Then: Finding de weak random number
     }
 
-    #[tokio::test]
-    async fn test_taint_sanitization() {
-        let code = r#"
-            const userId = req.query.id;
-            const sanitized = validator.escape(userId);
-            const query = `SELECT * FROM users WHERE id = ${sanitized}`;
-        "#;
-        
-        let facts = extractor.extract(code, "sanitized.js").await;
-        let taint_flow = find_taint_flow(&facts);
-        
-        assert!(taint_flow.is_some());
-        assert_eq!(taint_flow.sanitized, true);
+    #[test]
+    fn should_detect_long_session_expiry() {
+        // Given: Token expira en 7 días
+        // When: Se analiza
+        // Then: Finding de excessive session duration
+    }
+
+    #[test]
+    fn should_detect_plaintext_password() {
+        // Given: Password almacenado sin hash
+        // When: Se analiza
+        // Then: Finding de weak password storage
+    }
+
+    #[test]
+    fn should_detect_insecure_jwt() {
+        // Given: JWT sin firma o algoritmo "none"
+        // When: Se analiza
+        // Then: Finding de JWT misconfiguration
+    }
+
+    #[test]
+    fn should_accept_strong_auth() {
+        // Given: bcrypt + session timeout + MFA
+        // When: Se analiza
+        // Then: NO finding
     }
 }
 ```
 
 ---
 
-### US-04: As a Security Engineer, I want framework-specific rule detection
+### US-03: OWASP A03 - Sensitive Data Exposure
+**Como** security engineer
+**Quiero** detectar exposición de datos sensibles
+**Para** prevenir leakage de información confidencial
 
-**Priority:** P0
-**Story Points:** 13
-**Component:** Framework Detection Engine
+**Criterios de Aceptación:**
+```
+GIVEN código que envía datos sensibles via HTTP sin TLS
+WHEN se analiza
+THEN se detecta unencrypted sensitive data transmission
 
-#### BDD Scenarios
+GIVEN API que retorna credit card sin masking
+WHEN se evalúa
+THEN se detecta sensitive data exposure
 
-```gherkin
-Feature: Framework-Specific Security Rules
+GIVEN credentials hardcodeados en código
+WHEN se analiza
+THEN se detecta hardcoded secrets
 
-  Scenario: React Security Rules
-    Given I have React components
-    When the extractor processes:
-      | API/Pattern                    | check for                | severity |
-      | dangerouslySetInnerHTML        | missing validation       | critical |
-      | eval() in JSX                  | always vulnerable        | critical |
-      | innerHTML without encoding     | XSS vulnerability        | high     |
-      | state updates without sanitization| XSS in state          | high     |
-
-  Scenario: Spring Security Rules
-    Given I have Spring Boot application
-    When the extractor processes:
-      | component         | check for                      | severity |
-      | @RequestMapping   | missing @PreAuthorize          | high     |
-      | JdbcTemplate      | missing parameterized queries  | critical |
-      | ModelAttribute    | missing @Valid                 | medium   |
-
-  Scenario: Django Security Rules
-    Given I have Django application
-    When the extractor processes:
-      | component       | check for                   | severity |
-      | QuerySet        | missing .get() validation   | high     |
-      | raw() queries   | missing parameterization    | critical |
-      | template tags   | missing auto-escaping check | high     |
-
-  Scenario: Flask Security Rules
-    Given I have Flask application
-    When the extractor processes:
-      | API/Pattern          | check for              | severity |
-      | render_template      | missing context        | high     |
-      | request.json         | missing validation     | medium   |
-      | session manipulation | missing CSRF           | high     |
-
-  Scenario: Express.js Security Rules
-    Given I have Express application
-    When the extractor processes:
-      | middleware/API     | check for                | severity |
-      | express.json()     | missing size limit       | high     |
-      | helmet()           | missing security headers | medium   |
-      | user input to response| missing sanitization  | high     |
-
-  Scenario: .NET Security Rules
-    Given I have ASP.NET application
-    When the extractor processes:
-      | component     | check for                    | severity |
-      | Controller    | missing [ValidateAntiForgeryToken] | high |
-      | SqlCommand    | missing parameters           | critical |
-      | View          | missing HTML encoding        | high     |
+GIVEN datos sensibles en logs
+WHEN se evalúa
+THEN se detecta sensitive data logging
 ```
 
-#### Test Suite
+**Tareas Técnicas:**
+- [ ] Implementar sensitive data pattern detection
+- [ ] Crear encryption checker
+- [ ] Implementar data masking validator
+- [ ] Crear secrets detection (API keys, passwords, tokens)
+- [ ] Implementar TLS/HTTPS enforcement
+- [ ] Crear data classification (PII, PHI, PCI)
+- [ ] Implementar logging policy checker
+- [ ] Escribir tests con datos sensibles
 
+**TDD Tests:**
 ```rust
 #[cfg(test)]
-mod tests {
-    #[tokio::test]
-    async fn test_react_dangerous_html() {
-        let code = r#"
-            function Component() {
-                return <div dangerouslySetInnerHTML={{__html: userContent}} />;
-            }
-        "#;
-        
-        let facts = extractor.extract(code, "react.jsx").await;
-        let findings = security_engine.scan(&facts).await;
-        
-        assert!(findings.iter().any(|f| 
-            f.rule == "REACT-001-DANGEROUS-INNER-HTML"
-        ));
+mod sensitive_data_tests {
+    #[test]
+    fn should_detect_unencrypted_transmission() {
+        // Given: HTTP request con credit card
+        // When: Se analiza
+        // Then: Finding de unencrypted transmission
     }
 
-    #[tokio::test]
-    async fn test_spring_authorization() {
-        let code = r#"
-            @GetMapping("/admin/users")
-            public List<User> getUsers() {
-                return userService.findAll();
-            }
-        "#;
-        
-        let facts = extractor.extract(code, "UserController.java").await;
-        let findings = security_engine.scan(&facts).await;
-        
-        assert!(findings.iter().any(|f| 
-            f.rule == "SPRING-001-MISSING-PREAUTHORIZE"
-        ));
+    #[test]
+    fn should_detect_hardcoded_secrets() {
+        // Given: API key hardcodeada
+        // When: Se analiza
+        // Then: Finding de hardcoded secret
+    }
+
+    #[test]
+    fn should_detect_sensitive_logging() {
+        // Given: Log con password
+        // When: Se analiza
+        // Then: Finding de sensitive logging
+    }
+
+    #[test]
+    fn should_accept_masked_data() {
+        // Given: Credit card masked (****1234)
+        // When: Se analiza
+        // Then: NO finding
     }
 }
 ```
 
 ---
 
-### US-05: As a CISO, I want <10% false positive rate for security findings
+### US-04: OWASP A04 - XML External Entities (XXE)
+**Como** security engineer
+**Quiero** detectar vulnerabilidades XXE en procesamiento XML
+**Para** prevenir ataques que permiten disclosure de archivos
 
-**Priority:** P0
-**Story Points:** 8
-**Component:** False Positive Reduction
+**Criterios de Aceptación:**
+```
+GIVEN código que parsea XML con entity expansion habilitada
+WHEN se analiza
+THEN se detecta XXE vulnerability
 
-#### BDD Scenarios
+GIVEN XML parser con DTD externas habilitadas
+WHEN se evalúa
+THEN se reporta XXE risk
 
-```gherkin
-Feature: Low False Positive Rate
-
-  Scenario: Accurate sanitization detection
-    Given I have potentially vulnerable code
-    When the code uses:
-      | method              | context    | should detect | confidence |
-      | parameterized query | SQL        | NO            | high       |
-      | html.escape()       | HTML       | NO            | high       |
-      | validator.escape()  | HTML       | NO            | high       |
-      | built-in escaping   | template   | NO            | high       |
-    Then security engine should not flag as vulnerable
-
-  Scenario: Trusted data source detection
-    Given I have data sources
-    When the data comes from:
-      | source              | trust level | detection |
-      | config file         | trusted     | NO flag    |
-      | hardcoded constant  | trusted     | NO flag    |
-      | database (trusted)  | trusted     | NO flag    |
-      | user input          | untrusted   | FLAG       |
-    Then engine should distinguish trusted sources
-
-  Scenario: Context-aware detection
-    Given I have sink contexts
-    When the extractor processes:
-      | context        | check for       | threshold      |
-      | HTML           | encoding needed | 100% encoding  |
-      | attribute      | encoding needed | 100% encoding  |
-      | URL parameter  | encoding needed | 100% encoding  |
-      | CSS            | encoding needed | 100% encoding  |
-    Then engine should be context-aware
-
-  Scenario: Validation override
-    Given I have validation comments
-    When the code has:
-      | comment                     | effect           |
-      | // validate: SQL injection  | suppress finding |
-      | # nosec B608               | suppress finding |
-      | /* secure: using ORM */     | suppress finding |
-    Then engine should respect validation comments
+GIVEN código que deshabilita entity expansion
+WHEN se analiza
+THEN NO se reporta false positive
 ```
 
----
+**Tareas Técnicas:**
+- [ ] Implementar XXE detection
+- [ ] Crear XML parser configuration checker
+- [ ] Implementar DTD detection
+- [ ] Crear entity expansion analyzer
+- [ ] Implementar safe parser validation
+- [ ] Crear multi-language XXE patterns (Python lxml, Java DOM, JS xml2js)
+- [ ] Escribir tests de XXE payloads
 
-## 🏗️ Technical Implementation
-
-### IR Security Facts Schema
-
+**TDD Tests:**
 ```rust
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum SecurityFact {
-    // Taint tracking
-    TaintSource {
-        source: String,
-        location: CodeLocation,
-        trust_level: TrustLevel,
-    },
-    TaintSink {
-        sink: String,
-        location: CodeLocation,
-        context: String,
-    },
-    TaintFlow {
-        source: String,
-        sink: String,
-        path: Vec<CodeLocation>,
-        sanitized: bool,
-    },
-    
-    // Input validation
-    InputValidation {
-        input: String,
-        location: CodeLocation,
-        validation_type: ValidationType,
-        effective: bool,
-    },
-    
-    // Cryptographic operations
-    CryptographicOperation {
-        algorithm: String,
-        key_length: Option<u32>,
-        location: CodeLocation,
-        secure: bool,
-        issue: Option<String>,
-    },
-    
-    // Authentication/Authorization
-    AuthCheck {
-        location: CodeLocation,
-        check_type: AuthCheckType,
-        effective: bool,
-    },
-    
-    // Security headers/config
-    SecurityHeader {
-        header: String,
-        value: String,
-        location: CodeLocation,
-        present: bool,
-    },
-    
-    // OWASP Top 10 mapping
-    OwaspTop10 {
-        category: String,
-        rule_id: String,
-        location: CodeLocation,
-        severity: Severity,
-    },
-    
-    // CWE mapping
-    Cwe {
-        id: String,
-        name: String,
-        location: CodeLocation,
-        severity: Severity,
-    },
-}
-```
+#[cfg(test)]
+mod xxe_tests {
+    #[test]
+    fn should_detect_xxe_vulnerability() {
+        // Given: XML parser con entidades habilitadas
+        // When: Se analiza
+        // Then: Finding de XXE
+    }
 
-### Security Rule Engine
+    #[test]
+    fn should_detect_external_dtd() {
+        // Given: DTD externas permitidas
+        // When: Se analiza
+        // Then: Finding de external DTD
+    }
 
-```rust
-pub struct SecurityRule {
-    pub id: String,
-    pub name: String,
-    pub category: String, // OWASP/CWE
-    pub severity: Severity,
-    pub language_agnostic: bool,
-    pub patterns: Vec<RulePattern>,
-}
-
-impl SecurityRule {
-    pub async fn evaluate(&self, facts: &[SecurityFact]) -> Vec<SecurityFinding> {
-        let mut findings = Vec::new();
-        
-        // Pattern matching
-        for pattern in &self.patterns {
-            if let Some(match_result) = pattern.match_facts(facts) {
-                findings.push(SecurityFinding {
-                    rule_id: self.id.clone(),
-                    name: self.name.clone(),
-                    severity: self.severity,
-                    location: match_result.location,
-                    confidence: match_result.confidence,
-                    details: match_result.details,
-                });
-            }
-        }
-        
-        findings
+    #[test]
+    fn should_accept_safe_parser() {
+        // Given: Parser con entidades deshabilitadas
+        // When: Se analiza
+        // Then: NO finding
     }
 }
 ```
 
 ---
 
-## 📊 Performance Benchmarks
+### US-05: OWASP A05 - Security Misconfiguration
+**Como** security engineer
+**Quiero** detectar configuraciones inseguras de seguridad
+**Para** prevenir vectores de ataque por configuraciones débiles
 
-### Target Metrics
+**Criterios de Aceptación:**
+```
+GIVEN framework con debug mode habilitado en production
+WHEN se analiza
+THEN se detecta security misconfiguration
 
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| **Analysis Speed** | <10s for 1M LOC | Real projects |
-| **False Positive Rate** | <10% | User feedback |
-| **Detection Accuracy** | >90% | Test suites |
-| **Memory Usage** | <1GB | 1M LOC |
-| **Language Coverage** | 7 languages | All supported |
+GIVEN CORS policy que permite todos los origins
+WHEN se evalúa
+THEN se detecta over-permissive CORS
 
-### Benchmarking
+GIVEN código con default credentials
+WHEN se analiza
+THEN se detecta default credentials usage
 
-```bash
-# Security analysis benchmarks
-cargo bench --features security -- security_analysis
+GIVEN servidor con headers de seguridad faltantes
+WHEN se evalúa
+THEN se detecta missing security headers
+```
 
-# Compare against SonarQube
-./scripts/benchmark_sonarqube.sh
+**Tareas Técnicas:**
+- [ ] Implementar configuration security checker
+- [ ] Crear environment detection (dev, prod, test)
+- [ ] Implementar CORS policy analyzer
+- [ ] Crear credentials validator
+- [ ] Implementar security headers checker
+- [ ] Crear framework-specific configs (Express, Spring, Django)
+- [ ] Implementar best practices detector
+- [ ] Escribir tests de configuraciones
 
-# Generate accuracy report
-./scripts/security_accuracy_report.sh
+**TDD Tests:**
+```rust
+#[cfg(test)]
+mod misconfig_tests {
+    #[test]
+    fn should_detect_debug_in_production() {
+        // Given: Debug habilitado en production
+        // When: Se analiza
+        // Then: Finding de misconfiguration
+    }
+
+    #[test]
+    fn should_detect_permissive_cors() {
+        // Given: CORS con wildcard origin
+        // When: Se analiza
+        // Then: Finding de permissive CORS
+    }
+
+    #[test]
+    fn should_detect_default_credentials() {
+        // Given: admin/admin credentials
+        // When: Se analiza
+        // Then: Finding de default credentials
+    }
+
+    #[test]
+    fn should_accept_secure_config() {
+        // Given: Production sin debug + CORS restritivo
+        // When: Se analiza
+        // Then: NO finding
+    }
+}
 ```
 
 ---
 
-## 🧪 Test Strategy
+### US-06: OWASP A06 - Cross-Site Scripting (XSS)
+**Como** security engineer
+**Quiero** detectar vulnerabilidades XSS (Reflected, Stored, DOM-based)
+**Para** prevenir inyección de scripts maliciosos
 
-### Test Coverage Requirements
+**Criterios de Aceptación:**
+```
+GIVEN código que concatena user input en HTML sin encoding
+WHEN se analiza
+THEN se detecta reflected XSS
 
-| Component | Coverage Target | Test Types |
-|-----------|----------------|------------|
-| **OWASP Rules** | 100% | Unit + Integration |
-| **CWE Rules** | 100% | Unit + Integration |
-| **Taint Analysis** | 100% | Unit + Integration |
-| **Framework Detection** | 100% | Unit + Integration |
-| **False Positives** | 100% | E2E tests |
+GIVEN código que guarda user input en DB y luego lo muestra sin encoding
+WHEN se evalúa
+THEN se detecta stored XSS
 
-### Test Execution
+GIVEN código que usa innerHTML con user input
+WHEN se analiza
+THEN se detecta DOM-based XSS
 
-```bash
-# Run all security tests
-cargo test --features security
+GIVEN código que usa textContent o template engines
+WHEN se evalúa
+THEN NO se reporta false positive
+```
 
-# Run OWASP tests
-cargo test owasp_top10
+**Tareas Técnicas:**
+- [ ] Implementar XSS detection (reflected, stored, DOM)
+- [ ] Crear DOM API usage tracker
+- [ ] Implementar encoding detection
+- [ ] Crear template engine safety validator
+- [ ] Implementar sanitizer detection (DOMPurify, validators)
+- [ ] Crear multi-language XSS patterns (JS, Python, PHP)
+- [ ] Implementar context-aware detection (HTML, JS, CSS, URL)
+- [ ] Escribir tests con payloads XSS
 
-# Run CWE tests
-cargo test cwe_top25
+**TDD Tests:**
+```rust
+#[cfg(test)]
+mod xss_tests {
+    #[test]
+    fn should_detect_reflected_xss() {
+        // Given: User input concatenado en HTML
+        // When: Se analiza
+        // Then: Finding de reflected XSS
+    }
 
-# Run taint analysis tests
-cargo test taint_analysis
+    #[test]
+    fn should_detect_stored_xss() {
+        // Given: User input en DB sin sanitizar
+        // When: Se analiza
+        // Then: Finding de stored XSS
+    }
 
-# Run false positive tests
-cargo test false_positive
+    #[test]
+    fn should_detect_dom_xss() {
+        // Given: innerHTML con user input
+        // When: Se analiza
+        // Then: Finding de DOM XSS
+    }
+
+    #[test]
+    fn should_accept_safe_encoding() {
+        // Given: textContent o template engine
+        // When: Se analiza
+        // Then: NO finding
+    }
+
+    #[test]
+    fn should_accept_sanitizer() {
+        // Given: DOMPurify o similar
+        // When: Se analiza
+        // Then: NO finding
+    }
+}
 ```
 
 ---
 
-## ✅ Definition of Done
+### US-07: OWASP A07 - Insecure Deserialization
+**Como** security engineer
+**Quiero** detectar deserialización insegura
+**Para** prevenir ejecución remota de código
 
-### Code Quality
-- [ ] All OWASP Top 10 2021 rules implemented
-- [ ] All CWE Top 25 2024 rules implemented
-- [ ] 100% test coverage
-- [ ] Framework-specific rules for 5+ frameworks
-- [ ] Cross-language taint analysis working
+**Criterios de Aceptación:**
+```
+GIVEN código que deserializa data no confiable (pickle, YAML, JSON)
+WHEN se analiza
+THEN se detecta insecure deserialization
+
+GIVEN código que usa deserialización segura (JSON, MessagePack)
+WHEN se evalúa
+THEN NO se reporta false positive
+
+GIVEN código con validation antes de deserializar
+WHEN se analiza
+THEN confianza reducida o NO finding
+```
+
+**Tareas Técnicas:**
+- [ ] Implementar insecure deserialization detection
+- [ ] Crear serializer classification (safe vs unsafe)
+- [ ] Implementar validation checker
+- [ ] Crear multi-language patterns (Python pickle, Java serialization, .NET, JS)
+- [ ] Implementar gadget chain detection
+- [ ] Crear safe alternatives recommendation
+- [ ] Escribir tests con payloads reales
+
+**TDD Tests:**
+```rust
+#[cfg(test)]
+mod deserialization_tests {
+    #[test]
+    fn should_detect_pickle_deserialization() {
+        // Given: pickle.loads() con data no confiable
+        // When: Se analiza
+        // Then: Finding de insecure deserialization
+    }
+
+    #[test]
+    fn should_detect_java_deserialization() {
+        // Given: ObjectInputStream
+        // When: Se analiza
+        // Then: Finding de insecure deserialization
+    }
+
+    #[test]
+    fn should_accept_json() {
+        // Given: json.loads()
+        // When: Se analiza
+        // Then: NO finding
+    }
+
+    #[test]
+    fn should_accept_validated_input() {
+        // Given: Validación antes de pickle
+        // When: Se analiza
+        // Then: Confidence reducida
+    }
+}
+```
+
+---
+
+### US-08: OWASP A08 - Using Components with Known Vulnerabilities
+**Como** security engineer
+**Quiero** detectar uso de componentes con vulnerabilidades conocidas
+**Para** prevenir ataques que explotan CVEs
+
+**Criterios de Aceptación:**
+```
+GIVEN código que usa dependencia con CVE activo
+WHEN se analiza
+THEN se detecta vulnerable component
+
+GIVEN código que usa versión patched de dependencia
+WHEN se evalúa
+THEN NO se reporta finding
+
+GIVEN dependencia con múltiples CVEs
+WHEN se analiza
+THEN se muestran todos los CVEs
+```
+
+**Tareas Técnicas:**
+- [ ] Integrar con EPIC-03-SCA para obtener vulnerabilidades
+- [ ] Implementar vulnerable component detection
+- [ ] Crear CVE database integration
+- [ ] Implementar version comparison
+- [ ] Crear remediation suggestion
+- [ ] Implementar CVSS score calculation
+- [ ] Crear affected file tracking
+- [ ] Escribir tests con CVEs reales
+
+**TDD Tests:**
+```rust
+#[cfg(test)]
+mod vulnerable_components_tests {
+    #[test]
+    fn should_detect_vulnerable_dependency() {
+        // Given: Dependencia con CVE-2024-1234
+        // When: Se analiza
+        // Then: Finding con CVE details
+    }
+
+    #[test]
+    fn should_not_flag_patched_version() {
+        // Given: Versión patched
+        // When: Se analiza
+        // Then: NO finding
+    }
+
+    #[test]
+    fn should_show_all_cvès() {
+        // Given: Componente con 3 CVEs
+        // When: Se analiza
+        // Then: 3 findings con detalles
+    }
+}
+```
+
+---
+
+### US-09: OWASP A09 - Insufficient Logging & Monitoring
+**Como** security engineer
+**Quiero** detectar logging y monitoring insuficiente
+**Para** prevenir detección tardía de ataques
+
+**Criterios de Aceptación:**
+```
+GIVEN código que no loga eventos de seguridad
+WHEN se analiza
+THEN se detecta insufficient logging
+
+GIVEN código con logging pero sin monitoring
+WHEN se evalúa
+THEN se detecta insufficient monitoring
+
+GIVEN código con logging completo y alertas
+WHEN se analiza
+THEN NO se reporta finding
+```
+
+**Tareas Técnicas:**
+- [ ] Implementar logging coverage analyzer
+- [ ] Crear security event detection
+- [ ] Implementar monitoring integration checker
+- [ ] Crear audit trail validator
+- [ ] Implementar alerting validation
+- [ ] Crear multi-language logging patterns
+- [ ] Implementar compliance checker (PCI, HIPAA, SOX)
+- [ ] Escribir tests de logging
+
+**TDD Tests:**
+```rust
+#[cfg(test)]
+mod logging_tests {
+    #[test]
+    fn should_detect_missing_security_logs() {
+        // Given: Login sin logging
+        // When: Se analiza
+        // Then: Finding de insufficient logging
+    }
+
+    #[test]
+    fn should_detect_missing_monitoring() {
+        // Given: Logs sin alerting
+        // When: Se analiza
+        // Then: Finding de insufficient monitoring
+    }
+
+    #[test]
+    fn should_accept_comprehensive_logging() {
+        // Given: Security events log + monitoring
+        // When: Se analiza
+        // Then: NO finding
+    }
+}
+```
+
+---
+
+### US-10: Taint Analysis Engine
+**Como** security engineer
+**Quiero** trackear data flow de sources a sinks
+**Para** detectar vulnerabilidades por data flow
+
+**Criterios de Aceptación:**
+```
+GIVEN un source (user input) que llega a sink (SQL query) sin sanitización
+WHEN se ejecuta taint analysis
+THEN se detecta data flow vulnerability
+
+GIVEN sanitization en el path
+WHEN se evalúa
+THEN NO se reporta vulnerability
+
+GIVEN múltiples paths de taint
+WHEN se analizan
+THEN se muestra el path completo de la vulnerabilidad
+```
+
+**Tareas Técnicas:**
+- [ ] Implementar taint analysis engine
+- [ ] Crear source identification
+- [ ] Implementar sink identification
+- [ ] Crear sanitization detection
+- [ ] Implementar path tracking
+- [ ] Crear taint propagation rules
+- [ ] Implementar cross-function analysis
+- [ ] Escribir tests de taint flow
+
+**TDD Tests:**
+```rust
+#[cfg(test)]
+mod taint_analysis_tests {
+    #[test]
+    fn should_track_taint_from_source_to_sink() {
+        // Given: User input → SQL query
+        // When: Se ejecuta taint analysis
+        // Then: Se detecta data flow
+    }
+
+    #[test]
+    fn should_not_track_sanitized_data() {
+        // Given: Sanitized input
+        // When: Se ejecuta taint analysis
+        // Then: NO taint found
+    }
+
+    #[test]
+    fn should_track_across_functions() {
+        // Given: Taint que pasa por múltiples funciones
+        // When: Se ejecuta taint analysis
+        // Then: Se trackea el path completo
+    }
+}
+```
+
+---
+
+### US-11: Cryptographic Analysis
+**Como** security engineer
+**Quiero** detectar uso de criptografía débil
+**Para** prevenir ataques por algoritmos obsoletos
+
+**Criterios de Aceptación:**
+```
+GIVEN código que usa MD5 o SHA1 para hashing
+WHEN se analiza
+THEN se detecta weak cryptographic hash
+
+GIVEN código que usa RSA con key <2048 bits
+WHEN se evalúa
+THEN se detecta weak key size
+
+GIVEN código que usa ECB mode para encryption
+WHEN se analiza
+THEN se detecta weak encryption mode
+
+GIVEN código que usa AES-256-GCM
+WHEN se evalúa
+THEN NO se reporta finding
+```
+
+**Tareas Técnicas:**
+- [ ] Implementar cryptographic algorithm detection
+- [ ] Crear key strength analyzer
+- [ ] Implementar cipher mode validator
+- [ ] Crear deprecated algorithm detection
+- [ ] Implementar secure alternatives recommendation
+- [ ] Crear certificate validation
+- [ ] Implementar random number generator checker
+- [ ] Escribir tests de crypto
+
+**TDD Tests:**
+```rust
+#[cfg(test)]
+mod crypto_tests {
+    #[test]
+    fn should_detect_weak_hash() {
+        // Given: MD5 o SHA1
+        // When: Se analiza
+        // Then: Finding de weak hash
+    }
+
+    #[test]
+    fn should_detect_weak_key_size() {
+        // Given: RSA <2048 bits
+        // When: Se analiza
+        // Then: Finding de weak key
+    }
+
+    #[test]
+    fn should_detect_weak_cipher_mode() {
+        // Given: ECB mode
+        // When: Se analiza
+        // Then: Finding de weak mode
+    }
+
+    #[test]
+    fn should_accept_strong_crypto() {
+        // Given: AES-256-GCM, SHA-256
+        // When: Se analiza
+        // Then: NO finding
+    }
+}
+```
+
+---
+
+## ✅ Criterios de Validación
+
+### Funcionales
+- [ ] OWASP Top 10 2021: 100% coverage
+- [ ] CWE Top 25 2024: Universal rules
+- [ ] Taint analysis: Cross-function + cross-language
+- [ ] Framework-specific: React, Spring, Django, Flask
+- [ ] Cryptographic analysis: Algorithm + key strength
+- [ ] IR correlation: Security + Coverage + SCA
 
 ### Performance
-- [ ] Analysis <10s for 1M LOC
-- [ ] False positives <10%
-- [ ] Detection accuracy >90%
-- [ ] Memory usage <1GB
+- [ ] **Accuracy**: >90% (vs 60-70% SonarQube)
+- [ ] **False Positives**: <10% (vs 30-40% SonarQube)
+- [ ] **Analysis Speed**: <5s para proyecto típico
+- [ ] **Taint Analysis**: <2s para 100K LOC
+- [ ] **Multi-language**: Consistency >95%
 
-### Security
-- [ ] No security vulnerabilities in code
-- [ ] All findings reviewed
-- [ ] Documentation complete
-
----
-
-## 📝 Commit Validation Requirements
-
-```bash
-feat(epic-02): implement comprehensive SAST with IR-based security rules
-
-- Implement OWASP Top 10 2021 coverage (100% rules implemented)
-- Implement CWE Top 25 2024 detection (all rules)
-- Build cross-language taint analysis engine
-- Add framework-specific rules (React, Spring, Django, Flask, Express, .NET)
-- Implement cryptographic validation (weak algorithms, key management)
-- Add security correlation with SCA and coverage
-- Achieve >90% detection accuracy
-- Achieve <10% false positive rate
-- Analysis speed: <10s for 1M LOC
-- Test coverage: 100% for all security components
-- 7 languages supported: JavaScript, TypeScript, Python, Go, Rust, Java, C#
-
-Validation:
-- All OWASP Top 10 2021 rules pass tests
-- All CWE Top 25 2024 rules pass tests
-- Taint analysis working cross-language
-- Framework detection working for all major frameworks
-- Performance benchmarks: PASS
-- False positive rate: <10%
-- Code quality: PASS (no clippy warnings)
-
-Closes: EPIC-02
-```
+### Calidad
+- [ ] **Rules Coverage**: 200+ universal security rules
+- [ ] **Language Support**: JS, Python, Go, TypeScript, Rust, Java
+- [ ] **Test Coverage**: >90%
+- [ ] **Documentation**: 100% KDoc
 
 ---
 
-**Epic Owner:** Security Engineering Team
-**Reviewers:** Architecture Team, Security Team, Performance Team
-**Status:** 🚧 In Progress
-**Next Steps:** Begin Phase 1 - OWASP Top 10 2021 Implementation
+## 📊 Métricas de Éxito
+
+| Métrica | Target | Actual | Status |
+|---------|--------|--------|--------|
+| **OWASP Coverage** | 100% (10/10) | - | ⏳ |
+| **CWE Coverage** | 100% (25/25) | - | ⏳ |
+| **Detection Accuracy** | >90% | - | ⏳ |
+| **False Positive Rate** | <10% | - | ⏳ |
+| **Multi-language Consistency** | >95% | - | ⏳ |
+| **Taint Analysis Speed** | <2s / 100K LOC | - | ⏳ |
+| **Cryptographic Detection** | 100% rules | - | ⏳ |
 
 ---
 
-**Copyright © 2025 hodei-scan. All rights reserved.**
+## 🔗 Dependencias
+
+### Internas
+- **EPIC-01-CORE_STATIC_ANALYSIS_ENGINE**: IR Schema, DSL, Extractors
+- **EPIC-03-SOFTWARE_COMPOSITION_ANALYSIS**: CVE data
+
+### Externas
+- **CVE Database**: National Vulnerability Database
+- **OWASP Top 10**: Security guidelines
+- **CWE Database**: Common Weakness Enumeration
+- **NIST**: Cybersecurity framework
+- **Cap'n Proto**: IR serialization
+
+---
+
+## ⚠️ Riesgos y Mitigación
+
+| Riesgo | Probabilidad | Impacto | Mitigación |
+|--------|-------------|---------|------------|
+| **False positives altos** | Media | Alto | Continuous tuning + user feedback |
+| **New vulnerabilities patterns** | Alta | Medio | Community rules + regular updates |
+| **Cross-language inconsistencies** | Alta | Alto | Comprehensive test suite + validation |
+| **Performance degradation** | Media | Medio | Optimization + caching |
+| **Frameworks changes** | Media | Medio | Framework detection + adaptation |
+
+---
+
+## 🚀 Plan de Implementación
+
+### Sprint 1 (2 semanas): OWASP A01-A04
+- Implementar injection detection (SQL, NoSQL, Command)
+- Implementar broken authentication detection
+- Implementar sensitive data exposure
+- Implementar XXE detection
+
+### Sprint 2 (2 semanas): OWASP A05-A07
+- Implementar security misconfiguration
+- Implementar XSS detection (reflected, stored, DOM)
+- Implementar insecure deserialization
+
+### Sprint 3 (2 semanas): OWASP A08-A09 + Taint
+- Implementar vulnerable components (integración SCA)
+- Implementar insufficient logging & monitoring
+- Implementar taint analysis engine
+
+### Sprint 4 (2 semanas): Cryptographic + Framework
+- Implementar cryptographic analysis
+- Implementar framework-specific rules (React, Spring, Django)
+- Cross-language validation
+
+### Sprint 5 (2 semanas): Optimization + Testing
+- Performance optimization
+- False positive reduction
+- Comprehensive test suite
+- Documentation
+
+---
+
+## 📚 Referencias Técnicas
+
+- [OWASP Top 10 2021](https://owasp.org/Top10/)
+- [CWE Top 25 2024](https://cwe.mitre.org/top25/archive/2024/2024_cwe_top25.html)
+- [NIST Cybersecurity Framework](https://www.nist.gov/cyberframework)
+- [Taint Analysis Research](https://www.usenix.org/legacy/event/sec08/tech/full_papers/dalton.pdf)
+- [Cross-Site Scripting Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html)
+
+---
+
+**Estado:** ✅ Documentación Completa - Ready for Development
+**Próximos Pasos:** Crear EPIC-03-SOFTWARE_COMPOSITION_ANALYSIS.md

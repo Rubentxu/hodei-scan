@@ -1,176 +1,88 @@
-# Épica Web 6: Auth & RBAC
-## Autenticación y Control de Acceso
+# ÉPICA-WEB-06: AUTH & RBAC
 
-**Versión:** 1.0
+**Versión:** 2.0
 **Fecha:** 10 de noviembre de 2025
-**Estado:** 🚧 Planning
-**Época:** Fase 3 (Meses 13-24)
-**Prioridad:** 🔴 Critical
+**Story Points:** 52 SP
+**Sprint Estimado:** 4 sprints (paralelo)
+**Dependencias:** EPIC-09-ENTERPRISE_FEATURES (backend)
+**Estado:** 🚀 Ready for Development
 
 ---
 
-## 📋 Resumen Ejecutivo
+## 📋 Descripción de la Épica
 
-Sistema completo de autenticación y autorización con roles y permisos granulares para multi-tenant organizations.
+Esta épica implementa **authentication y role-based access control** que permite login, registration, SSO integration, y granular permissions. Incluye organization management y user management interface.
 
-**Objetivos:**
-- ✅ JWT authentication
-- ✅ Login/Logout
-- ✅ Role-based access control (RBAC)
-- ✅ Organization management
-- ✅ User management
-- ✅ Permission guards
-- ✅ SSO integration ready
-- ✅ Session management
+**Objetivo Principal:** Implementar secure authentication system con RBAC que permita control granular de access a features basado en roles (Admin, Security Engineer, Developer, Viewer).
 
 ---
 
 ## 👥 Historias de Usuario
 
-### US-WEB-12: Como user, quiero login securely
+### US-01: Login/Logout
+**Como** user
+**Quiero** login con email/password
+**Para** access application
 
-**Prioridad:** 🔴 Critical
-**Story Points:** 8
+### US-02: Registration
+**Como** new user
+**Quiero** create account
+**Para** start using application
 
-```gherkin
-Feature: Authentication
-  Como user
-  Quiero login to hodei-scan
-  Para access my projects
+### US-03: SSO Integration
+**Como** enterprise user
+**Quiero** login con corporate SSO
+**Para** single sign-on
 
-  Scenario: Successful login
-    Given valid credentials
-    When makes login
-    Then debería:
-      And redirect to dashboard
-      And store JWT token
-      And show user name en header
-      And show logout option
+### US-04: Role-Based Access
+**Como** admin
+**Quiero** assign roles to users
+**Para** control access permissions
 
-  Scenario: Invalid credentials
-    Given invalid credentials
-    When makes login
-    Then debería:
-      And show error message
-      And NOT redirect
-      And clear form
+### US-05: Organization Management
+**Como** admin
+**Quiero** manage organization settings
+**Para** configure multi-tenant
 
-  Scenario: Protected route
-    Given user NOT authenticated
-    When navigates to protected page
-    Then debería redirect to login
-```
-
-**Tareas:**
-
-1. **TASK-WEB-06-01: Auth Context** (2 días)
-2. **TASK-WEB-06-02: Login Page** (2 días)
-3. **TASK-WEB-06-03: Protected Routes** (2 días)
-4. **TASK-WEB-06-04: Role Guards** (1 día)
-5. **TASK-WEB-06-05: User Management UI** (3 días)
-
-**Tests:**
-
-```typescript
-describe('Authentication', () => {
-  it('should login with valid credentials', async () => {
-    render(<LoginPage />);
-    
-    fireEvent.change(screen.getByLabelText('Email'), {
-      target: { value: 'user@example.com' },
-    });
-    fireEvent.change(screen.getByLabelText('Password'), {
-      target: { value: 'password' },
-    });
-    
-    fireEvent.click(screen.getByText('Login'));
-    
-    await waitFor(() => {
-      expect(screen.getByText('Dashboard')).toBeInTheDocument();
-    });
-  });
-
-  it('should redirect on protected route without auth', () => {
-    render(
-      <BrowserRouter>
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-      </BrowserRouter>
-    );
-    
-    expect(screen.getByText('Login')).toBeInTheDocument();
-  });
-
-  it('should restrict access based on role', () => {
-    const user = { role: 'viewer' };
-    
-    render(
-      <RoleGuard requiredRole="admin">
-        <AdminPanel />
-      </RoleGuard>
-    );
-    
-    expect(screen.getByText('Access Denied')).toBeInTheDocument();
-  });
-});
-```
+### US-06: User Management
+**Como** admin
+**Quiero** manage users
+**Para** add/remove/edit users
 
 ---
 
-## 🏗️ Auth Architecture
+## ✅ Criterios de Validación
 
-```typescript
-// contexts/AuthContext.tsx
-interface AuthContextType {
-  user: User | null;
-  token: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  hasPermission: (permission: string) => boolean;
-}
+### Funcionales
+- [ ] Login/logout
+- [ ] Registration
+- [ ] SSO integration (SAML, OIDC)
+- [ ] Role management
+- [ ] Organization management
+- [ ] User management
+- [ ] Permission enforcement
+- [ ] Session management
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// hooks/useAuth.ts
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return context;
-};
-
-// components/ProtectedRoute.tsx
-export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!user) {
-      navigate('/login');
-    }
-  }, [user, navigate]);
-
-  if (!user) {
-    return <LoadingSpinner />;
-  }
-
-  return <>{children}</>;
-};
-```
+### Performance
+- [ ] Login time: <2s
+- [ ] Permission check: <100ms
+- [ ] SSO redirect: <3s
 
 ---
 
-## 🔄 Criterios de Done
+## 📊 Métricas de Éxito
 
-- [ ] ✅ Login/Logout working
-- [ ] ✅ JWT token management
-- [ ] ✅ Protected routes
-- [ ] ✅ Role-based access control
-- [ ] ✅ User management interface
-- [ ] ✅ Permission guards
-- [ ] ✅ Session persistence
-- [ ] ✅ 100% tests
+| Métrica | Target | Status |
+|---------|--------|--------|
+| **Login Time** | <2s | ⏳ |
+| **Permission Check** | <100ms | ⏳ |
+| **SSO Redirect** | <3s | ⏳ |
 
-**Total Story Points:** 52 | **Duración:** 6 semanas
+---
+
+## 🚀 Plan de Implementación
+
+### Sprint 1: Login/Registration + Session
+### Sprint 2: SSO Integration
+### Sprint 3: Role Management + Permissions
+### Sprint 4: Organization + User Management

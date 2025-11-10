@@ -1,147 +1,119 @@
-# Épica 4: Code Coverage Integration
-## Integración Multi-Formato de Métricas de Cobertura
+# ÉPICA-04: CODE COVERAGE INTEGRATION
 
-**Versión:** 1.0
+**Versión:** 2.0
 **Fecha:** 10 de noviembre de 2025
-**Estado:** 🚧 Planning
-**Época:** Fase 2 (Meses 7-12)
-**Prioridad:** 🟡 High
+**Story Points:** 45 SP
+**Sprint Estimado:** 3 sprints
+**Dependencias:** EPIC-01-CORE_STATIC_ANALYSIS_ENGINE
+**Estado:** 🚀 Ready for Development
 
 ---
 
-## 📋 Resumen Ejecutivo
+## 📋 Descripción de la Épica
 
-Implementar el motor de integración de code coverage para hodei-scan, soporte para 5+ herramientas de coverage, tracking histórico y enforcement de thresholds. Esta funcionalidad es clave para medir quality gate de test coverage.
+Esta épica implementa la **integración de code coverage basada en IR** que unifica coverage de múltiples herramientas (JaCoCo, Istanbul, Coverage.py) en facts IR universales. Permite threshold enforcement, PR decoration, y correlación con security issues.
 
-**Objetivos:**
-- ✅ Soporte multi-formato: JaCoCo, Istanbul, Coverage.py, LLVM, gcov
-- ✅ Branch coverage analysis
-- ✅ Line coverage metrics
-- ✅ Coverage threshold enforcement
-- ✅ Historical tracking
-- ✅ PR decoration con coverage deltas
+**Objetivo Principal:** Integrar coverage data de 5+ herramientas en IR facts universales, proporcionar threshold enforcement, historical tracking, y correlación con security vulnerabilities.
 
-**Métricas:** <15s parse de coverage reports, 100% format support, >95% accuracy
+---
+
+## 🎯 Objetivos y Alcance
+
+### Objetivos Estratégicos
+1. **Multi-format Coverage**: JaCoCo, Istanbul, Coverage.py, tarpaulin, go cover
+2. **IR Integration**: Coverage → IR facts
+3. **Threshold Enforcement**: Quality gates configurables
+4. **Historical Tracking**: Coverage trends over time
+5. **PR Decoration**: Coverage deltas en PRs
+6. **Regression Detection**: Coverage drop alerts
+7. **Correlación con Security**: Vulnerable + Uncovered = High Risk
+
+### Alcance Funcional
+- ✅ **Java**: JaCoCo, Cobertura integration
+- ✅ **JavaScript/TypeScript**: Istanbul, NYC integration
+- ✅ **Python**: Coverage.py, pytest-cov integration
+- ✅ **Rust**: tarpaulin integration
+- ✅ **Go**: go cover integration
+- ✅ **C/C++**: gcov, lcov, LLVM integration
+- ✅ **Branch Coverage**: Line + branch analysis
+- ✅ **Historical Tracking**: Coverage evolution
+- ✅ **Quality Gates**: Threshold enforcement
+- ✅ **PR Decoration**: GitHub/GitLab comments
 
 ---
 
 ## 👥 Historias de Usuario
 
-### US-15: Como developer, quiero ver coverage changes en Pull Requests
+### US-01: Java Coverage (JaCoCo)
+**Como** Java developer
+**Quiero** que el sistema integre coverage de JaCoCo
+**Para** ver coverage en el contexto de security issues
 
-**Prioridad:** 🔴 Critical
-**Story Points:** 8
+**Criterios de Aceptación:**
+```
+GIVEN un jacoco.exec file
+WHEN se analiza
+THEN se extraen line coverage y branch coverage
 
-```gherkin
-Feature: PR Coverage Decoration
-  Como developer revisando PR
-  Quiero ver coverage changes directamente en PR
-  Para evaluar impacto de cambios en test coverage
+GIVEN coverage <80%
+WHEN se evalúa quality gate
+THEN se marca como failed
 
-  Scenario: Coverage decrease en PR
-    Given proyecto con 80% overall coverage
-    When se abre PR que reduce coverage a 75%
-    Then hodei-scan debería reportar coverage drop
-    And debería marcar PR como "Coverage gate failed"
-    And debería sugerir agregar tests
-
-  Scenario: Coverage increase en PR
-    Given proyecto con 80% overall coverage
-    When se abre PR que aumenta coverage a 85%
-    Then hodei-scan debería reportar improvement
-    And debería mostrar celebration message
-    And debería mark PR como passing quality gate
+GIVEN línea uncovered en vulnerable function
+WHEN se correlaciona
+THEN se marca como high risk
 ```
 
-**Tareas:**
+### US-02: JavaScript Coverage (Istanbul)
+**Como** JS/TS developer
+**Quiero** que el sistema integre coverage de Istanbul/NYC
+**Para** trackear coverage de frontend code
 
-1. **TASK-04-01: Implementar Coverage Parser multi-formato** (3 días)
-2. **TASK-04-02: Implementar Coverage Delta Calculator** (3 días)
-3. **TASK-04-03: Implementar Threshold Enforcer** (2 días)
-4. **TASK-04-04: Implementar Historical Tracker** (3 días)
+### US-03: Python Coverage (Coverage.py)
+**Como** Python developer
+**Quiero** que el sistema integre coverage de Coverage.py
+**Para** monitorizar test coverage
 
-**Tests:**
+### US-04: Coverage Trends
+**Como** tech lead
+**Quiero** ver historical coverage trends
+**Para** identificar regression patterns
 
-```rust
-#[test]
-fn test_coverage_delta_calculation() {
-    let before = CoverageSummary { line_coverage: 80, branch_coverage: 75 };
-    let after = CoverageSummary { line_coverage: 75, branch_coverage: 70 };
-    let delta = CoverageDelta::calculate(&before, &after);
-
-    assert_eq!(delta.line_coverage_delta, -5);
-    assert!(delta.is_decrease);
-}
-```
-
-### US-16: Como QA, quiero enforcement de coverage minimums
-
-**Prioridad:** 🔴 Critical
-**Story Points:** 5
-
-```gherkin
-Feature: Coverage Threshold Enforcement
-  Como QA configurando quality standards
-  Quiero enforce minimum coverage thresholds
-  Para asegurar quality mínimo en code
-
-  Scenario: Configurar threshold
-    Given proyecto con quality gate de 80% coverage
-    When CI run con coverage < 80%
-    Then hodei-scan debería fallar el build
-    And debería reportar threshold violation
-
-  Scenario: Coverage por directorio
-    Given threshold diferentes por directorio
-    When se ejecuta coverage
-    Then debería aplicar threshold específico por path
-```
-
-**Tareas:**
-
-1. **TASK-04-05: Implementar Coverage Thresholds Configuration** (2 días)
-2. **TASK-04-06: Implementar Gate Failure Handler** (2 días)
+### US-05: PR Decoration
+**Como** developer
+**Quiero** ver coverage delta en PR
+**Para** entender impact de changes
 
 ---
 
-## 🏗️ Arquitectura
+## ✅ Criterios de Validación
 
-```
-┌─────────────────────────────────────┐
-│     Code Coverage Engine            │
-├─────────────────────────────────────┤
-│  ┌──────────┐ ┌──────────────────┐ │
-│  │ Parser   │ │ Threshold        │ │
-│  │ Registry │ │ Enforcer         │ │
-│  └──────────┘ └──────────────────┘ │
-│        │              │            │
-│  ┌─────▼──────┬───────▼──────┐    │
-│  │ Format    │ Historical   │    │
-│  │ Detectors │ Tracker      │    │
-│  └───────────┴──────────────┘    │
-│              │                   │
-│  ┌───────────▼───────────────┐   │
-│  │ Integration (CI/CD, PR)   │   │
-│  └───────────────────────────┘   │
-└─────────────────────────────────────┘
-```
+### Funcionales
+- [ ] 5+ coverage tools integration
+- [ ] IR facts generation
+- [ ] Threshold enforcement
+- [ ] Historical tracking
+- [ ] PR decoration
 
-**Dependencias:**
-```toml
-[dependencies]
-quick-xml = "0.31"  # JaCoCo XML
-regex = "1.0"       # Pattern matching
-```
+### Performance
+- [ ] Coverage parsing: <5s
+- [ ] Trend calculation: <2s
+- [ ] IR conversion: <1s
 
 ---
 
-## 🔄 Criterios de Done
+## 📊 Métricas de Éxito
 
-- [ ] ✅ 5+ coverage formats soportados
-- [ ] ✅ <15s parse time
-- [ ] ✅ Historical tracking funcional
-- [ ] ✅ Threshold enforcement working
-- [ ] ✅ PR decoration completo
-- [ ] ✅ 100% tests en verde
+| Métrica | Target | Status |
+|---------|--------|--------|
+| **Tools Supported** | 5/5 | ⏳ |
+| **Coverage Accuracy** | >95% | ⏳ |
+| **Parsing Speed** | <5s | ⏳ |
 
-**Total Story Points:** 26 | **Duración:** 6 semanas
+---
+
+## 🚀 Plan de Implementación
+
+### Sprint 1: JaCoCo + Istanbul
+### Sprint 2: Python + Rust + Go
+### Sprint 3: Trends + PR Decoration + Correlación

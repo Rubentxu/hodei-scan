@@ -1,1029 +1,557 @@
-# EPIC-WEB-01: Frontend Core & Dashboard
-## React 18 + TypeScript Dashboard with Real-Time Analysis Results
+# ÉPICA-WEB-01: FRONTEND CORE & DASHBOARD
 
-**Epic ID:** EPIC-WEB-01
-**Version:** 2.0
-**Created:** 2025-11-10
-**Story Points:** 45
-**Priority:** P0 (Critical)
-**Status:** 🚧 In Progress
-
----
-
-## 📋 Epic Overview
-
-### Objective
-Build the foundational React 18 frontend application with real-time dashboard, code viewer, and issue management. Implement a high-performance, accessible, and user-friendly interface for hodei-scan analysis results with <500KB bundle size target.
-
-### Key Deliverables
-1. **React 18 + TypeScript Core** - Modern React with hooks, suspense, and concurrent features
-2. **Dashboard UI** - Real-time metrics, trends, and quality scores
-3. **Code Viewer** - Monaco Editor with syntax highlighting and inline findings
-4. **Issue Management** - Virtualized table with filtering, sorting, and bulk actions
-5. **State Management** - Zustand for client state, TanStack Query for server state
-6. **Real-Time Updates** - WebSocket integration for live analysis updates
-7. **UI Components** - shadcn/ui component library with Tailwind CSS
-8. **Performance** - Code splitting, lazy loading, virtualized rendering
-
-### Success Criteria
-- [ ] Bundle size: <500KB (gzipped)
-- [ ] First Contentful Paint: <1.5s
-- [ ] Time to Interactive: <3s
-- [ ] Lighthouse Score: >90 (Performance, Accessibility, Best Practices, SEO)
-- [ ] Real-time updates: <100ms latency
-- [ ] Issue table: Render 10,000+ rows smoothly
-- [ ] Code viewer: Support 7 languages with syntax highlighting
-- [ ] Responsive: Mobile, tablet, desktop support
-- [ ] Accessibility: WCAG 2.1 AA compliant
+**Versión:** 2.0
+**Fecha:** 10 de noviembre de 2025
+**Story Points:** 45 SP
+**Sprint Estimado:** 4 sprints (paralelo con backend)
+**Dependencias:** EPIC-01-CORE_STATIC_ANALYSIS_ENGINE (backend API)
+**Estado:** 🚀 Ready for Development
 
 ---
 
-## 🎯 User Stories & BDD Specifications
+## 📋 Descripción de la Épica
 
-### US-01: As a Developer, I want to view analysis results on a real-time dashboard
+Esta épica implementa el **core del frontend** usando React 18 + TypeScript + Vite con un dashboard principal que muestra métricas en tiempo real, quality score, trends, y cross-domain correlations. Establece la foundation para toda la aplicación web.
 
-**Priority:** P0
-**Story Points:** 13
-**Component:** Dashboard UI
+**Objetivo Principal:** Crear la aplicación frontend base con dashboard en tiempo real, routing, state management, y integrations con backend IR para mostrar métricas, trends, y quality scores de manera intuitiva y performante.
 
-#### BDD Specification (Gherkin)
+---
 
-```gherkin
-Feature: Real-Time Analysis Dashboard
+## 🎯 Objetivos y Alcance
 
-  Scenario: View quality score overview
-    Given I have completed analysis results
-    When I view the dashboard
-    Then I should see:
-      | metric              | display format        | update frequency |
-      | quality score       | 0-100 gauge          | real-time       |
-      | security score      | 0-100 gauge          | real-time       |
-      | coverage percentage | progress bar + %     | real-time       |
-      | technical debt      | hours + $ estimate   | real-time       |
-      | issues count        | severity breakdown   | real-time       |
+### Objetivos Estratégicos
+1. **React 18 + TypeScript** - Modern stack con mejor performance
+2. **Real-time Dashboard** - Métricas en tiempo real via WebSocket
+3. **Quality Score Visualization** - Executive-level metrics
+4. **Cross-domain Correlation** - Security + Coverage + SCA combined
+5. **Responsive Design** - Desktop + tablet support
+6. **Performance <3s Load** - Bundle <500KB
+7. **Dark/Light Theme** - User preference
 
-  Scenario: View trends over time
-    Given I have historical analysis data
-    When I view the trends section
-    Then I should see:
-      | chart type | metric              | time range options      |
-      | line       | quality score       | 7d, 30d, 90d, 1y       |
-      | bar        | issues by severity  | 7d, 30d, 90d, 1y       |
-      | area       | coverage trend      | 7d, 30d, 90d, 1y       |
-      | line       | security score      | 7d, 30d, 90d, 1y       |
+### Alcance Funcional
+- ✅ **Dashboard Principal**: Métricas en tiempo real, quality score, trends
+- ✅ **React 18 + TypeScript**: Modern stack con Vite
+- ✅ **State Management**: Zustand + TanStack Query
+- ✅ **UI Components**: shadcn/ui + Tailwind CSS
+- ✅ **Charts**: Recharts para visualizations
+- ✅ **Routing**: React Router con lazy loading
+- ✅ **Real-time Updates**: WebSocket integration
+- ✅ **Theme System**: Dark/Light mode
+- ✅ **Performance**: Bundle splitting + code optimization
 
-  Scenario: View project health
-    Given I have multiple projects
-    When I view the project health grid
-    Then each project should display:
-      | field          | format                  | color coding      |
-      | name           | project name            | -                 |
-      | status         | badge (healthy/warning) | green/yellow/red |
-      | last scan      | timestamp               | -                 |
-      | issues         | count by severity       | color-coded       |
-      | coverage       | percentage              | progress bar      |
+### Fuera de Alcance
+- ❌ Issue Management detallada (EPIC-WEB-02)
+- ❌ Auth/RBAC (EPIC-WEB-06)
+- ❌ Advanced Settings (EPIC-WEB-04)
+- ❌ Reports/Export (EPIC-WEB-05)
 
-  Scenario: Real-time updates via WebSocket
-    Given I have an active analysis running
-    When the analysis produces new findings
-    Then the dashboard should:
-      | action           | behavior                          | latency target |
-      | update metrics   | refresh scores and counters       | <100ms         |
-      | new findings     | show toast notification           | <500ms         |
-      | progress         | update progress bar               | real-time      |
-      | trending        | animate chart updates             | <1s            |
+---
 
-  Scenario: View quality gate status
-    Given I have quality gates configured
-    When I view the dashboard
-    Then I should see:
-      | gate name        | status         | value       | threshold  |
-      | coverage > 80%   | passed/failed  | 85%         | 80%        |
-      | no critical      | passed/failed  | 0 issues    | 0          |
-      | security score > 90 | passed/failed| 92         | 90         |
-      | debt < 10 hours  | passed/failed  | 8 hours     | 10 hours   |
+## 👥 Historias de Usuario
 
-  Scenario: Quick actions panel
-    Given I am on the dashboard
-    When I view the quick actions
-    Then I should have access to:
-      | action             | icon  | result                          |
-      | New Scan           | play  | trigger new analysis            |
-      | View All Issues    | list  | navigate to issues page         |
-      | Export Report      | download| download PDF report           |
-      | Settings           | gear  | open settings modal             |
+### US-01: Dashboard Overview
+**Como** engineering manager
+**Quiero** ver overview del proyecto en dashboard
+**Para** entender health del código de un vistazo
+
+**Criterios de Aceptación:**
+```
+GIVEN usuario accede al dashboard
+WHEN carga la página
+THEN ve: quality score, security issues, coverage %, technical debt
+
+GIVEN nuevos datos disponibles
+WHEN se actualizan via WebSocket
+THEN dashboard se actualiza en <2s
+
+GIVEN proyecto con 0 issues
+WHEN ve dashboard
+THEN ve green status con "Excellent" message
+
+GIVEN proyecto con issues críticos
+WHEN carga dashboard
+THEN ve red status con critical issues count
 ```
 
-#### Implementation Tasks
+**Tareas Técnicas:**
+- [ ] Configurar React 18 + Vite + TypeScript
+- [ ] Instalar y configurar Tailwind CSS + shadcn/ui
+- [ ] Implementar Zustand para state management
+- [ ] Configurar React Router con lazy routes
+- [ ] Crear dashboard layout principal
+- [ ] Implementar quality score component
+- [ ] Integrar Recharts para charts
+- [ ] Configurar WebSocket client
+- [ ] Escribir tests unitarios y E2E
 
-**Task 1.1: Setup React 18 + TypeScript Project**
-- Initialize Vite project with React 18 template
-- Configure TypeScript strict mode
-- Setup Tailwind CSS with shadcn/ui
-- Configure path aliases and module resolution
-- Setup ESLint + Prettier + Husky
-
-**Task 1.2: Implement Dashboard Layout**
-- Create responsive grid layout
-- Build sidebar navigation
-- Implement header with user menu
-- Setup dark/light theme switching
-- Add loading states and skeletons
-
-**Task 1.3: Build Metrics Cards**
-- Create reusable MetricCard component
-- Implement animated gauge charts
-- Add trend indicators (up/down arrows)
-- Setup real-time data updates
-- Add accessibility labels
-
-**Task 1.4: Implement Charts**
-- Setup Recharts library
-- Create LineChart for trends
-- Create BarChart for issue breakdown
-- Create AreaChart for coverage
-- Add interactive tooltips
-
-**Task 1.5: WebSocket Integration**
-- Setup WebSocket client
-- Handle connection states
-- Implement message parsing
-- Update state on new data
-- Add reconnection logic
-
-#### Test Suite (Unit Tests - 100% Coverage)
-
+**TDD Tests:**
 ```typescript
-// src/components/Dashboard/__tests__/Dashboard.test.tsx
-
-import { render, screen, waitFor } from '@testing-library/react';
-import { Dashboard } from '../Dashboard';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
+// Dashboard.test.tsx
 describe('Dashboard', () => {
-  it('should display quality score gauge', async () => {
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { staleTime: 0 } },
-    });
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <Dashboard />
-      </QueryClientProvider>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('Quality Score')).toBeInTheDocument();
-    });
-
-    const gauge = screen.getByRole('meter');
-    expect(gauge).toHaveAttribute('aria-valuenow', '85');
+  it('should display quality score', async () => {
+    // Given: Project con quality score 85
+    // When: Dashboard renders
+    // Then: Muestra score 85 con color
   });
 
-  it('should display security score', async () => {
-    const queryClient = new QueryClient();
-    
-    render(
-      <QueryClientProvider client={queryClient}>
-        <Dashboard />
-      </QueryClientProvider>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('Security Score')).toBeInTheDocument();
-    });
-
-    const score = screen.getByText('92');
-    expect(score).toBeInTheDocument();
+  it('should update in real-time', async () => {
+    // Given: Dashboard con quality score 80
+    // When: WebSocket envía update a 90
+    // Then: UI se actualiza en <2s
   });
 
-  it('should show project health grid', async () => {
-    const queryClient = new QueryClient();
-    
-    render(
-      <QueryClientProvider client={queryClient}>
-        <Dashboard />
-      </QueryClientProvider>
-    );
-
-    await waitFor(() => {
-      const projectCards = screen.getAllByTestId('project-card');
-      expect(projectCards.length).toBeGreaterThan(0);
-    });
+  it('should show critical status for high issues', async () => {
+    // Given: 10 critical issues
+    // When: Dashboard renders
+    // Then: Status rojo con critical badge
   });
 });
 ```
 
 ---
 
-### US-02: As a Security Engineer, I want to view code with security findings inline
+### US-02: Real-time Metrics
+**Como** developer
+**Quiero** ver metrics actualizándose en tiempo real
+**Para** trackear changes immediately después de commit
 
-**Priority:** P0
-**Story Points:** 13
-**Component:** Code Viewer
+**Criterios de Aceptación:**
+```
+GIVEN análisis corriendo
+WHEN se completan results
+THEN métricas se actualizan automáticamente en dashboard
 
-#### BDD Scenarios
+GIVEN WebSocket disconnected
+WHEN se pierde conexión
+THEN muestra "Reconnecting..." indicator
 
-```gherkin
-Feature: Code Viewer with Inline Findings
+GIVEN nueva vulnerability detectada
+WHEN se envía via WebSocket
+THEN aparece en dashboard con notification
 
-  Scenario: View JavaScript code with syntax highlighting
-    Given I have a JavaScript file
-    When I open it in the code viewer
-    Then the viewer should:
-      | feature           | requirement                          |
-      | syntax highlight  | keywords, strings, functions colored |
-      | line numbers      | displayed on left                    |
-      | theme             | dark/light mode support              |
-      | font size         | adjustable (12px - 20px)             |
-      | wrapping          | soft wrap toggle                     |
-
-  Scenario: Display security findings inline
-    Given I have a file with security issues
-    When the code viewer loads
-    Then it should show:
-      | finding type  | display method        | color  | action             |
-      | critical      | red underline         | red    | click for details  |
-      | high          | orange underline      | orange | click for details  |
-      | medium        | yellow underline      | yellow | click for details  |
-      | low           | blue underline        | blue   | click for details  |
-
-  Scenario: Show finding details on click
-    Given I have a finding underlined in code
-    When I click on the underlined code
-    Then it should display:
-      | field        | content                            |
-      | rule ID      | e.g., SEC-001-SQL-INJECTION        |
-      | severity     | e.g., Critical                      |
-      | message      | descriptive error message           |
-      | remediation  | fix suggestion                      |
-      | CWE          | CWE ID and name                     |
-      | line         | line number                         |
-
-  Scenario: Support multiple languages
-    Given I have different file types
-    When opened in the viewer
-    Then it should highlight:
-      | language    | file extensions           |
-      | JavaScript  | .js, .jsx, .mjs, .cjs     |
-      | TypeScript  | .ts, .tsx, .mts, .cts     |
-      | Python      | .py, .pyi                 |
-      | Go          | .go                       |
-      | Rust        | .rs                       |
-      | Java        | .java                     |
-      | C#          | .cs                       |
-
-  Scenario: Navigate between findings
-    Given I have a file with multiple findings
-    When viewing the file
-    Then I should be able to:
-      | action        | behavior                          |
-      | next finding  | jump to next underlined code      |
-      | prev finding  | jump to previous underlined code  |
-      | finding list  | show all findings in sidebar      |
-      | filter        | filter by severity                |
-
-  Scenario: Display taint flow visualization
-    Given I have a taint analysis result
-    When viewing the affected code
-    Then it should show:
-      | element       | display                  | color    |
-      | taint source  | green indicator          | green    |
-      | taint path    | connecting line          | yellow   |
-      | taint sink    | red indicator            | red      |
-      | sanitization  | blue indicator           | blue     |
-
-  Scenario: Show code context
-    Given I have a finding on line N
-    When viewing the code
-    Then it should display:
-      | lines shown  | behavior                          |
-      | above        | 3 lines before finding            |
-      | below        | 3 lines after finding             |
-      | expand       | click to show more context        |
-      | collapse     | click to hide extra lines         |
+GIVEN coverage update
+WHEN se recibe
+THEN chart se actualiza smooth animation
 ```
 
-#### Implementation Tasks
+**Tareas Técnicas:**
+- [ ] Implementar WebSocket connection manager
+- [ ] Crear real-time metrics store (Zustand)
+- [ ] Implementar reconnect logic con exponential backoff
+- [ ] Crear notification system para updates
+- [ ] Implementar chart animations con Recharts
+- [ ] Crear loading states para updates
+- [ ] Implementar error handling
+- [ ] Escribir tests de WebSocket integration
 
-**Task 2.1: Setup Monaco Editor**
-- Install @monaco-editor/react
-- Configure for 7 supported languages
-- Setup themes (dark, light, high contrast)
-- Configure editor options
-- Add custom theme if needed
-
-**Task 2.2: Implement Inline Findings**
-- Create FindingMarker component
-- Calculate finding positions
-- Render underlines/warnings
-- Add hover tooltips
-- Implement click handlers
-
-**Task 2.3: Build Finding Details Panel**
-- Create collapsible panel component
-- Display finding metadata
-- Add remediation suggestions
-- Include CWE links
-- Add copy to clipboard
-
-**Task 2.4: Add Navigation Features**
-- Implement finding navigation
-- Create findings sidebar
-- Add filter controls
-- Setup keyboard shortcuts
-- Add search functionality
-
-**Task 2.5: Taint Flow Visualization**
-- Draw connections between lines
-- Color-code taint stages
-- Add interactive hover
-- Implement zoom/pan
-- Add legend
-
-#### Test Suite
-
+**TDD Tests:**
 ```typescript
-// src/components/CodeViewer/__tests__/CodeViewer.test.tsx
-
-import { render, screen, fireEvent } from '@testing-library/react';
-import { CodeViewer } from '../CodeViewer';
-
-describe('CodeViewer', () => {
-  it('should display JavaScript with syntax highlighting', () => {
-    const code = 'function test() { return 42; }';
-    
-    render(
-      <CodeViewer
-        code={code}
-        language="javascript"
-        findings={[]}
-      />
-    );
-
-    const editor = screen.getByRole('textbox');
-    expect(editor).toBeInTheDocument();
+// WebSocketManager.test.ts
+describe('WebSocket Manager', () => {
+  it('should reconnect on disconnect', async () => {
+    // Given: WebSocket conectado
+    // When: Se disconnecta
+    // Then: Intenta reconectar con backoff
   });
 
-  it('should show inline finding for critical issue', () => {
-    const code = 'eval(userInput);';
-    const finding = {
-      id: '1',
-      rule: 'SEC-001',
-      severity: 'critical',
-      message: 'Use of eval() is dangerous',
-      line: 1,
-    };
-
-    render(
-      <CodeViewer
-        code={code}
-        language="javascript"
-        findings={[finding]}
-      />
-    );
-
-    const criticalFinding = screen.getByTestId('finding-critical');
-    expect(criticalFinding).toBeInTheDocument();
-  });
-
-  it('should show finding details on click', async () => {
-    const code = 'eval(userInput);';
-    const finding = {
-      id: '1',
-      rule: 'SEC-001',
-      severity: 'critical',
-      message: 'Use of eval() is dangerous',
-      line: 1,
-    };
-
-    render(
-      <CodeViewer
-        code={code}
-        language="javascript"
-        findings={[finding]}
-      />
-    );
-
-    fireEvent.click(screen.getByTestId('finding-critical'));
-
-    await screen.findByText('SEC-001');
-    expect(screen.getByText('Use of eval() is dangerous')).toBeInTheDocument();
+  it('should update metrics on message', async () => {
+    // Given: WebSocket con message de nueva metric
+    // When: Recibe message
+    // Then: Store se actualiza
   });
 });
 ```
 
 ---
 
-### US-03: As a Team Lead, I want to manage issues in a sortable, filterable table
+### US-03: Security Metrics Visualization
+**Como** security engineer
+**Quiero** ver security metrics visualizadas
+**Para** entender security posture rápidamente
 
-**Priority:** P0
-**Story Points:** 8
-**Component:** Issue Management
+**Criterios de Aceptación:**
+```
+GIVEN dashboard principal
+WHEN se carga
+THEN muestra: Critical (0), High (3), Medium (12), Low (8)
 
-#### BDD Scenarios
+GIVEN click en critical count
+WHEN se navega
+THEN va a detailed security view con filtros
 
-```gherkin
-Feature: Issue Management Table
+GIVEN 0 vulnerabilities
+WHEN se muestra dashboard
+THEN muestra green shield icon con "Secure" message
 
-  Scenario: Display all issues in virtualized table
-    Given I have 10,000+ issues
-    When I view the issues table
-    Then it should:
-      | feature         | behavior                          |
-      | virtual scroll  | render only visible rows          |
-      | smooth scrolling| maintain 60fps during scroll     |
-      | lazy loading    | load data as needed              |
-      | row height      | consistent for all items         |
-
-  Scenario: Filter issues by severity
-    Given I have issues of different severities
-    When I filter by severity
-    Then it should show:
-      | filter value | results shown                  |
-      | Critical     | only critical issues           |
-      | High         | only high severity issues      |
-      | All          | all issues                     |
-
-  Scenario: Filter issues by type
-    Given I have issues of different types
-    When I filter by type
-    Then it should support:
-      | type filter      | shows                               |
-      | Security         | all security findings              |
-      | Quality          | all code quality issues            |
-      | Coverage         | all coverage issues                |
-      | Duplicate        | all duplicate code issues         |
-
-  Scenario: Sort by multiple columns
-    Given I have a table with issues
-    When I click column headers
-    Then it should sort by:
-      | column       | sort behavior                    |
-      | severity     | Critical → High → Medium → Low  |
-      | file         | alphabetical                     |
-      | line         | numerical                        |
-      | rule         | alphabetical                     |
-      | status       | Open → WontFix → Fixed           |
-
-  Scenario: Bulk actions
-    Given I have selected multiple issues
-    When I perform bulk action
-    Then I can:
-      | action          | result                            |
-      | mark as fixed   | update status to Fixed            |
-      | mark wontfix    | update status to WontFix          |
-      | assign to me    | set assignee to current user      |
-      | export          | export selected to CSV/JSON       |
-
-  Scenario: Search functionality
-    Given I have a large issue list
-    When I search
-    Then it should match:
-      | search field | matches                              |
-      | file name    | exact match or partial               |
-      | rule ID      | exact match                          |
-      | message      | fuzzy match                          |
-      | CWE          | exact match                          |
+GIVEN nueva vulnerability crítica
+WHEN aparece
+THEN muestra red alert con sound notification (optional)
 ```
 
-#### Implementation Tasks
+**Tareas Técnicas:**
+- [ ] Crear security metrics component
+- [ ] Implementar severity badges (Critical, High, Medium, Low)
+- [ ] Crear shield icon con estado colors
+- [ ] Implementar drill-down navigation
+- [ ] Crear alert system para critical issues
+- [ ] Integrar con security API endpoints
+- [ ] Implementar sound notifications (opt-in)
+- [ ] Escribir tests de security visualization
 
-**Task 3.1: Setup TanStack Table**
-- Install @tanstack/react-table
-- Configure columns
-- Setup sorting
-- Configure filtering
-- Add selection
-
-**Task 3.2: Implement Virtual Scrolling**
-- Install react-window
-- Setup row virtualization
-- Implement row height calculation
-- Add overscan for smooth scrolling
-- Handle dynamic row heights
-
-**Task 3.3: Build Filter UI**
-- Create filter components
-- Add severity filter dropdown
-- Add type filter dropdown
-- Add status filter
-- Add date range filter
-
-**Task 3.4: Add Search**
-- Setup Fuse.js for fuzzy search
-- Implement search input
-- Add search highlighting
-- Setup search index
-- Add debounced search
-
-**Task 3.5: Bulk Actions**
-- Create selection state
-- Implement select all
-- Add bulk action toolbar
-- Implement action handlers
-- Add confirmation modals
-
-#### Test Suite
-
+**TDD Tests:**
 ```typescript
-// src/components/IssueTable/__tests__/IssueTable.test.tsx
-
-import { render, screen, fireEvent } from '@testing-library/react';
-import { IssueTable } from '../IssueTable';
-
-describe('IssueTable', () => {
-  it('should render 10,000 issues with virtualization', () => {
-    const issues = Array.from({ length: 10000 }, (_, i) => ({
-      id: i.toString(),
-      rule: `RULE-${i}`,
-      severity: 'medium',
-      file: `file${i}.js`,
-      line: i,
-    }));
-
-    render(<IssueTable issues={issues} />);
-
-    const table = screen.getByRole('table');
-    expect(table).toBeInTheDocument();
-    // Only visible rows should be rendered (performance check)
-    const rows = screen.getAllByRole('row');
-    expect(rows.length).toBeLessThan(100); // Only viewport rendered
+// SecurityMetrics.test.tsx
+describe('Security Metrics', () => {
+  it('should display severity breakdown', () => {
+    // Given: 3 critical, 5 high, 12 medium
+    // When: Render component
+    // Then: Shows breakdown correctly
   });
 
-  it('should filter by severity', () => {
-    const issues = [
-      { id: '1', severity: 'critical' },
-      { id: '2', severity: 'high' },
-      { id: '3', severity: 'medium' },
-    ];
-
-    render(<IssueTable issues={issues} />);
-
-    fireEvent.change(screen.getByLabelText('Severity'), {
-      target: { value: 'critical' },
-    });
-
-    const rows = screen.getAllByRole('row');
-    expect(rows).toHaveLength(2); // header + 1 data row
+  it('should navigate on click', () => {
+    // Given: Security metrics component
+    // When: Click en critical count
+    // Then: Navigate to security details
   });
 });
 ```
 
 ---
 
-### US-04: As a Developer, I want responsive design that works on mobile and desktop
+### US-04: Coverage Trends Chart
+**Como** tech lead
+**Quiero** ver coverage trends over time
+**Para** identify regression patterns
 
-**Priority:** P0
-**Story Points:** 6
-**Component:** Responsive Layout
+**Criterios de Aceptación:**
+```
+GIVEN dashboard
+WHEN se carga
+THEN muestra line chart con coverage % over last 30 days
 
-#### BDD Scenarios
+GIVEN coverage drops >5%
+WHEN se detecta
+THEN muestra red indicator en chart
 
-```gherkin
-Feature: Responsive Design
+GIVEN hover sobre data point
+WHEN se muestra tooltip
+THEN muestra exact % y date
 
-  Scenario: Mobile view (320px - 768px)
-    Given I am on a mobile device
-    When I view the dashboard
-    Then it should:
-      | element        | behavior on mobile               |
-      | sidebar        | hidden, accessible via drawer    |
-      | navigation     | bottom tab bar                   |
-      | charts         | stack vertically                 |
-      | metrics cards  | full width, stacked              |
-      | table          | horizontal scroll, simplified    |
-      | code viewer    | full width, font auto-size       |
-
-  Scenario: Tablet view (768px - 1024px)
-    Given I am on a tablet
-    When I view the dashboard
-    Then it should:
-      | element        | behavior on tablet               |
-      | sidebar        | collapsible                      |
-      | navigation     | side + bottom options            |
-      | charts         | 2-column grid                    |
-      | metrics cards  | 2-column grid                    |
-      | table          | show all columns                 |
-      | code viewer    | optimized width                  |
-
-  Scenario: Desktop view (1024px+)
-    Given I am on a desktop
-    When I view the dashboard
-    Then it should:
-      | element        | behavior on desktop              |
-      | sidebar        | always visible                   |
-      | navigation     | side navigation                  |
-      | charts         | 4-column grid                    |
-      | metrics cards  | 4-column grid                    |
-      | table          | all features visible             |
-      | code viewer    | 3-pane layout                    |
-
-  Scenario: Touch gestures
-    Given I am on a touch device
-    When I interact with the UI
-    Then it should support:
-      | gesture       | behavior                          |
-      | swipe         | navigate between views            |
-      | pinch-to-zoom | zoom in code viewer               |
-      | tap           | select items                      |
-      | long press    | show context menu                 |
-
-  Scenario: Keyboard navigation
-    Given I am using keyboard
-    When I navigate the interface
-    Then it should:
-      | key           | behavior                          |
-      | Tab           | focus next element                |
-      | Shift+Tab     | focus previous element            |
-      | Enter         | activate focused element          |
-      | Space         | toggle checkbox/dropdown          |
-      | Arrow keys    | navigate within components        |
+GIVEN coverage mejora
+WHEN se actualiza
+THEN muestra green indicator
 ```
 
-#### Implementation Tasks
+**Tareas Técnicas:**
+- [ ] Implementar coverage trends chart (Recharts LineChart)
+- [ ] Crear tooltip personalizado
+- [ ] Implementar regression detection
+- [ ] Crear indicators para drops/improvements
+- [ ] Implementar date range selection (7d, 30d, 90d, 1y)
+- [ ] Integrar con coverage API
+- [ ] Crear smooth animations
+- [ ] Escribir tests de chart
 
-**Task 4.1: Setup Tailwind Responsive**
-- Configure Tailwind breakpoints
-- Setup responsive utilities
-- Test on multiple screen sizes
-- Document responsive patterns
-- Setup visual regression tests
-
-**Task 4.2: Mobile Navigation**
-- Create drawer component
-- Implement bottom tab bar
-- Setup gesture handling
-- Add haptic feedback
-- Test on iOS/Android
-
-**Task 4.3: Responsive Tables**
-- Configure responsive table
-- Add horizontal scroll
-- Implement column hiding
-- Setup row details modal
-- Test with large datasets
-
-**Task 4.4: Mobile Code Viewer**
-- Setup mobile Monaco config
-- Add pinch-to-zoom
-- Implement font size controls
-- Add landscape mode
-- Test on various devices
-
-#### Test Suite
-
+**TDD Tests:**
 ```typescript
-// src/components/__tests__/Responsive.test.tsx
-
-import { render } from '@testing-library/react';
-import { Dashboard } from '../Dashboard';
-
-describe('Responsive Design', () => {
-  it('should show sidebar on desktop', () => {
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 1920,
-    });
-
-    render(<Dashboard />);
-
-    const sidebar = screen.getByTestId('sidebar');
-    expect(sidebar).toBeVisible();
+// CoverageChart.test.tsx
+describe('Coverage Chart', () => {
+  it('should display trend over time', () => {
+    // Given: 30 días de data
+    // When: Render chart
+    // Then: Line graph with points
   });
 
-  it('should hide sidebar on mobile', () => {
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 375,
-    });
-
-    render(<Dashboard />);
-
-    const sidebar = screen.getByTestId('sidebar');
-    expect(sidebar).not.toBeVisible();
+  it('should highlight drops', () => {
+    // Given: Coverage drop del 85% al 75%
+    // When: Render chart
+    // Then: Red indicator en drop point
   });
 });
 ```
 
 ---
 
-## 🏗️ Technical Implementation
+### US-05: Quality Gate Status
+**Como** engineering manager
+**Quiero** ver status de quality gates
+**Para** saber si proyecto pasa thresholds
 
-### Tech Stack
+**Criterios de Aceptación:**
+```
+GIVEN quality gate: 80% coverage
+WHEN coverage actual es 85%
+THEN muestra green checkmark "PASSED"
 
-```json
-{
-  "frontend": {
-    "framework": "React 18.3.1",
-    "language": "TypeScript 5.0+",
-    "bundler": "Vite 5.0+",
-    "styling": "Tailwind CSS 3.4+",
-    "components": "shadcn/ui + Radix UI",
-    "state": {
-      "client": "Zustand 4.0+",
-      "server": "TanStack Query 5.0+"
-    },
-    "code_editor": "Monaco Editor",
-    "charts": "Recharts 2.0+",
-    "virtual_scrolling": "react-window 1.0+",
-    "search": "Fuse.js 6.0+",
-    "forms": "React Hook Form 7.0+",
-    "notifications": "Sonner 1.0+",
-    "icons": "Lucide React",
-    "web_socket": "native WebSocket API"
-  }
-}
+GIVEN quality gate: <5 critical issues
+WHEN tiene 7 critical
+THEN muestra red X "FAILED" con details
+
+GIVEN gate con threshold configurable
+WHEN se configuran valores
+THEN se actualiza status inmediatamente
+
+GIVEN todos los gates pass
+WHEN se muestra
+THEN muestra "All Quality Gates PASSED" con celebration
 ```
 
-### Project Structure
+**Tareas Técnicas:**
+- [ ] Crear quality gates component
+- [ ] Implementar pass/fail indicators
+- [ ] Crear gate configuration modal
+- [ ] Implementar real-time status updates
+- [ ] Crear celebration animation (confetti)
+- [ ] Integrar con quality gates API
+- [ ] Implementar gate details drill-down
+- [ ] Escribir tests de quality gates
 
-```
-src/
-├── components/
-│   ├── ui/                    # shadcn/ui components
-│   ├── dashboard/             # Dashboard components
-│   │   ├── Dashboard.tsx
-│   │   ├── MetricsCard.tsx
-│   │   ├── TrendsChart.tsx
-│   │   └── ProjectHealth.tsx
-│   ├── code-viewer/           # Code viewer components
-│   │   ├── CodeViewer.tsx
-│   │   ├── FindingMarker.tsx
-│   │   └── TaintFlow.tsx
-│   ├── issue-table/           # Issue table components
-│   │   ├── IssueTable.tsx
-│   │   ├── IssueRow.tsx
-│   │   └── Filters.tsx
-│   └── layout/                # Layout components
-│       ├── Header.tsx
-│       ├── Sidebar.tsx
-│       └── Navigation.tsx
-├── stores/                    # Zustand stores
-│   ├── dashboardStore.ts
-│   ├── issueStore.ts
-│   └── themeStore.ts
-├── hooks/                     # Custom hooks
-│   ├── useWebSocket.ts
-│   ├── useMetrics.ts
-│   └── useIssues.ts
-├── services/                  # API services
-│   ├── api.ts
-│   ├── websocket.ts
-│   └── metrics.ts
-├── types/                     # TypeScript types
-│   ├── finding.ts
-│   ├── issue.ts
-│   └── metrics.ts
-├── utils/                     # Utilities
-│   ├── formatters.ts
-│   ├── validators.ts
-│   └── constants.ts
-├── App.tsx
-├── main.tsx
-└── index.css
-```
-
-### State Management Architecture
-
+**TDD Tests:**
 ```typescript
-// stores/dashboardStore.ts
+// QualityGates.test.tsx
+describe('Quality Gates', () => {
+  it('should show PASSED status', () => {
+    // Given: Coverage 85% vs threshold 80%
+    // When: Render gates
+    // Then: Green checkmark "PASSED"
+  });
 
-interface DashboardState {
-  metrics: Metrics;
-  projects: Project[];
-  filters: DashboardFilters;
-  theme: 'light' | 'dark';
-  setMetrics: (metrics: Metrics) => void;
-  updateProject: (id: string, updates: Partial<Project>) => void;
-  setTheme: (theme: 'light' | 'dark') => void;
-}
-
-export const useDashboardStore = create<DashboardState>((set) => ({
-  metrics: initialMetrics,
-  projects: [],
-  filters: {},
-  theme: 'light',
-  setMetrics: (metrics) => set({ metrics }),
-  updateProject: (id, updates) =>
-    set((state) => ({
-      projects: state.projects.map((p) =>
-        p.id === id ? { ...p, ...updates } : p
-      ),
-    })),
-  setTheme: (theme) => set({ theme }),
-}));
-```
-
-### WebSocket Integration
-
-```typescript
-// hooks/useWebSocket.ts
-
-export const useWebSocket = (url: string) => {
-  const [socket, setSocket] = useState<WebSocket | null>(null);
-  const [messages, setMessages] = useState<any[]>([]);
-  const [connected, setConnected] = useState(false);
-
-  useEffect(() => {
-    const ws = new WebSocket(url);
-
-    ws.onopen = () => setConnected(true);
-    ws.onclose = () => setConnected(false);
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      setMessages((prev) => [...prev, data]);
-    };
-
-    setSocket(ws);
-
-    return () => {
-      ws.close();
-    };
-  }, [url]);
-
-  const send = (data: any) => {
-    if (socket && connected) {
-      socket.send(JSON.stringify(data));
-    }
-  };
-
-  return { socket, connected, messages, send };
-};
-```
-
----
-
-## 📊 Performance Benchmarks
-
-### Target Metrics
-
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| **Bundle Size** | <500KB gzipped | Build output |
-| **First Contentful Paint** | <1.5s | Lighthouse |
-| **Largest Contentful Paint** | <2.5s | Lighthouse |
-| **Time to Interactive** | <3s | Lighthouse |
-| **Cumulative Layout Shift** | <0.1 | Lighthouse |
-| **First Input Delay** | <100ms | Lighthouse |
-| **Runtime Performance** | 60fps | Chrome DevTools |
-| **Memory Usage** | <100MB | Performance tab |
-| **Table Render** | 10,000+ rows | Custom benchmark |
-| **Code Viewer Load** | <500ms | Custom benchmark |
-
-### Performance Optimization
-
-```typescript
-// Code splitting
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const CodeViewer = lazy(() => import('./components/CodeViewer'));
-const IssueTable = lazy(() => import('./components/IssueTable'));
-
-// Memoization
-const MemoizedMetricsCard = memo(MetricsCard);
-const MemoizedTrendChart = memo(TrendChart);
-
-// Virtual scrolling
-const VirtualizedIssueTable = FixedSizeList({
-  height: 600,
-  itemCount: issues.length,
-  itemSize: 50,
-  itemData: issues,
+  it('should show FAILED status', () => {
+    // Given: 7 critical vs threshold 5
+    // When: Render gates
+    // Then: Red X "FAILED"
+  });
 });
-
-// Image optimization
-<img
-  src={lazyImage}
-  loading="lazy"
-  alt="chart"
-/>
-```
-
-### Bundle Analysis
-
-```bash
-# Analyze bundle size
-npm run build
-npx vite-bundle-analyzer dist
-
-# Check dependencies
-npm run depcheck
-npx vite-bundle-analyzer --analyze
 ```
 
 ---
 
-## 🧪 Test Strategy
+### US-06: Technical Debt Visualization
+**Como** engineering manager
+**Quiero** ver technical debt hours y trend
+**Para** planificar refactoring sprints
 
-### Test Types
+**Criterios de Aceptación:**
+```
+GIVEN dashboard
+WHEN se carga
+THEN muestra: 45 horas debt, trend +5h este mes
 
-| Type | Coverage Target | Tools |
-|------|----------------|-------|
-| **Unit** | 90% | Jest, React Testing Library |
-| **Component** | 100% | RTL, MSW |
-| **Integration** | 80% | Cypress, Playwright |
-| **E2E** | Critical paths | Playwright |
-| **Visual** | Major pages | Chromatic, Percy |
+GIVEN click en debt hours
+WHEN se navega
+THEN va a detailed debt breakdown por category
 
-### Test Commands
+GIVEN debt reduction
+WHEN se actualiza
+THEN muestra green arrow down con "-10h"
 
-```bash
-# Run all tests
-npm test
+GIVEN debt increase
+WHEN se actualiza
+THEN muestra red arrow up con "+15h"
+```
 
-# Run with coverage
-npm test -- --coverage
+**Tareas Técnicas:**
+- [ ] Crear technical debt component
+- [ ] Implementar debt hours display
+- [ ] Crear trend indicators
+- [ ] Implementar drill-down navigation
+- [ ] Crear debt breakdown view
+- [ ] Integrar con technical debt API
+- [ ] Implementar debt categories
+- [ ] Escribir tests de debt visualization
 
-# Run E2E tests
-npm run test:e2e
+**TDD Tests:**
+```typescript
+// TechnicalDebt.test.tsx
+describe('Technical Debt', () => {
+  it('should display debt hours', () => {
+    // Given: 45 horas debt
+    // When: Render component
+    // Then: Shows "45h" con icon
+  });
 
-# Visual regression
-npm run test:visual
-
-# Performance tests
-npm run test:performance
+  it('should show positive trend', () => {
+    // Given: +5h este mes
+    // When: Render
+    // Then: Red arrow up "+5h"
+  });
+});
 ```
 
 ---
 
-## ✅ Definition of Done
+### US-07: Theme System (Dark/Light)
+**Como** developer
+**Quiero** switch entre dark y light theme
+**Para** work comfortably en different environments
 
-### Code Quality
-- [ ] TypeScript strict mode enabled
-- [ ] ESLint + Prettier configured
-- [ ] 90% test coverage
-- [ ] All components accessible (WCAG 2.1 AA)
-- [ ] No console errors/warnings
-- [ ] No security vulnerabilities
+**Criterios de Aceptación:**
+```
+GIVEN usuario en light theme
+WHEN click en toggle
+THEN cambia a dark theme inmediatamente
+
+GIVEN theme selection
+WHEN se guarda en localStorage
+THEN persiste entre browser sessions
+
+GIVEN system theme cambia
+WHEN se detecta (prefers-color-scheme)
+THEN sugiere switch to system theme
+
+GIVEN theme applied
+WHEN se navega entre pages
+THEN mantiene theme consistency
+```
+
+**Tareas Técnicas:**
+- [ ] Implementar theme provider (Zustand)
+- [ ] Crear theme toggle component
+- [ ] Configurar Tailwind dark mode
+- [ ] Implementar localStorage persistence
+- [ ] Detectar system theme preference
+- [ ] Crear theme switcher UI
+- [ ] Aplicar themes a todos components
+- [ ] Escribir tests de theme system
+
+**TDD Tests:**
+```typescript
+// ThemeProvider.test.tsx
+describe('Theme Provider', () => {
+  it('should toggle theme', () => {
+    // Given: Light theme
+    // When: Toggle to dark
+    // Then: Theme changes to dark
+  });
+
+  it('should persist selection', () => {
+    // Given: Dark theme selected
+    // When: Reload page
+    // Then: Still dark theme
+  });
+});
+```
+
+---
+
+## ✅ Criterios de Validación
+
+### Funcionales
+- [ ] Dashboard principal con métricas en tiempo real
+- [ ] Quality score visualization
+- [ ] Security metrics breakdown
+- [ ] Coverage trends chart
+- [ ] Quality gates status
+- [ ] Technical debt display
+- [ ] Theme system (dark/light)
+- [ ] WebSocket real-time updates
 
 ### Performance
-- [ ] Bundle size <500KB
-- [ ] FCP <1.5s
-- [ ] TTI <3s
-- [ ] Lighthouse score >90
-- [ ] 60fps runtime performance
-- [ ] 10,000+ table rows smooth
+- [ ] **Initial Load**: <3s
+- [ ] **Bundle Size**: <500KB (gzipped)
+- [ ] **Time to Interactive**: <2s
+- [ ] **WebSocket Latency**: <500ms
+- [ ] **Chart Rendering**: <100ms
+- [ ] **Theme Switch**: <200ms
 
-### User Experience
-- [ ] Real-time updates <100ms
-- [ ] Responsive design (320px - 2560px)
-- [ ] Dark/light theme
-- [ ] Keyboard navigation
-- [ ] Touch gestures
-- [ ] Offline support (Service Worker)
-
-### Features
-- [ ] Dashboard with real-time metrics
-- [ ] Code viewer with inline findings
-- [ ] Issue table with 10,000+ rows
-- [ ] WebSocket integration
-- [ ] Search and filtering
-- [ ] Export functionality
+### Calidad
+- [ ] **TypeScript Coverage**: 100%
+- [ ] **Test Coverage**: >85%
+- [ ] **Lighthouse Score**: >90
+- [ ] **Accessibility**: WCAG 2.1 AA
+- [ ] **Responsive**: Desktop + tablet
 
 ---
 
-## 📝 Commit Validation Requirements
+## 📊 Métricas de Éxito
 
-```bash
-feat(epic-web-01): implement React 18 frontend core and dashboard
-
-- Setup React 18 + TypeScript + Vite + Tailwind + shadcn/ui
-- Implement real-time dashboard with metrics and trends
-- Build Monaco Editor code viewer with inline security findings
-- Create virtualized issue table supporting 10,000+ rows
-- Add state management (Zustand + TanStack Query)
-- Implement WebSocket for real-time updates
-- Setup responsive design (mobile, tablet, desktop)
-- Add dark/light theme support
-- Implement search, filtering, and sorting
-- Add accessibility (WCAG 2.1 AA)
-- Bundle size optimization: <500KB gzipped
-- Performance: FCP <1.5s, TTI <3s, 60fps runtime
-- Test coverage: 90% unit, 100% components
-- Lighthouse score: >90 (all categories)
-
-Validation:
-- All user stories implemented and tested
-- Real-time dashboard with metrics working
-- Code viewer with inline findings working
-- Issue table with virtualization working
-- Responsive design tested on all devices
-- Performance benchmarks passing
-- Accessibility compliance verified
-- Bundle size within target
-
-Closes: EPIC-WEB-01
-```
+| Métrica | Target | Actual | Status |
+|---------|--------|--------|--------|
+| **Initial Load Time** | <3s | - | ⏳ |
+| **Bundle Size** | <500KB | - | ⏳ |
+| **WebSocket Latency** | <500ms | - | ⏳ |
+| **Test Coverage** | >85% | - | ⏳ |
+| **Lighthouse Performance** | >90 | - | ⏳ |
+| **TypeScript Coverage** | 100% | - | ⏳ |
 
 ---
 
-**Epic Owner:** Frontend Engineering Team
-**Reviewers:** UX Team, Performance Team, Architecture Team
-**Status:** 🚧 In Progress
-**Next Steps:** Begin Phase 1 - React 18 Setup and Dashboard
+## 🔗 Dependencias
+
+### Internas
+- **EPIC-01-CORE_STATIC_ANALYSIS_ENGINE**: Backend IR API
+- Backend WebSocket para real-time updates
+
+### Externas
+- **React 18**: UI library
+- **TypeScript**: Type safety
+- **Vite**: Build tool
+- **Tailwind CSS**: Styling
+- **shadcn/ui**: Component library
+- **Zustand**: State management
+- **TanStack Query**: Data fetching
+- **Recharts**: Charts library
+- **React Router**: Routing
 
 ---
 
-**Copyright © 2025 hodei-scan. All rights reserved.**
+## ⚠️ Riesgos y Mitigación
+
+| Riesgo | Probabilidad | Impacto | Mitigación |
+|--------|-------------|---------|------------|
+| **WebSocket disconnections** | Media | Medio | Auto-reconnect + offline indicators |
+| **Bundle size >500KB** | Media | Alto | Code splitting + tree shaking |
+| **Chart performance** | Baja | Medio | React.memo + virtualization |
+| **Theme inconsistencies** | Media | Medio | Comprehensive theming system |
+| **Real-time data sync** | Media | Alto | Buffer + delta updates |
+
+---
+
+## 🚀 Plan de Implementación
+
+### Sprint 1 (1.5 semanas): Foundation
+- Configurar React 18 + Vite + TypeScript
+- Instalar y configurar Tailwind + shadcn/ui
+- Implementar routing y lazy loading
+- Crear base layout y theme system
+- Escribir tests foundation
+
+### Sprint 2 (1.5 semanas): Dashboard Core
+- Implementar dashboard layout
+- Crear quality score component
+- Implementar security metrics visualization
+- Integrar con backend API (mock data inicial)
+- Escribir tests componentes
+
+### Sprint 3 (1 semana): Real-time + Charts
+- Implementar WebSocket client
+- Crear coverage trends chart (Recharts)
+- Implementar real-time updates
+- Add loading states y error handling
+- Escribir tests WebSocket
+
+### Sprint 4 (1 semana): Quality Gates + Debt
+- Implementar quality gates status
+- Crear technical debt visualization
+- Implementar drill-down navigation
+- Performance optimization
+- E2E tests + documentation
+
+---
+
+## 📚 Referencias Técnicas
+
+- [React 18 Documentation](https://react.dev/)
+- [Vite Guide](https://vitejs.dev/)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [shadcn/ui](https://ui.shadcn.com/)
+- [Zustand Documentation](https://docs.pmnd.rs/zustand/)
+- [TanStack Query](https://tanstack.com/query/)
+- [Recharts Documentation](https://recharts.org/)
+- [React Router](https://reactrouter.com/)
+
+---
+
+**Estado:** ✅ Documentación Completa - Ready for Development
+**Próximos Pasos:** Crear EPIC-WEB-02-ISSUE_MANAGEMENT.md

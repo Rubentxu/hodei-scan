@@ -1,179 +1,108 @@
-# Épica 9: Enterprise Features
-## Gestión de Usuarios, Seguridad y Compliance
+# ÉPICA-09: ENTERPRISE FEATURES
 
-**Versión:** 1.0
+**Versión:** 2.0
 **Fecha:** 10 de noviembre de 2025
-**Estado:** 🚧 Planning
-**Época:** Fase 3 (Meses 13-24)
-**Prioridad:** 🔴 Critical
+**Story Points:** 70 SP
+**Sprint Estimado:** 5 sprints
+**Dependencias:** Todas las épicas anteriores
+**Estado:** 🚀 Ready for Development
 
 ---
 
-## 📋 Resumen Ejecutivo
+## 📋 Descripción de la Épica
 
-Implementar enterprise features para hodei-scan incluyendo user management, RBAC, SSO integration, audit logging y compliance reporting. Estas features son esenciales para adoption enterprise.
+Esta épica implementa **enterprise-ready features** incluyendo RBAC, organization management, SSO integration, audit logging, compliance (SOC 2, ISO 27001, GDPR, HIPAA), y multi-tenant support.
 
-**Objetivos:**
-- ✅ Role-based access control (RBAC) con granular permissions
-- ✅ Enterprise SSO integration (SAML, OIDC, LDAP)
-- ✅ Multi-tenant organization support
-- ✅ Audit logging de todas las acciones
-- ✅ Compliance reporting (NIST, OWASP, STIG, ISO27001)
-- ✅ User provisioning y de-provisioning
+**Objetivo Principal:** Proporcionar enterprise-grade security, compliance, y management features que permitan deployment en organizaciones enterprise con requirements estrictos de security y compliance.
 
-**Métricas:** <100ms auth, 100% audit coverage, SOC 2 compliance ready
+---
+
+## 🎯 Objetivos y Alcance
+
+### Objetivos Estratégicos
+1. **Role-Based Access Control (RBAC)**: Granular permissions
+2. **Organization Management**: Multi-tenant support
+3. **SSO Integration**: SAML, OIDC, LDAP
+4. **Audit Logging**: Complete activity tracking
+5. **User Provisioning**: Automated lifecycle
+6. **Compliance**: SOC 2, ISO 27001, GDPR, HIPAA, NIST
+
+### Alcance Funcional
+- ✅ **RBAC**: Admin, Security Engineer, Developer, Viewer roles
+- ✅ **Multi-tenant**: Organization isolation
+- ✅ **SSO**: SAML 2.0, OIDC, LDAP
+- ✅ **Audit Logs**: User actions, system events
+- ✅ **User Lifecycle**: Provisioning, deprovisioning
+- ✅ **Data Encryption**: At rest y in transit
+- ✅ **Compliance**: SOC 2, ISO 27001, GDPR, HIPAA
+- ✅ **API Security**: Rate limiting, API keys, JWT
 
 ---
 
 ## 👥 Historias de Usuario
 
-### US-25: Como enterprise admin, quiero manage users y roles
+### US-01: Role-Based Access Control
+**Como** admin
+**Quiero** assign roles con granular permissions
+**Para** control access a features
 
-**Prioridad:** 🔴 Critical
-**Story Points:** 13
+### US-02: Organization Management
+**Como** enterprise admin
+**Quiero** manage multiple organizations
+**Para** support multi-tenant architecture
 
-```gherkin
-Feature: User Management & RBAC
-  Como enterprise admin
-  Quiero manage users y roles granulares
-  Para control access a features
+### US-03: SSO Integration
+**Como** enterprise user
+**Quiero** login con corporate SSO
+**Para** single sign-on experience
 
-  Scenario: Create user con role
-    Given organization con existing roles
-    When admin creates new user
-    Then debería assign specific role
-    And debería send invitation
-    And user should have appropriate permissions
+### US-04: Audit Logging
+**Como** security officer
+**Quiero** track all user actions
+**Para** compliance y security auditing
 
-  Scenario: Role-based access control
-    Given user con "Developer" role
-    When intenta access admin features
-    Then debería ser denied
-    And debería show permission error
-```
+### US-05: Compliance Reporting
+**Como** compliance officer
+**Quiero** generate compliance reports
+**Para** SOC 2, ISO 27001 audits
 
-**Tareas:**
-
-1. **TASK-09-01: Implementar User Management System** (5 días)
-2. **TASK-09-02: Implementar RBAC Engine** (5 días)
-3. **TASK-09-03: Implementar Permission System** (3 días)
-
-**Tests:**
-
-```rust
-#[test]
-fn test_rbac_permission_check() {
-    let rbac = RBACEngine::new();
-    rbac.assign_role("user1", "Developer");
-
-    assert!(rbac.check_permission("user1", "view_reports").is_ok());
-    assert!(rbac.check_permission("user1", "manage_users").is_err());
-}
-```
-
-### US-26: Como security officer, quiero SSO integration
-
-**Prioridad:** 🔴 Critical
-**Story Points:** 8
-
-```gherkin
-Feature: Enterprise SSO
-  Como security officer
-  Quiero integrate con enterprise SSO
-  Para centralize identity management
-
-  Scenario: SAML integration
-    Given organization con Okta/ADFS
-    When user clicks "Login with SSO"
-    Then debería redirect to SAML provider
-    And should create user account after auth
-    And should maintain session
-
-  Scenario: OIDC integration
-    Given organization con Azure AD
-    When user authenticates via OIDC
-    Then should exchange token
-    And should create/update user account
-    And should establish session
-```
-
-**Tareas:**
-
-1. **TASK-09-04: Implementar SAML Provider** (4 días)
-2. **TASK-09-05: Implementar OIDC Provider** (4 días)
-
-### US-27: Como compliance officer, quiero compliance reports
-
-**Prioridad:** 🔴 Critical
-**Story Points:** 8
-
-```gherkin
-Feature: Compliance Reporting
-  Como compliance officer
-  Quiero generate compliance reports
-  Para pass regulatory audits
-
-  Scenario: SOC 2 Type II report
-    Given organization requiere SOC 2
-    When genero compliance report
-    Then should show control coverage
-    And should include audit trail
-    And should demonstrate compliance
-
-  Scenario: ISO 27001 compliance
-    Given organization con ISO 27001
-    When genero report
-    Then should map controls to findings
-    And should show compliance gaps
-    And should provide remediation plan
-```
-
-**Tareas:**
-
-1. **TASK-09-06: Implementar Compliance Frameworks** (5 días)
-2. **TASK-09-07: Implementar Audit Logger** (3 días)
-3. **TASK-09-08: Implementar Report Generator** (3 días)
+### US-06: API Security
+**Como** enterprise architect
+**Quiero** secure API access
+**Para** protect against abuse
 
 ---
 
-## 🏗️ Arquitectura
+## ✅ Criterios de Validación
 
-```rust
-pub struct EnterpriseFeatures {
-    pub user_management: UserManager,
-    pub role_based_access: RBACEngine,
-    pub sso_integration: SSOProvider,
-    pub audit_logger: AuditLogger,
-    pub compliance_reporter: ComplianceReporter,
-}
+### Funcionales
+- [ ] RBAC con granular permissions
+- [ ] Multi-tenant organization support
+- [ ] SSO integration (SAML, OIDC, LDAP)
+- [ ] Complete audit logging
+- [ ] Compliance frameworks
 
-pub struct ComplianceReport {
-    pub framework: ComplianceFramework, // NIST, OWASP, STIG, ISO27001
-    pub compliance_score: Percentage,
-    pub violations: Vec<ComplianceViolation>,
-    pub remediation_roadmap: RemediationPlan,
-    pub audit_trail: Vec<AuditEntry>,
-}
-```
-
-**Enterprise Stack:**
-- PostgreSQL: User data y permissions
-- Redis: Session management
-- Vault: Secret management
-- Kafka: Audit logging pipeline
+### Performance
+- [ ] Auth check: <100ms
+- [ ] Audit log: <50ms
+- [ ] Compliance report: <60s
 
 ---
 
-## 🔄 Criterios de Done
+## 📊 Métricas de Éxito
 
-- [ ] ✅ User management system
-- [ ] ✅ RBAC con granular permissions
-- [ ] ✅ SAML SSO integration
-- [ ] ✅ OIDC SSO integration
-- [ ] ✅ Audit logging completo
-- [ ] ✅ SOC 2 compliance reporting
-- [ ] ✅ ISO 27001 reporting
-- [ ] ✅ <100ms auth latency
-- [ ] ✅ 100% audit trail
+| Métrica | Target | Status |
+|---------|--------|--------|
+| **Auth Check** | <100ms | ⏳ |
+| **Audit Latency** | <50ms | ⏳ |
+| **Compliance** | 100% | ⏳ |
 
-**Total Story Points:** 65 | **Duración:** 12 semanas
+---
+
+## 🚀 Plan de Implementación
+
+### Sprint 1: RBAC + Organization Management
+### Sprint 2: SSO Integration
+### Sprint 3: Audit Logging
+### Sprint 4: Compliance (SOC 2, ISO 27001)
+### Sprint 5: GDPR, HIPAA, API Security

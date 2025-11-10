@@ -1,112 +1,102 @@
-# Épica 7: Portfolio Management
-## Organization-Wide Code Health Visibility
+# ÉPICA-07: PORTFOLIO MANAGEMENT
 
-**Versión:** 1.0
+**Versión:** 2.0
 **Fecha:** 10 de noviembre de 2025
-**Estado:** 🚧 Planning
-**Época:** Fase 3 (Meses 13-24)
-**Prioridad:** 🟡 High
+**Story Points:** 65 SP
+**Sprint Estimado:** 5 sprints
+**Dependencias:** EPIC-01, EPIC-02, EPIC-03, EPIC-04, EPIC-05, EPIC-06
+**Estado:** 🚀 Ready for Development
 
 ---
 
-## 📋 Resumen Ejecutivo
+## 📋 Descripción de la Épica
 
-Implementar portfolio management para hodei-scan, proporcionando organization-wide visibility en code health, executive dashboards y scheduled reporting.
+Esta épica implementa **enterprise portfolio management basado en IR aggregation** que proporciona cross-project correlation, executive dashboards, compliance reporting, e investment guidance.
 
-**Objetivos:**
-- ✅ Organization-wide project grouping
-- ✅ Executive dashboards con high-level metrics
-- ✅ Scheduled PDF reports
-- ✅ Holistic code health views
-- ✅ Cross-project compliance reporting
-- ✅ Portfolio-level quality trends
+**Objetivo Principal:** Agregar IR facts de múltiples proyectos para provide organization-level insights, compliance reporting (SOC 2, ISO 27001), y risk-based prioritization para engineering investments.
 
-**Métricas:** <30s dashboard load para 100 projects, real-time updates, 95% report accuracy
+---
+
+## 🎯 Objetivos y Alcance
+
+### Objetivos Estratégicos
+1. **Cross-project Correlation**: IR aggregation across projects
+2. **Executive Dashboards**: Portfolio health visualization
+3. **Compliance Reporting**: SOC 2, ISO 27001, HIPAA
+4. **Investment Guidance**: Risk-based prioritization
+5. **Scheduled Reports**: Automated PDF reports
+6. **Portfolio Trends**: Organization-level metrics
+
+### Alcance Funcional
+- ✅ **Project Aggregation**: Multi-project IR facts
+- ✅ **Risk Scoring**: Combined risk across portfolio
+- ✅ **Compliance Dashboards**: Regulatory requirements
+- ✅ **Investment Analysis**: ROI across projects
+- ✅ **Report Automation**: Scheduled PDF reports
+- ✅ **Trend Analysis**: Portfolio evolution
+- ✅ **Alerting**: Portfolio-level notifications
 
 ---
 
 ## 👥 Historias de Usuario
 
-### US-21: Como C-level executive, quiero holistic view de code quality
+### US-01: Project Aggregation
+**Como** portfolio manager
+**Quiero** aggregate metrics de múltiples projects
+**Para** understand organization health
 
-**Prioridad:** 🔴 Critical
-**Story Points:** 8
+### US-02: Executive Dashboard
+**Como** CTO
+**Quiero** ver portfolio health en dashboard
+**Para** make data-driven decisions
 
-```gherkin
-Feature: Executive Dashboard
-  Como C-level executive
-  Quiero dashboard con code health overview
-  Para tomar strategic decisions
+### US-03: Compliance Reporting
+**Como** compliance officer
+**Quiero** generate compliance reports
+**Para** audit y regulatory requirements
 
-  Scenario: Organization health overview
-    Given organization con 50+ projects
-    When accedo a executive dashboard
-    Then debería ver overall health score
-    And debería ver top/bottom performers
-    And debería see trends over time
-    And debería get investment recommendations
-```
+### US-04: Investment Analysis
+**Como** VP Engineering
+**Quiero** analyze ROI across projects
+**Para** allocate resources efficiently
 
-**Tareas:**
-
-1. **TASK-07-01: Implementar Portfolio Grouping** (3 días)
-2. **TASK-07-02: Implementar Executive Dashboard** (4 días)
-3. **TASK-07-03: Implementar Report Scheduler** (2 días)
-
-### US-22: Como compliance officer, quiero cross-project compliance reporting
-
-**Prioridad:** 🟡 Medium
-**Story Points:** 5
-
-```gherkin
-Feature: Cross-Project Compliance
-  Como compliance officer auditando
-  Quiero compliance report across projects
-  Para ensure regulatory compliance
-
-  Scenario: SOC 2 compliance report
-    Given organization con multiple projects
-    When genero compliance report
-    Then debería show compliance por project
-    And debería aggregate organization-wide
-    And debería identify gaps
-```
-
-**Tareas:**
-
-1. **TASK-07-04: Implementar Compliance Aggregator** (3 días)
-2. **TASK-07-05: Implementar PDF Report Generator** (2 días)
+### US-05: Scheduled Reports
+**Como** engineering manager
+**Quiero** receive automated reports
+**Para** stay informed de portfolio status
 
 ---
 
-## 🏗️ Arquitectura
+## ✅ Criterios de Validación
 
-```rust
-pub struct PortfolioManager {
-    pub project_groups: HashMap<String, Portfolio>,
-    pub executive_dashboards: ExecutiveDashboardBuilder,
-    pub report_scheduler: ScheduledReporter,
-    pub compliance_reporter: ComplianceReporter,
-}
+### Funcionales
+- [ ] Multi-project aggregation
+- [ ] Executive dashboards
+- [ ] Compliance reports
+- [ ] Investment analysis
+- [ ] Scheduled reports
 
-pub struct ExecutiveDashboard {
-    pub organization_health: OrgHealthScore,
-    pub quality_trends: TimeSeriesMetrics,
-    pub security_overview: SecuritySummary,
-    pub compliance_status: ComplianceStatus,
-    pub investment_recommendations: InvestmentGuidance,
-}
-```
+### Performance
+- [ ] Aggregation: <10s para 100 projects
+- [ ] Dashboard load: <3s
+- [ ] Report generation: <30s
 
 ---
 
-## 🔄 Criterios de Done
+## 📊 Métricas de Éxito
 
-- [ ] ✅ Portfolio grouping
-- [ ] ✅ Executive dashboard
-- [ ] ✅ Report scheduler
-- [ ] ✅ Compliance reporting
-- [ ] ✅ <30s dashboard load
-- [ ] ✅ 100% tests
+| Métrica | Target | Status |
+|---------|--------|--------|
+| **Projects Supported** | 100+ | ⏳ |
+| **Dashboard Load** | <3s | ⏳ |
+| **Report Generation** | <30s | ⏳ |
 
-**Total Story Points:** 26 | **Duración:** 6 semanas
+---
+
+## 🚀 Plan de Implementación
+
+### Sprint 1: Aggregation Engine
+### Sprint 2: Risk Scoring + Compliance
+### Sprint 3: Executive Dashboards
+### Sprint 4: Investment Analysis
+### Sprint 5: Automated Reports + Scheduling

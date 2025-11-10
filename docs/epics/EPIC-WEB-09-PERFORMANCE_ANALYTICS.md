@@ -1,159 +1,82 @@
-# Épica Web 9: Performance & Analytics
-## Optimización de Performance y Analytics de Uso
+# ÉPICA-WEB-09: PERFORMANCE & ANALYTICS
 
-**Versión:** 1.0
+**Versión:** 2.0
 **Fecha:** 10 de noviembre de 2025
-**Estado:** 🚧 Planning
-**Época:** Fase 3 (Meses 13-24)
-**Prioridad:** 🟡 Medium
+**Story Points:** 39 SP
+**Sprint Estimado:** 3 sprints (paralelo)
+**Dependencias:** EPIC-WEB-01, EPIC-WEB-07
+**Estado:** 🚀 Ready for Development
 
 ---
 
-## 📋 Resumen Ejecutivo
+## 📋 Descripción de la Épica
 
-Optimización de performance frontend, lazy loading, code splitting, y analytics de uso para mejorar UX y obtener insights.
+Esta épica implementa **performance monitoring y analytics** que trackea application performance, user analytics, error tracking, y optimization recommendations. Incluye performance metrics y slow query analysis.
 
-**Objetivos:**
-- ✅ Code splitting y lazy loading
-- ✅ Virtual scrolling para large datasets
-- ✅ Service worker para caching
-- ✅ Performance monitoring
-- ✅ User analytics
-- ✅ Error tracking
-- ✅ Bundle size optimization
+**Objetivo Principal:** Proporcionar comprehensive analytics que permitan monitor application performance, track user behavior, y identify optimization opportunities para mejor user experience.
 
 ---
 
 ## 👥 Historias de Usuario
 
-### US-WEB-15: Como user, quiero fast loading even con large datasets
+### US-01: Performance Monitoring
+**Como** engineering manager
+**Quiero** monitor application performance
+**Para** ensure optimal user experience
 
-**Prioridad:** 🔴 Critical
-**Story Points:** 8
+### US-02: User Analytics
+**Como** product manager
+**Quiero** track user behavior
+**Para** understand usage patterns
 
-```gherkin
-Feature: Performance Optimization
-  Como user con large project
-  Quiero fast loading y smooth scrolling
-  Para have good experience
+### US-03: Error Tracking
+**Como** developer
+**Quiero** track errors en frontend
+**Para** identify y fix issues
 
-  Scenario: Load 1000 issues
-    Given project con 1000 issues
-    When navigates to Issues page
-    Then debería:
-      And show first 50 issues instantly
-      And virtual scroll para remaining
-      And load more as scroll
-      And maintain 60fps scrolling
+### US-04: Optimization Recommendations
+**Como** performance engineer
+**Quiero** get optimization suggestions
+**Para** improve application speed
 
-  Scenario: Initial page load
-    Given user visits dashboard
-    When page loads
-    Then debería:
-      And show content en <2 seconds
-      And progressive loading de charts
-      And skeleton loaders mientras loads
-```
-
-**Tareas:**
-
-1. **TASK-WEB-09-01: Code Splitting** (2 días)
-2. **TASK-WEB-09-02: Virtual Scrolling** (3 días)
-3. **TASK-WEB-09-03: Service Worker** (2 días)
-4. **TASK-WEB-09-04: Performance Monitoring** (1 día)
-5. **TASK-WEB-09-05: Bundle Optimization** (2 días)
-
-**Tests:**
-
-```typescript
-describe('Performance', () => {
-  it('should render 1000 items with virtual scrolling', async () => {
-    const start = performance.now();
-    render(<VirtualizedList items={generateItems(1000)} />);
-    const end = performance.now();
-    
-    expect(end - start).toBeLessThan(100); // < 100ms
-  });
-
-  it('should lazy load dashboard chunks', async () => {
-    const dashboardModule = await import('./Dashboard');
-    expect(dashboardModule.default).toBeDefined();
-  });
-
-  it('should track performance metrics', () => {
-    render(<Dashboard />);
-    
-    expect(mockAnalytics.track).toHaveBeenCalledWith('page_view', {
-      page: 'dashboard',
-      loadTime: expect.any(Number),
-    });
-  });
-});
-```
+### US-05: Slow Query Analysis
+**Como** backend developer
+**Quiero** identify slow queries
+**Para** optimize database performance
 
 ---
 
-## 🏗️ Performance Architecture
+## ✅ Criterios de Validación
 
-```typescript
-// components/ VirtualizedIssuesList.tsx
-import { FixedSizeList as List } from 'react-window';
+### Funcionales
+- [ ] Performance monitoring
+- [ ] User analytics
+- [ ] Error tracking
+- [ ] Optimization recommendations
+- [ ] Slow query analysis
+- [ ] Performance dashboards
+- [ ] Alert system
+- [ ] Historical data
 
-export const VirtualizedIssuesList: React.FC<{ issues: Issue[] }> = ({ issues }) => {
-  const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => (
-    <div style={style}>
-      <IssueRow issue={issues[index]} />
-    </div>
-  );
-
-  return (
-    <List
-      height={600}
-      itemCount={issues.length}
-      itemSize={60}
-      width="100%"
-    >
-      {Row}
-    </List>
-  );
-};
-
-// hooks/useIntersectionObserver.ts
-export const useIntersectionObserver = (
-  callback: () => void,
-  options?: IntersectionObserverInit
-) => {
-  const [target, setTarget] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (!target) return;
-
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        callback();
-      }
-    }, options);
-
-    observer.observe(target);
-
-    return () => observer.disconnect();
-  }, [target, callback, options]);
-
-  return setTarget;
-};
-```
+### Performance
+- [ ] Analytics load: <2s
+- [ ] Error capture: Real-time
+- [ ] Dashboard update: <1s
 
 ---
 
-## 🔄 Criterios de Done
+## 📊 Métricas de Éxito
 
-- [ ] ✅ Code splitting implemented
-- [ ] ✅ Virtual scrolling for large lists
-- [ ] ✅ Service worker for caching
-- [ ] ✅ Performance metrics tracking
-- [ ] ✅ Bundle size < 500KB
-- [ ] ✅ First contentful paint < 1.5s
-- [ ] ✅ Time to interactive < 3s
-- [ ] ✅ 100% tests
+| Métrica | Target | Status |
+|---------|--------|--------|
+| **Analytics Load** | <2s | ⏳ |
+| **Error Capture** | Real-time | ⏳ |
+| **Dashboard Update** | <1s | ⏳ |
 
-**Total Story Points:** 39 | **Duración:** 5 semanas
+---
+
+## 🚀 Plan de Implementación
+
+### Sprint 1: Performance Monitoring + Error Tracking
+### Sprint 2: User Analytics + Dashboards
+### Sprint 3: Optimization + Slow Query Analysis

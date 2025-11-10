@@ -1,138 +1,100 @@
-# Épica 8: Pull Request Analysis & Decoration
-## Análisis Automático y Decoración de PRs
+# ÉPICA-08: PULL REQUEST ANALYSIS & DECORATION
 
-**Versión:** 1.0
+**Versión:** 2.0
 **Fecha:** 10 de noviembre de 2025
-**Estado:** 🚧 Planning
-**Época:** Fase 3 (Meses 13-24)
-**Prioridad:** 🔴 High
+**Story Points:** 47 SP
+**Sprint Estimado:** 3 sprints
+**Dependencias:** EPIC-01, EPIC-02, EPIC-04
+**Estado:** 🚀 Ready for Development
 
 ---
 
-## 📋 Resumen Ejecutivo
+## 📋 Descripción de la Épica
 
-Implementar análisis automático de Pull Requests y decoración en GitHub/GitLab/Bitbucket, proporcionando inline comments, coverage deltas y quality gate status directamente en PRs.
+Esta épica implementa **incremental analysis via IR cache con PR decoration** que proporciona feedback en tiempo real en Pull Requests, coverage deltas, y merge protection basado en quality gates.
 
-**Objetivos:**
-- ✅ PR decoration en GitHub/GitLab/Bitbucket
-- ✅ Inline comments con issues encontrados
-- ✅ Branch-specific analysis results
-- ✅ Code coverage deltas en PRs
-- ✅ Quality gate status per PR
-- ✅ Security findings highlighting
+**Objetivo Principal:** Proporcionar analysis incremental ultra-rápido (<1s) usando IR cache, con PR decoration en GitHub/GitLab/Bitbucket, coverage deltas, y merge protection basado en quality gates.
 
-**Métricas:** <60s analysis por PR, 100% VCS integrations, real-time updates
+---
+
+## 🎯 Objetivos y Alcance
+
+### Objetivos Estratégicos
+1. **IR Caching**: Fast incremental analysis
+2. **PR Decoration**: GitHub/GitLab/Bitbucket inline comments
+3. **Change Impact**: IR diff analysis
+4. **Merge Protection**: IR-based quality gates
+5. **Coverage Deltas**: Coverage changes en PRs
+6. **Security Findings**: New vulnerabilities highlighting
+
+### Alcance Funcional
+- ✅ **Incremental Analysis**: <1s usando IR cache
+- ✅ **GitHub Integration**: PR comments + check runs
+- ✅ **GitLab Integration**: MR comments + status checks
+- ✅ **Bitbucket Integration**: PR comments + status
+- ✅ **Coverage Deltas**: +X lines covered, -Y uncovered
+- ✅ **Security Highlighting**: New vulnerabilities in diff
+- ✅ **Quality Gates**: Prevent merge si thresholds no cumplidos
 
 ---
 
 ## 👥 Historias de Usuario
 
-### US-23: Como developer, quiero ver analysis results directly en PR
+### US-01: Incremental Analysis
+**Como** developer
+**Quiero** que analysis sea <1s en PR changes
+**Para** get fast feedback
 
-**Prioridad:** 🔴 Critical
-**Story Points:** 8
+### US-02: PR Decoration
+**Como** developer
+**Quiero** ver findings inline en PR
+**Para** understand impact de changes
 
-```gherkin
-Feature: PR Decoration
-  Como developer revisando PR
-  Quiero ver analysis results en PR interface
-  Para get immediate feedback
+### US-03: Coverage Deltas
+**Como** tech lead
+**Quiero** ver coverage delta en PR
+**Para** ensure tests coverage se mantiene
 
-  Scenario: New issues in PR
-    Given PR con nuevos code issues
-    When hodei-scan analiza PR
-    Then debería add inline comments
-    And debería mark problematic lines
-    And debería suggest fixes
+### US-04: Merge Protection
+**Como** engineering manager
+**Quiero** prevent merge si quality gates fail
+**Para** maintain quality standards
 
-  Scenario: Coverage delta
-    Given PR que changes coverage
-    When hodei-scan analiza PR
-    Then debería show coverage change
-    And debería comment coverage impact
-```
-
-**Tareas:**
-
-1. **TASK-08-01: Implementar VCS Integrations (GitHub, GitLab, Bitbucket)** (5 días)
-2. **TASK-08-02: Implementar Inline Comment Generator** (3 días)
-3. **TASK-08-03: Implementar PR Analysis Engine** (4 días)
-4. **TASK-08-04: Implementar Quality Gate Status** (2 días)
-
-**Tests:**
-
-```rust
-#[test]
-fn test_github_pr_decoration() {
-    let client = GitHubClient::new("token");
-    let result = PRAnalysisResult {
-        new_issues: vec![Issue { file: "src/main.rs", line: 10, severity: Severity::Critical }],
-        coverage_change: Some(CoverageDelta { delta: -5 }),
-        quality_gate_status: QualityGateResult::Failed,
-    };
-
-    client.decorate_pr("owner", "repo", 123, &result).unwrap();
-    assert!(client.has_comment(123));
-}
-```
+### US-05: Security Highlighting
+**Como** security engineer
+**Quiero** ver new vulnerabilities en PR
+**Para** prevent security regressions
 
 ---
 
-### US-24: Como reviewer, quiero understand PR impact
+## ✅ Criterios de Validación
 
-**Prioridad:** 🟡 Medium
-**Story Points:** 5
+### Funcionales
+- [ ] Incremental analysis <1s
+- [ ] PR decoration (GitHub, GitLab, Bitbucket)
+- [ ] Coverage deltas
+- [ ] Security highlighting
+- [ ] Merge protection
 
-```gherkin
-Feature: PR Impact Analysis
-  Como reviewer evaluando PR
-  Quiero understand PR's impact en quality
-  Para make informed review decisions
-
-  Scenario: Security impact
-    Given PR con security-related changes
-    When hodei-scan analiza PR
-    Then debería highlight security findings
-    And debería show security score change
-    And debería suggest security review
-```
-
-**Tareas:**
-
-1. **TASK-08-05: Implementar Impact Analyzer** (3 días)
-2. **TASK-08-06: Implementar Security Highlighting** (2 días)
+### Performance
+- [ ] Incremental analysis: <1s
+- [ ] Diff calculation: <500ms
+- [ ] Comment posting: <2s
 
 ---
 
-## 🏗️ Arquitectura
+## 📊 Métricas de Éxito
 
-```rust
-pub struct PRDecorationEngine {
-    pub vcs_integrations: HashMap<String, VCSIntegration>,
-    pub comment_generator: IssueCommentGenerator,
-    pub coverage_reporter: CoverageReporter,
-    pub quality_gate_status: QualityGateChecker,
-}
-
-pub struct PRAnalysisResult {
-    pub new_issues: Vec<Issue>,
-    pub fixed_issues: Vec<Issue>,
-    pub coverage_change: Option<CoverageDelta>,
-    pub quality_gate_status: QualityGateResult,
-    pub security_findings: Vec<SecurityIssue>,
-}
-```
+| Métrica | Target | Status |
+|---------|--------|--------|
+| **Incremental Speed** | <1s | ⏳ |
+| **Platforms** | 3/3 | ⏳ |
+| **Accuracy** | >95% | ⏳ |
 
 ---
 
-## 🔄 Criterios de Done
+## 🚀 Plan de Implementación
 
-- [ ] ✅ GitHub integration
-- [ ] ✅ GitLab integration
-- [ ] ✅ Bitbucket integration
-- [ ] ✅ <60s analysis
-- [ ] ✅ Inline comments
-- [ ] ✅ Quality gate status
-- [ ] ✅ 100% tests
-
-**Total Story Points:** 26 | **Duración:** 6 semanas
+### Sprint 1: IR Caching + Incremental Analysis
+### Sprint 2: GitHub Integration + Decoration
+### Sprint 3: GitLab + Bitbucket + Merge Protection

@@ -1,143 +1,82 @@
-# Épica Web 4: Settings & Configuration
-## Gestión de Configuraciones y Preferencias
+# ÉPICA-WEB-04: SETTINGS & CONFIGURATION
 
-**Versión:** 1.0
+**Versión:** 2.0
 **Fecha:** 10 de noviembre de 2025
-**Estado:** 🚧 Planning
-**Época:** Fase 1 (Meses 1-6)
-**Prioridad:** 🟡 High
+**Story Points:** 34 SP
+**Sprint Estimado:** 3 sprints (paralelo)
+**Dependencias:** EPIC-WEB-01-FRONTEND_CORE_DASHBOARD
+**Estado:** 🚀 Ready for Development
 
 ---
 
-## 📋 Resumen Ejecutivo
+## 📋 Descripción de la Épica
 
-Crear interfaz para configurar análisis, reglas, quality gates y preferencias de usuario.
+Esta épica implementa **settings y configuration interface** que permite configure project settings, quality gates, notification preferences, theme, y integrations. Proporciona form management con validation y persistence.
 
-**Objetivos:**
-- ✅ Project settings (languages, exclusions)
-- ✅ Rule configuration (enable/disable)
-- ✅ Quality gate thresholds
-- ✅ User preferences
-- ✅ Notification settings
-- ✅ Theme selection (light/dark)
+**Objetivo Principal:** Crear comprehensive settings interface que permita configure todos los aspects de hodei-scan para el proyecto, desde quality gates hasta notification preferences.
 
 ---
 
 ## 👥 Historias de Usuario
 
-### US-WEB-10: Como project admin, quiero configure project settings
+### US-01: Project Settings
+**Como** engineering manager
+**Quiero** configure project settings
+**Para** customize analysis parameters
 
-**Prioridad:** 🔴 Critical
-**Story Points:** 8
+### US-02: Quality Gates Configuration
+**Como** tech lead
+**Quiero** set quality gate thresholds
+**Para** enforce quality standards
 
-```gherkin
-Feature: Project Settings
-  Como project admin
-  Quiero configure project parameters
-  Para customize analysis behavior
+### US-03: Notification Preferences
+**Como** developer
+**Quiero** configure notification settings
+**Para** control how y when recibo alerts
 
-  Scenario: Configure languages
-    Given project multi-language
-    When navega a Settings > Languages
-    Then debería poder:
-      And enable/disable specific languages
-      And set language priorities
-      And exclude directories (node_modules, dist)
+### US-04: Integration Settings
+**Como** DevOps engineer
+**Quiero** configure integrations (GitHub, GitLab)
+**Para** setup CI/CD workflow
 
-  Scenario: Configure quality gates
-    Given project con custom standards
-    When navega a Settings > Quality Gates
-    Then debería set:
-      And minimum coverage threshold (e.g., 80%)
-      And max issues por severity
-      And max technical debt hours
-```
-
-**Tareas:**
-
-1. **TASK-WEB-04-01: Settings Layout** (1 día)
-2. **TASK-WEB-04-02: Project Settings Form** (2 días)
-3. **TASK-WEB-04-03: Quality Gates Config** (2 días)
-4. **TASK-WEB-04-04: Rule Toggles** (2 días)
-5. **TASK-WEB-04-05: User Preferences** (1 día)
-
-**Tests:**
-
-```typescript
-describe('Settings', () => {
-  it('should save project settings', async () => {
-    render(<ProjectSettings />);
-    
-    fireEvent.change(screen.getByLabelText('Coverage Threshold'), {
-      target: { value: '80' },
-    });
-    
-    fireEvent.click(screen.getByText('Save'));
-    
-    await waitFor(() => {
-      expect(screen.getByText('Settings saved')).toBeInTheDocument();
-    });
-  });
-
-  it('should toggle rule on/off', () => {
-    render(<RuleConfig />);
-    
-    expect(screen.getByText('SQL Injection Rule')).toBeInTheDocument();
-    
-    fireEvent.click(screen.getByRole('switch'));
-    
-    expect(screen.getByRole('switch')).not.toBeChecked();
-  });
-});
-```
+### US-05: User Preferences
+**Como** developer
+**Quiero** customize UI preferences
+**Para** optimize my workflow
 
 ---
 
-## 🏗️ Settings Architecture
+## ✅ Criterios de Validación
 
-```typescript
-// components/settings/SettingsLayout.tsx
-export const SettingsLayout: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('project');
+### Funcionales
+- [ ] Project settings form
+- [ ] Quality gates configuration
+- [ ] Notification preferences
+- [ ] Integration settings
+- [ ] User preferences
+- [ ] Form validation
+- [ ] Auto-save
+- [ ] Reset to defaults
 
-  return (
-    <div className="flex h-full">
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-48">
-          <TabsTrigger value="project">Project</TabsTrigger>
-          <TabsTrigger value="rules">Rules</TabsTrigger>
-          <TabsTrigger value="gates">Quality Gates</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="preferences">User Preferences</TabsTrigger>
-        </TabsList>
-
-        <div className="flex-1 ml-8">
-          <TabsContent value="project">
-            <ProjectSettings />
-          </TabsContent>
-          <TabsContent value="rules">
-            <RuleConfiguration />
-          </TabsContent>
-          <TabsContent value="gates">
-            <QualityGatesConfig />
-          </TabsContent>
-        </div>
-      </Tabs>
-    </div>
-  );
-};
-```
+### Performance
+- [ ] Settings load: <1s
+- [ ] Form save: <2s
+- [ ] Validation: <100ms
 
 ---
 
-## 🔄 Criterios de Done
+## 📊 Métricas de Éxito
 
-- [ ] ✅ Project settings form
-- [ ] ✅ Language selection
-- [ ] ✅ Rule toggles
-- [ ] ✅ Quality gates configuration
-- [ ] ✅ User preferences (theme, notifications)
-- [ ] ✅ Settings persistence
-- [ ] ✅ 100% tests
+| Métrica | Target | Status |
+|---------|--------|--------|
+| **Settings Load** | <1s | ⏳ |
+| **Form Save** | <2s | ⏳ |
+| **Validation** | <100ms | ⏳ |
 
-**Total Story Points:** 34 | **Duración:** 4 semanas
+---
+
+## 🚀 Plan de Implementación
+
+### Sprint 1: Project Settings + Quality Gates
+### Sprint 2: Notifications + Integrations
+### Sprint 3: User Preferences + Validation

@@ -1,145 +1,80 @@
-# Épica Web 5: Reports & Export
-## Generación y Exportación de Reportes
+# ÉPICA-WEB-05: REPORTS & EXPORT
 
-**Versión:** 1.0
+**Versión:** 2.0
 **Fecha:** 10 de noviembre de 2025
-**Estado:** 🚧 Planning
-**Época:** Fase 2 (Meses 7-12)
-**Prioridad:** 🟡 High
+**Story Points:** 39 SP
+**Sprint Estimado:** 3 sprints (paralelo)
+**Dependencias:** EPIC-WEB-01, EPIC-WEB-07
+**Estado:** 🚀 Ready for Development
 
 ---
 
-## 📋 Resumen Ejecutivo
+## 📋 Descripción de la Épica
 
-Sistema completo de generación, visualización y exportación de reportes para stakeholders técnicos y no-técnicos.
+Esta épica implementa **reports generation y export functionality** que permite generate PDF reports, export data en múltiples formatos (JSON, CSV, SARIF), y schedule automated reports para stakeholders.
 
-**Objetivos:**
-- ✅ PDF report generation
-- ✅ Executive summaries
-- ✅ Custom report builder
-- ✅ Scheduled reports
-- ✅ Export formats (PDF, CSV, JSON, Excel)
-- ✅ Email report delivery
-- ✅ Branded reports con logo
+**Objetivo Principal:** Proporcionar comprehensive reporting que permita generate professional reports para stakeholders, export data para analysis externo, y schedule reports para compliance.
 
 ---
 
 ## 👥 Historias de Usuario
 
-### US-WEB-11: Como manager, quiero executive summary report
+### US-01: PDF Report Generation
+**Como** engineering manager
+**Quiero** generate PDF report
+**Para** share con executives
 
-**Prioridad:** 🔴 Critical
-**Story Points:** 8
+### US-02: Data Export
+**Como** security engineer
+**Quiero** export issues to JSON/CSV
+**Para** analysis en other tools
 
-```gherkin
-Feature: Executive Report
-  Como engineering manager
-  Quiero executive summary de code quality
-  Para report to leadership
+### US-03: SARIF Export
+**Como** security engineer
+**Quiero** export findings to SARIF
+**Para** integrate con security tools
 
-  Scenario: Generate executive report
-    Given project analysis completa
-    When hace click "Generate Report"
-    And selecciona "Executive Summary"
-    Then debería crear PDF con:
-      And overall health score
-      And security posture
-      And technical debt trend
-      And top 5 issues
-      And recommendations
-      And charts y graphs
-      And no technical jargon
-```
+### US-04: Scheduled Reports
+**Como** compliance officer
+**Quiero** schedule automated reports
+**Para** regular compliance reporting
 
-**Tareas:**
-
-1. **TASK-WEB-05-01: Report Templates** (2 días)
-2. **TASK-WEB-05-02: PDF Generation** (3 días)
-3. **TASK-WEB-05-03: Export Formats** (2 días)
-4. **TASK-WEB-05-04: Scheduled Reports** (2 días)
-5. **TASK-WEB-05-05: Email Delivery** (1 día)
-
-**Tests:**
-
-```typescript
-describe('Reports', () => {
-  it('should generate PDF report', async () => {
-    render(<ReportGenerator />);
-    
-    fireEvent.click(screen.getByText('Generate PDF'));
-    
-    await waitFor(() => {
-      expect(screen.getByText('Downloading...')).toBeInTheDocument();
-    });
-  });
-
-  it('should create custom report', async () => {
-    render(<CustomReportBuilder />);
-    
-    fireEvent.click(screen.getByText('Add Section'));
-    fireEvent.selectOptions(screen.getByLabelText('Metric'), ['Security', 'Quality']);
-    
-    fireEvent.click(screen.getByText('Generate'));
-    
-    await waitFor(() => {
-      expect(screen.getByText('Report generated')).toBeInTheDocument();
-    });
-  });
-});
-```
+### US-05: Report Customization
+**Como** developer
+**Quiero** customize report content
+**Para** include only relevant sections
 
 ---
 
-## 🏗️ Report Builder
+## ✅ Criterios de Validación
 
-```typescript
-// components/reports/ReportBuilder.tsx
-export const ReportBuilder: React.FC = () => {
-  const [sections, setSections] = useState<ReportSection[]>([]);
+### Funcionales
+- [ ] PDF report generation
+- [ ] Multi-format export (JSON, CSV, SARIF)
+- [ ] Scheduled reports
+- [ ] Report templates
+- [ ] Email delivery
+- [ ] Report history
 
-  const addSection = (type: ReportType) => {
-    setSections([...sections, createSection(type)]);
-  };
-
-  const generateReport = async () => {
-    const reportData = await fetchReportData(sections);
-    const pdf = await generatePDF(reportData);
-    downloadPDF(pdf);
-  };
-
-  return (
-    <div>
-      <div className="mb-4">
-        <Button onClick={() => addSection('security')}>Add Security Section</Button>
-        <Button onClick={() => addSection('quality')}>Add Quality Section</Button>
-        <Button onClick={() => addSection('debt')}>Add Debt Section</Button>
-      </div>
-
-      <SortableContext items={sections}>
-        {sections.map((section) => (
-          <ReportSection key={section.id} section={section} />
-        ))}
-      </SortableContext>
-
-      <Button onClick={generateReport} className="w-full">
-        Generate Report
-      </Button>
-    </div>
-  );
-};
-```
+### Performance
+- [ ] PDF generation: <30s
+- [ ] Export generation: <10s
+- [ ] Report preview: <3s
 
 ---
 
-## 🔄 Criterios de Done
+## 📊 Métricas de Éxito
 
-- [ ] ✅ PDF report generation
-- [ ] ✅ Executive summary template
-- [ ] ✅ Custom report builder
-- [ ] ✅ Export CSV, JSON
-- [ ] ✅ Scheduled reports
-- [ ] ✅ Email delivery
-- [ ] ✅ Branded reports
-- [ ] ✅ 100% tests
+| Métrica | Target | Status |
+|---------|--------|--------|
+| **PDF Generation** | <30s | ⏳ |
+| **Export Speed** | <10s | ⏳ |
+| **Preview Load** | <3s | ⏳ |
 
-**Total Story Points:** 39 | **Duración:** 5 semanas
+---
+
+## 🚀 Plan de Implementación
+
+### Sprint 1: PDF Generation + Templates
+### Sprint 2: Data Export (JSON, CSV, SARIF)
+### Sprint 3: Scheduling + Email Delivery

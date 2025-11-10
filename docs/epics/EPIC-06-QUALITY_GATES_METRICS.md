@@ -1,117 +1,96 @@
-# Épica 6: Quality Gates & Metrics
-## Configuración y Enforcement de Quality Standards
+# ÉPICA-06: QUALITY GATES & METRICS
 
-**Versión:** 1.0
+**Versión:** 2.0
 **Fecha:** 10 de noviembre de 2025
-**Estado:** 🚧 Planning
-**Época:** Fase 2 (Meses 7-12)
-**Prioridad:** 🔴 High
+**Story Points:** 38 SP
+**Sprint Estimado:** 3 sprints
+**Dependencias:** EPIC-01-CORE_STATIC_ANALYSIS_ENGINE
+**Estado:** 🚀 Ready for Development
 
 ---
 
-## 📋 Resumen Ejecutivo
+## 📋 Descripción de la Épica
 
-Implementar el sistema de quality gates y metrics para hodei-scan. Los quality gates son criterios configurables que determinan si un proyecto cumple con quality standards mínimos.
+Esta épica implementa **quality gates configurables basados en IR** que enforcement políticas de calidad en tiempo real. Incluye metrics computation, threshold validation, y failure notifications.
 
-**Objetivos:**
-- ✅ Configurable quality gates con múltiples metrics
-- ✅ Real-time quality status durante development
-- ✅ Historical quality trends con time-series
-- ✅ Quality score calculation (1-100)
-- ✅ CI/CD integration con enforcement
-- ✅ Custom metrics definition
+**Objetivo Principal:** Implementar quality gates configurables que validen coverage, security, quality, y technical debt thresholds, con enforcement en CI/CD y real-time feedback.
 
-**Métricas:** <2s gate evaluation, 100% custom metrics support, real-time updates
+---
+
+## 🎯 Objetivos y Alcance
+
+### Objetivos Estratégicos
+1. **Configurable Gates**: Coverage, Security, Quality, Debt thresholds
+2. **Real-time Enforcement**: CI/CD integration con fail-fast
+3. **Metrics Computation**: Quality score calculation
+4. **Historical Tracking**: Gate status over time
+5. **Notification System**: Slack, email, PR comments
+6. **Custom Metrics**: IR-based metric definition
+
+### Alcance Funcional
+- ✅ **Coverage Threshold**: Min coverage % (e.g., 80%)
+- ✅ **Security Gates**: Max issues por severity
+- ✅ **Quality Gates**: Max code smells
+- ✅ **Technical Debt**: Max debt hours
+- ✅ **Security Score**: Min security score (0-100)
+- ✅ **CI/CD Integration**: GitHub Actions, Jenkins
+- ✅ **Notification**: Multiple channels
+- ✅ **Custom Gates**: IR permite metric definition
 
 ---
 
 ## 👥 Historias de Usuario
 
-### US-19: Como DevOps, quiero enforce quality gates en CI/CD
+### US-01: Quality Gate Configuration
+**Como** engineering manager
+**Quiero** configurar quality gates por project
+**Para** enforcement políticas organizacionales
 
-**Prioridad:** 🔴 Critical
-**Story Points:** 8
+### US-02: Real-time Enforcement
+**Como** developer
+**Quiero** que CI fallé si quality gate no se cumple
+**Para** prevent quality degradation
 
-```gherkin
-Feature: Quality Gate Enforcement
-  Como DevOps configurando pipelines
-  Quiero enforce quality gates en CI/CD
-  Para prevenir code que no cumple standards
+### US-03: Quality Score Calculation
+**Como** tech lead
+**Quiero** un quality score compuesto
+**Para** compare projects y track progress
 
-  Scenario: Failed quality gate
-    Given quality gate con threshold 80% coverage
-    When pipeline run con 75% coverage
-    Then hodei-scan debería fail build
-    And debería reportar specific failures
-    And debería suggest fixes
-
-  Scenario: Passed quality gate
-    Given quality gate con 80% coverage
-    When pipeline run con 85% coverage
-    Then hodei-scan debería pass build
-    And debería generate quality report
-```
-
-**Tareas:**
-
-1. **TASK-06-01: Implementar Quality Gate Config** (3 días)
-2. **TASK-06-02: Implementar Gate Evaluator** (3 días)
-3. **TASK-06-03: Implementar CI/CD Integration** (2 días)
-
-### US-20: Como manager, quiero quality trends over time
-
-**Prioridad:** 🟡 Medium
-**Story Points:** 5
-
-```gherkin
-Feature: Quality Trends
-  Como manager trackeando quality
-  Quiero ver trends históricos de quality
-  Para measure improvement over time
-
-  Scenario: Quality trend chart
-    Given project con 6 meses de data
-    When accedo a quality dashboard
-    Then debería ver time-series chart
-    And debería mostrar trend direction
-    And debería highlight key milestones
-```
-
-**Tareas:**
-
-1. **TASK-06-04: Implementar Time Series Storage** (2 días)
-2. **TASK-06-05: Implementar Trend Analyzer** (3 días)
+### US-04: Historical Gate Status
+**Como** engineering manager
+**Quiero** ver historical gate status
+**Para** identify quality trends
 
 ---
 
-## 🏗️ Arquitectura
+## ✅ Criterios de Validación
 
-```rust
-pub struct QualityGate {
-    pub name: String,
-    pub conditions: Vec<GateCondition>,
-    pub threshold: QualityThreshold,
-    pub action: GateAction,
-}
+### Funcionales
+- [ ] Configurable gates
+- [ ] Real-time enforcement
+- [ ] Metrics calculation
+- [ ] CI/CD integration
+- [ ] Notifications
 
-pub struct QualityScore {
-    pub overall_score: f64,  // 0-100
-    pub reliability_score: f64,
-    pub security_score: f64,
-    pub maintainability_score: f64,
-    pub coverage_score: f64,
-}
-```
+### Performance
+- [ ] Gate evaluation: <1s
+- [ ] Score calculation: <2s
+- [ ] Historical query: <3s
 
 ---
 
-## 🔄 Criterios de Done
+## 📊 Métricas de Éxito
 
-- [ ] ✅ Configurable gates
-- [ ] ✅ <2s evaluation
-- [ ] ✅ CI/CD integration
-- [ ] ✅ Historical trends
-- [ ] ✅ Custom metrics
-- [ ] ✅ 100% tests
+| Métrica | Target | Status |
+|---------|--------|--------|
+| **Gate Evaluation** | <1s | ⏳ |
+| **Score Accuracy** | >90% | ⏳ |
+| **CI Integration** | 100% | ⏳ |
 
-**Total Story Points:** 26 | **Duración:** 6 semanas
+---
+
+## 🚀 Plan de Implementación
+
+### Sprint 1: Gate Configuration + Engine
+### Sprint 2: CI/CD Integration + Enforcement
+### Sprint 3: Metrics + Historical + Notifications
