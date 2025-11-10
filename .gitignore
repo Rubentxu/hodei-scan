@@ -1,1 +1,114 @@
-/target
+# === Rust/Cargo ===
+/target/
+**/*.rs.bk
+*.pdb
+Cargo.lock
+debug/
+*.rlib
+*.so
+*.dylib
+*.dll
+
+# Compilación
+*.o
+*.a
+*.exe
+
+# === Documentación Rust ===
+/doc/
+*.profraw
+*.profdata
+
+# === IntelliJ IDEA / RustRover ===
+.idea/
+*.iml
+*.ipr
+*.iws
+.idea_modules/
+out/
+atlassian-ide-plugin.xml
+com_crashlytics_export_strings.xml
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties
+
+# === VSCode ===
+.vscode/
+*.code-workspace
+.history/
+
+# === Agentes IA ===
+.cursor/
+.continue/
+.aider*
+*.aider.chat.history.md
+.copilot/
+.codeium/
+
+# === Sistema Operativo ===
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+.directory
+
+# === Logs y Temporales ===
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+*.cache
+
+# === Tests y Cobertura ===
+coverage/
+*.gcda
+*.gcno
+*.lcov
+tarpaulin-report.html
+cobertura.xml
+
+# === Secrets y Configuración Local ===
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p12
+*.jks
+secrets/
+config.local.*
+
+# === Database ===
+*.db
+*.sqlite
+*.sqlite3
+
+# === Redis ===
+dump.rdb
+
+# === Docker ===
+docker-compose.override.yml
+
+# === Benchmarking ===
+criterion/
+benches/target/
+
+# === Backup y Patches ===
+*.orig
+*.rej
+*.bak
+*.patch
+
+# === Editor Config ===
+*.kate-swp
+.project
+.settings/
+.classpath

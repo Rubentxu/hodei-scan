@@ -2803,9 +2803,146 @@ pub struct FactProvenance {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum FactType {
-    Function { name: String },
-    Variable { name: String },
-    UnsafeCall { function_name: String },
+    // === SAST DOMAIN (Security) ===
+    FunctionFact { 
+        name: String, 
+        complexity: u32,
+        cognitive_complexity: u32,
+        visibility: String,
+        file: String,
+        line: u32,
+    },
+    VariableFact { 
+        name: String,
+        scope: String,
+        type_info: String,
+        file: String,
+        line: u32,
+    },
+    TaintSourceFact { 
+        var: String, 
+        source_type: String,
+        confidence: f64,
+        file: String,
+        line: u32,
+    },
+    TaintSinkFact { 
+        func: String, 
+        sink_type: String,
+        severity: String,
+        file: String,
+        line: u32,
+    },
+    VulnerabilityFact { 
+        cwe_id: String, 
+        owasp_category: String, 
+        confidence: f64,
+        severity: String,
+        r#type: String,
+        file: String,
+        line: u32,
+        message: String,
+    },
+    SecurityHotspotFact {
+        resource: String,
+        security_category: String,
+        probability: f64,
+        file: String,
+        line: u32,
+    },
+    
+    // === SCA DOMAIN (Dependencies) ===
+    DependencyFact { 
+        name: String, 
+        version: String,
+        ecosystem: String,
+        scope: String,
+        is_transitive: bool,
+        cve: Option<String>,
+        cvss_score: Option<f64>,
+        is_outdated: bool,
+        license: Option<String>,
+        file: String,
+    },
+    
+    // === COVERAGE DOMAIN ===
+    CoverageFact {
+        file: String,
+        covered_lines: u32,
+        uncovered_lines: u32,
+        total_lines: u32,
+        coverage_percentage: f64,
+        branch_coverage: Option<f64>,
+    },
+    UncoveredLineFact { 
+        file: String, 
+        line: u32,
+        is_branch: bool,
+    },
+    TestResultFact {
+        test_name: String,
+        status: String,
+        duration_ms: f64,
+        error_message: Option<String>,
+    },
+    
+    // === CODE QUALITY DOMAIN ===
+    CodeSmellFact {
+        r#type: String,
+        severity: String,
+        effort: String,
+        debt_minutes: Option<u32>,
+        file: String,
+        line: u32,
+    },
+    DuplicationFact {
+        blocks: u32,
+        lines: u32,
+        files: Vec<String>,
+    },
+    CyclomaticComplexityFact {
+        file: String,
+        function: String,
+        complexity: u32,
+    },
+    
+    // === ARCHITECTURE DOMAIN ===
+    ArchitectureSmellFact {
+        r#type: String,
+        affected_files: Vec<String>,
+        description: String,
+    },
+    DeadCodeFact {
+        r#type: String,
+        name: String,
+        file: String,
+        line: u32,
+    },
+    
+    // === METRICS DOMAIN ===
+    MetricFact {
+        metric_name: String,
+        value: f64,
+        r#type: String,
+        file: Option<String>,
+    },
+    
+    // === DOCUMENTATION DOMAIN ===
+    CommentFact {
+        r#type: String,
+        density: f64,
+        duplicated: bool,
+        file: String,
+    },
+    
+    // === CORRELATION DOMAIN ===
+    CorrelationFact { 
+        correlation_type: String,
+        domains: Vec<String>,
+        fact_ids: Vec<String>,
+        strength: f64,
+        description: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
