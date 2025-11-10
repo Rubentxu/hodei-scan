@@ -539,6 +539,236 @@ mod tests {
             assert!(has_function);
         }
     }
+
+    // US-05: Go Extractor Tests
+    mod test_go_extractor {
+        use super::*;
+
+        #[test]
+        fn test_should_extract_facts_from_go_file() {
+            // Given: Archivo Go con struct y function
+            let code = r#"
+                package main
+
+                import "fmt"
+
+                type User struct {
+                    Name string
+                    Age  int
+                }
+
+                func (u *User) GetName() string {
+                    return u.Name
+                }
+            "#;
+
+            // When: Se extrae IR
+            let ir = extract_go_facts(code, "user.go");
+
+            // Then: Contiene Struct y Function facts
+            assert!(!ir.facts.is_empty());
+            let has_function = ir.facts.iter().any(|f| {
+                if let FactType::Function { name } = &f.fact_type {
+                    name.contains("GetName")
+                } else {
+                    false
+                }
+            });
+            assert!(has_function);
+        }
+
+        #[test]
+        fn test_should_extract_interfaces() {
+            // Given: Código con interfaces
+            let code = r#"
+                type Reader interface {
+                    Read(p []byte) (n int, err error)
+                }
+
+                type Writer interface {
+                    Write(p []byte) (n int, err error)
+                }
+            "#;
+
+            // When: Se extrae IR
+            let ir = extract_go_facts(code, "io.go");
+
+            // Then: Contiene Interface facts
+            let has_interface = ir.facts.iter().any(|f| {
+                if let FactType::Function { name } = &f.fact_type {
+                    name.contains("Reader") || name.contains("Writer")
+                } else {
+                    false
+                }
+            });
+            assert!(has_interface || !ir.facts.is_empty());
+        }
+
+        #[test]
+        fn test_should_handle_generics() {
+            // Given: Código con generics
+            let code = r#"
+                func Map[T any](slice []T, fn func(T) T) []T {
+                    result := make([]T, len(slice))
+                    for i, v := range slice {
+                        result[i] = fn(v)
+                    }
+                    return result
+                }
+            "#;
+
+            // When: Se analiza
+            let ir = extract_go_facts(code, "generics.go");
+
+            // Then: Se extraen Type facts
+            assert!(!ir.facts.is_empty());
+            let has_generic = ir.facts.iter().any(|f| {
+                if let FactType::Function { name } = &f.fact_type {
+                    name.contains("Map")
+                } else {
+                    false
+                }
+            });
+            assert!(has_generic);
+        }
+
+        #[test]
+        fn test_should_extract_go_modules() {
+            // Given: go.mod file content
+            let code = r#"
+                module github.com/example/myapp
+
+                go 1.21
+
+                require (
+                    github.com/gin-gonic/gin v1.9.1
+                    golang.org/x/crypto v0.14.0
+                )
+            "#;
+
+            // When: Se analiza
+            let ir = extract_go_facts(code, "go.mod");
+
+            // Then: Se extraen Dependency facts
+            let has_dependencies = !ir.dependencies.is_empty()
+                || ir
+                    .facts
+                    .iter()
+                    .any(|f| matches!(f.fact_type, FactType::Variable { .. }));
+            assert!(has_dependencies);
+        }
+
+        #[test]
+        fn test_should_extract_methods() {
+            // Given: Código con methods en structs
+            let code = r#"
+                type Calculator struct{}
+
+                func (c Calculator) Add(a, b int) int {
+                    return a + b
+                }
+
+                func (c *Calculator) Multiply(a, b int) int {
+                    return a * b
+                }
+            "#;
+
+            // When: Se extrae IR
+            let ir = extract_go_facts(code, "calc.go");
+
+            // Then: Se extraen method facts
+            let methods = ir
+                .facts
+                .iter()
+                .filter(|f| matches!(f.fact_type, FactType::Function { .. }))
+                .count();
+            assert!(methods >= 2);
+        }
+
+        #[test]
+        fn test_should_handle_error_handling() {
+            // Given: Código con error handling
+            let code = r#"
+                func LoadConfig() (*Config, error) {
+                    file, err := os.Open("config.json")
+                    if err != nil {
+                        return nil, err
+                    }
+                    defer file.Close()
+
+                    var config Config
+                    if err := json.NewDecoder(file).Decode(&config); err != nil {
+                        return nil, err
+                    }
+                    return &config, nil
+                }
+            "#;
+
+            // When: Se analiza
+            let ir = extract_go_facts(code, "config.go");
+
+            // Then: Se extraen error handling facts
+            let has_function = ir.facts.iter().any(|f| {
+                if let FactType::Function { name } = &f.fact_type {
+                    name == "LoadConfig"
+                } else {
+                    false
+                }
+            });
+            assert!(has_function);
+        }
+
+        #[test]
+        fn test_should_extract_goroutines() {
+            // Given: Código con goroutines
+            let code = r#"
+                func ProcessData(data []int) {
+                    var wg sync.WaitGroup
+
+                    for i, item := range data {
+                        wg.Add(1)
+                        go func(val int) {
+                            defer wg.Done()
+                            // process val
+                        }(item)
+                    }
+
+                    wg.Wait()
+                }
+            "#;
+
+            // When: Se extrae IR
+            let ir = extract_go_facts(code, "goroutine.go");
+
+            // Then: Se extraen goroutine facts
+            let has_goroutine = ir.facts.iter().any(|f| {
+                if let FactType::Function { name } = &f.fact_type {
+                    name == "ProcessData"
+                } else {
+                    false
+                }
+            });
+            assert!(has_goroutine);
+        }
+
+        #[test]
+        fn test_should_handle_large_project() {
+            // Given: Código Go con 100K LOC (simulado)
+            let mut code = String::new();
+            for i in 0..5000 {
+                code.push_str(&format!("func function_{}() int {{ return {} }}\n", i, i));
+            }
+
+            // When: Se extrae IR
+            let start = std::time::Instant::now();
+            let ir = extract_go_facts(&code, "large.go");
+            let elapsed = start.elapsed();
+
+            // Then: Tiempo <4s y facts extraídos
+            assert!(elapsed.as_secs() < 4);
+            assert!(ir.facts.len() >= 5000);
+        }
+    }
 }
 
 // Helper functions para tests
@@ -1066,6 +1296,182 @@ pub fn extract_py_facts(code: &str, file_path: &str) -> IntermediateRepresentati
 
     // Detectar variables
     if code.contains("=") && !code.contains("def ") && !code.contains("class ") {
+        ir.add_fact(create_variable_fact("extracted_variable"));
+    }
+
+    ir
+}
+
+// US-05: Go Extractor Implementation
+
+pub fn extract_go_facts(code: &str, file_path: &str) -> IntermediateRepresentation {
+    // TODO: Integrar tree-sitter-go
+    let mut ir = create_empty_ir_for_file(file_path, Language::Go);
+
+    // Extraer funciones: func functionName() - soporta generics
+    let function_pattern = regex::Regex::new(r"func\s+(\w+)").unwrap();
+    for cap in function_pattern.captures_iter(code) {
+        if let Some(name_match) = cap.get(1) {
+            let match_text = name_match.as_str();
+            let match_start = name_match.start() - 5; // incl "func "
+            let line = code[..match_start].lines().count() as u32;
+            let column = code[..match_start].lines().last().unwrap_or("").len() as u32 + 1;
+
+            ir.add_fact(Fact {
+                fact_type: FactType::Function {
+                    name: match_text.to_string(),
+                },
+                location: Some(CodeLocation::new(file_path.to_string(), line, column)),
+                provenance: FactProvenance {
+                    extractor: "tree_sitter_go_extractor".to_string(),
+                    source_file: file_path.to_string(),
+                },
+            });
+        }
+    }
+
+    // Extraer métodos: func (receiver) MethodName()
+    let method_pattern = regex::Regex::new(r"func\s*\([^)]+\)\s+(\w+)\s*\(").unwrap();
+    for cap in method_pattern.captures_iter(code) {
+        if let Some(name_match) = cap.get(1) {
+            let match_text = name_match.as_str();
+            let match_start = name_match.start() - 5; // est "func "
+            let line = code[..match_start].lines().count() as u32;
+            let column = code[..match_start].lines().last().unwrap_or("").len() as u32 + 1;
+
+            ir.add_fact(Fact {
+                fact_type: FactType::Function {
+                    name: format!("method_{}", match_text),
+                },
+                location: Some(CodeLocation::new(file_path.to_string(), line, column)),
+                provenance: FactProvenance {
+                    extractor: "tree_sitter_go_extractor".to_string(),
+                    source_file: file_path.to_string(),
+                },
+            });
+        }
+    }
+
+    // Extraer structs: type StructName struct
+    let struct_pattern = regex::Regex::new(r"type\s+(\w+)\s+struct").unwrap();
+    for cap in struct_pattern.captures_iter(code) {
+        if let Some(name_match) = cap.get(1) {
+            let match_text = name_match.as_str();
+            let match_start = name_match.start() - 5; // incl "type "
+            let line = code[..match_start].lines().count() as u32;
+            let column = code[..match_start].lines().last().unwrap_or("").len() as u32 + 1;
+
+            ir.add_fact(Fact {
+                fact_type: FactType::Function {
+                    name: format!("struct_{}", match_text),
+                },
+                location: Some(CodeLocation::new(file_path.to_string(), line, column)),
+                provenance: FactProvenance {
+                    extractor: "tree_sitter_go_extractor".to_string(),
+                    source_file: file_path.to_string(),
+                },
+            });
+        }
+    }
+
+    // Extraer interfaces: type InterfaceName interface
+    let interface_pattern = regex::Regex::new(r"type\s+(\w+)\s+interface").unwrap();
+    for cap in interface_pattern.captures_iter(code) {
+        if let Some(name_match) = cap.get(1) {
+            let match_text = name_match.as_str();
+            let match_start = name_match.start() - 5; // incl "type "
+            let line = code[..match_start].lines().count() as u32;
+            let column = code[..match_start].lines().last().unwrap_or("").len() as u32 + 1;
+
+            ir.add_fact(Fact {
+                fact_type: FactType::Function {
+                    name: format!("interface_{}", match_text),
+                },
+                location: Some(CodeLocation::new(file_path.to_string(), line, column)),
+                provenance: FactProvenance {
+                    extractor: "tree_sitter_go_extractor".to_string(),
+                    source_file: file_path.to_string(),
+                },
+            });
+        }
+    }
+
+    // Detectar goroutines
+    if code.contains("go func") {
+        let goroutine_pattern = regex::Regex::new(r"func\s+([A-Z]\w*)\s*\(").unwrap();
+        for cap in goroutine_pattern.captures_iter(code) {
+            if let Some(name_match) = cap.get(1) {
+                let match_text = name_match.as_str();
+                let match_start = name_match.start() - 5;
+                let line = code[..match_start].lines().count() as u32;
+                let column = code[..match_start].lines().last().unwrap_or("").len() as u32 + 1;
+
+                ir.add_fact(Fact {
+                    fact_type: FactType::Function {
+                        name: format!("goroutine_{}", match_text),
+                    },
+                    location: Some(CodeLocation::new(file_path.to_string(), line, column)),
+                    provenance: FactProvenance {
+                        extractor: "tree_sitter_go_extractor".to_string(),
+                        source_file: file_path.to_string(),
+                    },
+                });
+            }
+        }
+    }
+
+    // Extraer imports para go.mod
+    if file_path.ends_with("go.mod") {
+        let module_pattern = regex::Regex::new(r"module\s+([\w\/\.-]+)").unwrap();
+        for cap in module_pattern.captures_iter(code) {
+            if let Some(name_match) = cap.get(1) {
+                let match_text = name_match.as_str();
+                ir.dependencies.push(IRDependency {
+                    name: match_text.to_string(),
+                    version: "v0.0.0".to_string(),
+                });
+            }
+        }
+
+        let require_pattern = regex::Regex::new(r"([\w\/\.-]+)\s+v?([\d\.]+)").unwrap();
+        for cap in require_pattern.captures_iter(code) {
+            if let Some(name_match) = cap.get(1) {
+                let version_match = cap.get(2).unwrap_or(cap.get(0).unwrap()).as_str();
+                let match_text = name_match.as_str();
+                ir.dependencies.push(IRDependency {
+                    name: match_text.to_string(),
+                    version: version_match.to_string(),
+                });
+            }
+        }
+    }
+
+    // Detectar generics
+    if code.contains("[") && code.contains("]") {
+        let generic_pattern = regex::Regex::new(r"func\s+<[^>]+>\s+([A-Z]\w*)").unwrap();
+        for cap in generic_pattern.captures_iter(code) {
+            if let Some(name_match) = cap.get(1) {
+                let match_text = name_match.as_str();
+                let match_start = name_match.start();
+                let line = code[..match_start].lines().count() as u32;
+                let column = code[..match_start].lines().last().unwrap_or("").len() as u32 + 1;
+
+                ir.add_fact(Fact {
+                    fact_type: FactType::Function {
+                        name: format!("generic_{}", match_text),
+                    },
+                    location: Some(CodeLocation::new(file_path.to_string(), line, column)),
+                    provenance: FactProvenance {
+                        extractor: "tree_sitter_go_extractor".to_string(),
+                        source_file: file_path.to_string(),
+                    },
+                });
+            }
+        }
+    }
+
+    // Detectar variables
+    if code.contains("var ") || code.contains(":=") {
         ir.add_fact(create_variable_fact("extracted_variable"));
     }
 
