@@ -16,8 +16,8 @@ mod tooling_tests {
 
         // Verificar configuraciones importantes
         assert!(
-            content.contains("edition = \"2021\""),
-            "rustfmt.toml debe usar edition 2021"
+            content.contains("edition = \"2024\""),
+            "rustfmt.toml debe usar edition 2024"
         );
     }
 
