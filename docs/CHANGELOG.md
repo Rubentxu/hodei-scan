@@ -7,6 +7,132 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.2.1] - 2025-01-XX
+
+### Added
+
+#### Epic Documentation (EPIC-04 through EPIC-15)
+
+Complete implementation plans for hodei-scan v3.2:
+
+**Critical Path Epics:**
+- **EPIC-04**: Indexed Fact Store & Query Planner
+  - TypeIndex (HashMap), SpatialIndex (R-tree with rstar), FlowIndex (petgraph)
+  - QueryPlanner with cost estimation and selectivity
+  - Performance target: 1M facts queries in <10μs
+  - Memory overhead: <30% of IR size
+
+- **EPIC-05**: DSL Parser (Cedar-like Rule Language)
+  - Formal PEG grammar with pest (40+ production rules)
+  - Type-safe AST with comprehensive type checker
+  - Security: Zero DSL injection vulnerabilities (no eval, formal grammar)
+  - Error messages with spans and suggestions
+
+- **EPIC-06**: Rule Engine (Evaluation & Finding Generation)
+  - Stateless parallel evaluator using rayon
+  - Resource limits: per-rule timeouts (1s default), max findings (10k)
+  - PatternMatcher with optimal index selection
+  - ExprEvaluator with short-circuit evaluation
+  - FindingBuilder with template interpolation
+
+- **EPIC-07**: Extractors Framework & Core Extractors
+  - Trait-based plugin system (async_trait)
+  - Core extractors: TaintAnalysis (tree-sitter), Coverage (lcov), Dependency, Semgrep, Gitleaks
+  - Parallel execution with rayon
+  - Error handling and timeout management
+
+- **EPIC-11**: CLI (Command-Line Interface)
+  - Commands: extract, analyze, check, convert, metrics, history, compare, validate-rules
+  - Shell completions for bash/zsh/fish (clap_complete)
+  - Progress indicators with indicatrix
+  - Colored output with termcolor
+  - Multi-format output: text, JSON, SARIF
+
+**High Priority Epics:**
+- **EPIC-08**: Quality Gates Plugin
+  - YAML configuration for threshold policies
+  - Metrics: FindingsBySeverity, LineCoverage, TechnicalDebt, VulnerableUncoveredRatio
+  - Actions: Fail, Warn, Block (distinct exit codes)
+  - CI/CD integration with appropriate exit codes
+
+- **EPIC-12**: CI/CD Integration & GitHub Actions
+  - GitHub Action with SARIF upload to Security tab
+  - Automated PR comments with finding summaries
+  - Templates for GitLab CI and Jenkins
+  - Multi-platform support
+
+- **EPIC-13**: Testing Strategy & Test Suite
+  - Unit tests (target: >90% coverage)
+  - Property tests with proptest for critical types
+  - Fuzzing with cargo-fuzz (DSL parser, Cap'n Proto, ProjectPath)
+  - Integration tests with realistic fixtures
+  - E2E tests for CLI commands
+  - Benchmarks with criterion and automated regression detection
+
+- **EPIC-14**: Documentation (User & Developer)
+  - User guide: getting started, writing rules, quality gates, CI/CD integration
+  - Developer guide: architecture, custom extractors, plugin development
+  - API reference: rustdoc for all public APIs
+  - Tutorials: first scan, first rule, custom extractor, GitHub Actions
+  - mdBook deployment to GitHub Pages
+
+- **EPIC-15**: Release & Deployment Pipeline
+  - Automated releases with semantic versioning
+  - Multi-platform binaries: Linux (amd64/musl), macOS (amd64/arm64), Windows
+  - Docker images with multi-arch support
+  - Publication to crates.io (hodei-ir, hodei-dsl, hodei-extractors, hodei-engine, hodei-cli)
+  - Install script with platform detection
+  - Changelog automation with git-cliff
+
+**Medium Priority Epics:**
+- **EPIC-09**: Metric Aggregator & Dashboards
+  - JSON, Prometheus, HTML export formats
+  - Interactive HTML dashboard with Chart.js
+  - Historical trending and comparisons
+
+- **EPIC-10**: Persistence Layer (JSON/SQLite)
+  - Storage trait abstraction
+  - JSON storage for simplicity
+  - SQLite storage for queryable history
+  - Metrics comparison across scans
+
+**Future Epics (v3.3+):**
+- **EPIC-16**: Incremental Analysis & Caching (v3.3)
+- **EPIC-17**: Interactive Mode & REPL (v3.3)
+- **EPIC-18**: Web UI & Dashboard (v3.4)
+- **EPIC-19**: Language Server Protocol (LSP) (v3.5)
+- **EPIC-20**: Advanced Correlation Rules with ML (v3.5)
+
+#### Epic Documentation Structure
+
+Each epic contains:
+1. **Resumen Ejecutivo** - Objective, business goals, success metrics
+2. **Contexto Técnico** - Problem, solution, high-level design
+3. **Alcance** - MUST/SHOULD/Out of scope
+4. **Arquitectura Detallada** - Code examples, types, API designs (500-1000 lines per epic)
+5. **Plan de Implementación** - Phases with tasks, dependencies, timelines
+6. **Tests & Validación** - Unit tests, property tests, benchmarks, fuzzing
+7. **Seguridad & Mitigaciones** - Threat model, security considerations
+8. **Criterios de Aceptación** - Done checklist
+
+#### Documentation Updates
+
+- **INDEX.md**: Added epic navigation section
+  - Epic roadmap table with priorities and dependencies
+  - Quick start guide updated with epic references
+  - Checklist for new team members includes epic study
+  - Metrics updated: ~15,000 total documentation lines, 20 epics
+
+### Documentation Stats
+
+- **Total lines added:** ~6,200 (13 epic files + INDEX updates)
+- **Epics documented:** 20 (15 detailed, 5 future in consolidated doc)
+- **Code examples:** 200+ across all epics
+- **Implementation phases:** 50+ detailed phase breakdowns
+- **Test examples:** 100+ unit/integration/property test cases
+
+---
+
 ## [3.2.0] - 2025-01-XX
 
 ### 🚨 BREAKING CHANGES
