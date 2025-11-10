@@ -59,6 +59,26 @@ test-unit:
 test-integration:
     cargo test --test '*'
 
+# Run E2E tests (real-world testing with actual Java projects)
+test-e2e:
+    cargo test --test e2e
+
+# Run E2E tests with verbose output
+test-e2e-verbose:
+    cargo test --test e2e -- --nocapture
+
+# Run specific E2E test
+test-e2e-name name:
+    cargo test --test e2e {{name}} -- --nocapture
+
+# Run performance tests
+test-perf:
+    cargo test --test performance
+
+# Run all tests including E2E
+test-all-types: test-integration test-e2e test-perf
+    echo "✅ All test types passed!"
+
 # Run doc tests
 test-docs:
     cargo test --doc
@@ -234,9 +254,9 @@ clean-temp:
 # CI/CD COMMANDS
 # ==========================================
 
-# Full CI pipeline
+# Full CI pipeline (includes all test types)
 ci:
-    just test-all
+    just test-all-types
     just quality
     just audit
     just docs
@@ -248,11 +268,20 @@ ci-quick:
     just lint
     echo "✅ Quick CI passed!"
 
-# CI for pull requests
+# CI for pull requests (includes E2E tests)
 ci-pr:
-    just test-workspace
+    just test-all-types
     just quality
     echo "✅ PR CI passed!"
+
+# Full CI with detailed E2E test output
+ci-e2e:
+    just test-integration
+    just test-e2e-verbose
+    just test-perf
+    just quality
+    just audit
+    echo "✅ Full CI with E2E tests passed!"
 
 # Pre-commit checks
 pre-commit:

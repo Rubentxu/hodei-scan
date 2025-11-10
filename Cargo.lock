@@ -600,6 +600,8 @@ dependencies = [
  "hodei-engine",
  "hodei-extractors",
  "hodei-ir",
+ "tempfile",
+ "tokio",
  "uuid",
 ]
 

@@ -1,11 +1,9 @@
 //! Quality Gates Validation Tests
 
 use std::path::PathBuf;
-use tempfile;
 
 #[cfg(test)]
 mod quality_gates_tests {
-    use super::*;
 
     #[test]
     fn test_quality_gate_configuration_parsing() {

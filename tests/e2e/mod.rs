@@ -64,3 +64,9 @@ mod basic_e2e {
         assert!(true);
     }
 }
+
+#[cfg(test)]
+mod real_world_tests;
+
+#[cfg(test)]
+mod quality_gates;
