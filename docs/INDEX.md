@@ -229,6 +229,7 @@ Este índice organiza toda la documentación de hodei-scan v3.2 por audiencia y 
 2. **Entender v3.2 changes:** `decisions/ADR-001-atomic-facts-only.md` (10 min)
 3. **Entender decisiones:** `ARCHITECTURE-V3.2-FINAL.md` Sección 1 (30 min)
 4. **Ver roadmap:** `ARCHITECTURE-V3.2-FINAL.md` Sección 10 (10 min)
+5. **Revisar épicas:** [`epics/`](./epics/) (por fase de implementación)
 
 ### Para implementar esta semana:
 1. **Setup monorepo:** `ARCHITECTURE-V3.2-FINAL.md` Sección 9.1
@@ -246,6 +247,74 @@ Este índice organiza toda la documentación de hodei-scan v3.2 por audiencia y 
 | `decisions/ADR-001-atomic-facts-only.md` | 3.2 | ✅ Accepted | Decisión: Facts atómicos | Arquitectos |
 | `ARCHITECTURE-V3.md` | 3.0 | 📚 Referencia | Visión original | Contexto |
 | `HODEI-SCAN-V2-FINAL_PROPOSAL.md` | 2.0 | 📚 Referencia | Propuesta inicial | Contexto |
+| `epics/EPIC-*.md` | 3.2 | 📝 Draft | Plan de implementación | Ingenieros |
+
+---
+
+## 📋 Épicas de Implementación (v3.2)
+
+**Directorio:** [`epics/`](./epics/)  
+**Audiencia:** Ingenieros, Tech Leads, Project Managers  
+**Tiempo de lectura:** Variable por épica (30-60 min cada una)
+
+### Épicas del Critical Path (v3.2)
+
+| Epic | Título | Prioridad | Dependencias | Estado |
+|------|--------|-----------|--------------|--------|
+| [EPIC-01](./epics/EPIC-01-overview.md) | Project Overview & Roadmap | Critical | - | ✅ Done |
+| [EPIC-02](./epics/EPIC-02-ir-core.md) | IR Core (Newtypes & Facts) | Critical | - | 📝 Draft |
+| [EPIC-03](./epics/EPIC-03-zero-copy.md) | Zero-Copy IR (Cap'n Proto) | Critical | EPIC-02 | 📝 Draft |
+| [EPIC-04](./epics/EPIC-04-indexed-fact-store.md) | Indexed Fact Store & Query Planner | Critical | EPIC-02, 03 | 📝 Draft |
+| [EPIC-05](./epics/EPIC-05-dsl-parser.md) | DSL Parser (PEG Grammar) | Critical | EPIC-02 | 📝 Draft |
+| [EPIC-06](./epics/EPIC-06-rule-engine.md) | Rule Engine (Evaluation & Findings) | Critical | EPIC-02, 04, 05 | 📝 Draft |
+| [EPIC-07](./epics/EPIC-07-extractors.md) | Extractors Framework & Core | Critical | EPIC-02 | 📝 Draft |
+| [EPIC-11](./epics/EPIC-11-cli.md) | CLI (Command-Line Interface) | Critical | EPIC-02..10 | 📝 Draft |
+| [EPIC-13](./epics/EPIC-13-testing.md) | Testing Strategy & Test Suite | Critical | Todos | 📝 Draft |
+
+### Épicas de Alta Prioridad (v3.2)
+
+| Epic | Título | Prioridad | Dependencias | Estado |
+|------|--------|-----------|--------------|--------|
+| [EPIC-08](./epics/EPIC-08-quality-gates.md) | Quality Gates Plugin | High | EPIC-06 | 📝 Draft |
+| [EPIC-12](./epics/EPIC-12-ci-cd.md) | CI/CD Integration & GitHub Actions | High | EPIC-11 | 📝 Draft |
+| [EPIC-14](./epics/EPIC-14-documentation.md) | Documentation (User & Developer) | High | Todos | 📝 Draft |
+| [EPIC-15](./epics/EPIC-15-release.md) | Release & Deployment Pipeline | High | EPIC-11, 13 | 📝 Draft |
+
+### Épicas de Prioridad Media (v3.2)
+
+| Epic | Título | Prioridad | Dependencias | Estado |
+|------|--------|-----------|--------------|--------|
+| [EPIC-09](./epics/EPIC-09-metrics.md) | Metric Aggregator & Dashboards | Medium | EPIC-06, 08 | 📝 Draft |
+| [EPIC-10](./epics/EPIC-10-persistence.md) | Persistence Layer (JSON/SQLite) | Medium | EPIC-02, 06 | 📝 Draft |
+
+### Épicas Futuras (v3.3+)
+
+| Epic | Título | Versión | Prioridad | Estado |
+|------|--------|---------|-----------|--------|
+| [EPIC-16](./epics/EPIC-16-20-future.md) | Incremental Analysis & Caching | v3.3 | Medium | 🔮 Future |
+| [EPIC-17](./epics/EPIC-16-20-future.md) | Interactive Mode & REPL | v3.3 | Low | 🔮 Future |
+| [EPIC-18](./epics/EPIC-16-20-future.md) | Web UI & Dashboard | v3.4 | Medium | 🔮 Future |
+| [EPIC-19](./epics/EPIC-16-20-future.md) | Language Server Protocol (LSP) | v3.5 | Low | 🔮 Future |
+| [EPIC-20](./epics/EPIC-16-20-future.md) | Advanced Correlation Rules | v3.5 | Medium | 🔮 Future |
+
+### Estructura de una Épica
+
+Cada épica contiene:
+1. **Resumen Ejecutivo** - Objetivo, métricas de éxito
+2. **Contexto Técnico** - Problema, solución, diseño
+3. **Alcance** - MUST/SHOULD/Fuera de alcance
+4. **Arquitectura Detallada** - Código de ejemplo, tipos, APIs
+5. **Plan de Implementación** - Fases, tareas, dependencias
+6. **Tests & Validación** - Unit tests, property tests, benchmarks
+7. **Seguridad & Mitigaciones** - Threat model, mitigaciones
+8. **Criterios de Aceptación** - Checklist de Done
+
+### Casos de uso de las Épicas:
+- ✅ Planificación sprint-by-sprint
+- ✅ Estimación de esfuerzo
+- ✅ Distribución de trabajo en equipo
+- ✅ Tracking de progreso
+- ✅ Onboarding de nuevos desarrolladores
 
 ---
 
@@ -287,6 +356,7 @@ Este índice organiza toda la documentación de hodei-scan v3.2 por audiencia y 
 |-----------|-----|-------------------------|
 | ✅ Especificación v3.2 Completa | 2025-01-XX | Este conjunto de docs |
 | ✅ ADR-001: Facts Atómicos | 2025-01-XX | `decisions/ADR-001-atomic-facts-only.md` |
+| ✅ Épicas v3.2 Completadas | 2025-01-XX | `epics/EPIC-01..15.md` |
 | ⏳ PoC Zero-Copy (Semana 1) | 2025-02-XX | `ARCHITECTURE-V3.2-FINAL.md` §8.1.1 |
 | ⏳ IR Core Implementado (Mes 1) | 2025-03-XX | `ARCHITECTURE-V3.2-FINAL.md` §9.2 |
 | ⏳ Extractores Nivel 1 (Mes 2) | 2025-04-XX | `ARCHITECTURE-V3.2-FINAL.md` §9.3 |
@@ -376,10 +446,12 @@ Este índice organiza toda la documentación de hodei-scan v3.2 por audiencia y 
 - [ ] Leer `V3.1-EXECUTIVE-SUMMARY.md` (15 min)
 - [ ] Leer `decisions/ADR-001-atomic-facts-only.md` (10 min)
 - [ ] Leer `ARCHITECTURE-V3.2-FINAL.md` Secciones 1-2.5 (1 hora)
+- [ ] Revisar `epics/EPIC-01-overview.md` (30 min)
 - [ ] Setup entorno de desarrollo (ver §9.1)
 
 ### Semana 1:
 - [ ] Leer `ARCHITECTURE-V3.2-FINAL.md` completo (3 horas)
+- [ ] Estudiar épicas del critical path (EPIC-02..07)
 </parameter>
 </invoke>
 - [ ] Implementar primer tipo core (Confidence)
@@ -452,7 +524,8 @@ Ver `ARCHITECTURE-V3.1-FINAL.md` Apéndice B para glosario completo.
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de líneas documentadas** | ~6,500 |
+| **Total de líneas documentadas** | ~15,000 |
+| **Épicas documentadas** | 20 |
 | **Secciones principales** | 11 |
 | **Ejemplos de código** | 100+ |
 | **Diagramas ASCII** | 5 |
