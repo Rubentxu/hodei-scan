@@ -19,7 +19,8 @@ mod tests {
             assert!(
                 crate_path.exists(),
                 "Crate '{}' no existe en crates/{}",
-                crate_name, crate_name
+                crate_name,
+                crate_name
             );
 
             let cargo_toml = crate_path.join("Cargo.toml");
@@ -55,8 +56,8 @@ mod tests {
     /// Test que verifica que las dependencias están definidas en el workspace
     #[test]
     fn workspace_dependencies_are_defined() {
-        let workspace_toml = fs::read_to_string("Cargo.toml")
-            .expect("No se pudo leer Cargo.toml del workspace");
+        let workspace_toml =
+            fs::read_to_string("Cargo.toml").expect("No se pudo leer Cargo.toml del workspace");
 
         // Verificar que es un workspace
         assert!(
@@ -93,13 +94,7 @@ mod tests {
         // Este test simula la verificación de compilación
         // En un entorno real, usaríamos: cargo check --workspace
         // Por ahora, verificamos que los archivos de configuración existen
-        assert!(
-            Path::new("rustfmt.toml").exists(),
-            "rustfmt.toml no existe"
-        );
-        assert!(
-            Path::new(".clippy.toml").exists(),
-            ".clippy.toml no existe"
-        );
+        assert!(Path::new("rustfmt.toml").exists(), "rustfmt.toml no existe");
+        assert!(Path::new(".clippy.toml").exists(), ".clippy.toml no existe");
     }
 }

@@ -1,0 +1,14 @@
+[package]
+name = "hodei-metrics"
+version = "0.1.0"
+edition = "2024"
+description = "Metrics and analytics for hodei-scan"
+license = "MIT"
+
+[dependencies]
+hodei-ir = { path = "../hodei-ir" }
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }

@@ -2,22 +2,11 @@
 #
 # This file configures the Clippy linter for the entire workspace.
 
-# Toolchain configuration
-[toolchain]
-channel = "stable"
-components = ["rustfmt", "clippy"]
-profile = "default"
-
 # Allow some lints that are useful but may be too strict in some cases
 allow = [
     "clippy::module_name_repetitions",
     "clippy::similar_names",
     "clippy::too_many_lines",
-]
-
-# Deny warnings in CI
-deny = [
-    "warnings",
 ]
 
 # Complex lints with custom thresholds

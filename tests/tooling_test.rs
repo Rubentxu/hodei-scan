@@ -6,13 +6,9 @@ mod tooling_tests {
     /// Test que verifica que rustfmt.toml existe
     #[test]
     fn rustfmt_config_exists() {
-        assert!(
-            Path::new("rustfmt.toml").exists(),
-            "rustfmt.toml no existe"
-        );
+        assert!(Path::new("rustfmt.toml").exists(), "rustfmt.toml no existe");
 
-        let content = fs::read_to_string("rustfmt.toml")
-            .expect("No se pudo leer rustfmt.toml");
+        let content = fs::read_to_string("rustfmt.toml").expect("No se pudo leer rustfmt.toml");
 
         // Verificar configuraciones importantes
         assert!(
@@ -24,10 +20,7 @@ mod tooling_tests {
     /// Test que verifica que .clippy.toml existe
     #[test]
     fn clippy_config_exists() {
-        assert!(
-            Path::new(".clippy.toml").exists(),
-            ".clippy.toml no existe"
-        );
+        assert!(Path::new(".clippy.toml").exists(), ".clippy.toml no existe");
     }
 
     /// Test que verifica que rust-toolchain.toml existe
@@ -38,8 +31,8 @@ mod tooling_tests {
             "rust-toolchain.toml no existe"
         );
 
-        let content = fs::read_to_string("rust-toolchain.toml")
-            .expect("No se pudo leer rust-toolchain.toml");
+        let content =
+            fs::read_to_string("rust-toolchain.toml").expect("No se pudo leer rust-toolchain.toml");
 
         assert!(
             content.contains("channel ="),

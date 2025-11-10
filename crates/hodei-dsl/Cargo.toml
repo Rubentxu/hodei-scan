@@ -10,6 +10,7 @@ repository = "https://github.com/hodei-scan/hodei-scan"
 hodei-ir = { path = "../hodei-ir" }
 pest = { workspace = true }
 pest_derive = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
 
 [dev-dependencies]

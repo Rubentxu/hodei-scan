@@ -1,0 +1,67 @@
+// Reglas de Testing para Java
+// Archivo: rules/testing.rules
+
+rule "Low Test Coverage" {
+    description: "Detecta clases con baja cobertura de tests"
+    severity: "Critical"
+    tags: ["testing", "coverage", "java"]
+
+    match {
+        file: LowTestCoverage {
+            percentage < 80
+        }
+    }
+
+    emit Finding {
+        message: "Cobertura de tests baja: {file.percentage}% en {file.file}"
+        confidence: "High"
+        metadata: {
+            coverage = file.percentage,
+            total_lines = file.total_lines,
+            covered_lines = file.covered_lines
+        }
+    }
+}
+
+rule "Missing Tests for Public Methods" {
+    description: "Detecta clases públicas sin tests unitarios"
+    severity: "High"
+    tags: ["testing", "java"]
+
+    match {
+        class: Class {
+            visibility == "public"
+            name !~ ".*Controller|.*Repository|.*Application|.*Configuration"
+        }
+        where: count(class.methods) > 0
+    }
+
+    emit Finding {
+        message: "Clase pública sin tests: {class.name}"
+        confidence: "Medium"
+        metadata: {
+            method_count = count(class.methods)
+        }
+    }
+}
+
+rule "Test Method Without Assertions" {
+    description: "Detecta métodos de test sin assertions"
+    severity: "Medium"
+    tags: ["testing", "java"]
+
+    match {
+        test: Function {
+            name =~ "test.*|.*Test"
+            source_code !~ "assert.*|expect.*|should.*"
+        }
+    }
+
+    emit Finding {
+        message: "Test sin assertions: {test.name}"
+        confidence: "High"
+        metadata: {
+            file = test.location.file
+        }
+    }
+}

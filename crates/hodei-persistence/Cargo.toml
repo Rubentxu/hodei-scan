@@ -1,0 +1,15 @@
+[package]
+name = "hodei-persistence"
+version = "0.1.0"
+edition = "2024"
+description = "Persistence layer for hodei-scan"
+license = "MIT"
+
+[dependencies]
+hodei-ir = { path = "../hodei-ir" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }

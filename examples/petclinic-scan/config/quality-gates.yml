@@ -1,0 +1,85 @@
+# Configuración de Quality Gates para hodei-scan
+# Archivo: config/quality-gates.yml
+
+# Quality Gates Configuration
+quality_gates:
+  # Gate 1: Security - Bloquea vulnerabilidades críticas
+  - name: "Security Gate"
+    description: "Bloquea vulnerabilidades de seguridad críticas"
+    enabled: true
+    rules:
+      - "SQL Injection in JPQL"
+      - "Hardcoded Credentials"
+      - "Insecure Random Number Generation"
+    fail_conditions:
+      - severity: "Critical"
+        count: 0  # No permite ninguna vulnerabilidad crítica
+      - severity: "High"
+        count: 3  # Permite máximo 3 vulnerabilidades altas
+
+  # Gate 2: Code Quality - Controla calidad de código
+  - name: "Code Quality Gate"
+    description: "Controla la calidad de código y mantenibilidad"
+    enabled: true
+    rules:
+      - "High Cyclomatic Complexity"
+      - "Long Method"
+      - "Too Many Parameters"
+      - "Empty Catch Block"
+    fail_conditions:
+      - severity: "High"
+        count: 5
+      - severity: "Major"
+        count: 10
+
+  # Gate 3: Testing - Asegura cobertura mínima
+  - name: "Testing Gate"
+    description: "Asegura cobertura mínima de tests"
+    enabled: true
+    rules:
+      - "Low Test Coverage"
+      - "Missing Tests for Public Methods"
+    fail_conditions:
+      - severity: "Critical"
+        count: 0  # No permite clases sin tests
+      - coverage_below: 80  # Cobertura debe ser >= 80%
+
+  # Gate 4: Logging & Best Practices
+  - name: "Best Practices Gate"
+    description: "Verifica buenas prácticas de desarrollo"
+    enabled: false  # Habilitar si se desea ser más estricto
+    rules:
+      - "System.out.println in Production Code"
+    fail_conditions:
+      - severity: "Low"
+        count: 20
+
+# Configuración de Severidad
+severity_config:
+  levels:
+    - Critical  # 0 tolerancia
+    - High      # Poca tolerancia
+    - Major     # Tolerancia media
+    - Minor     # Tolerancia alta
+    - Info      # Sin impacto
+
+# Configuración de Acciones
+actions:
+  on_pass:
+    - "Allow merge"
+    - "Send success notification"
+  on_fail:
+    - "Block merge"
+    - "Create GitHub issue"
+    - "Send failure notification to Slack"
+    - "Add 'failing-quality' label"
+
+# Configuración de Reportes
+reporting:
+  formats:
+    - json    # Para CI/CD
+    - html    # Para revisión manual
+    - sarif   # Para GitHub Security tab
+  output_dir: "reports"
+  keep_artifacts: true
+  artifact_retention_days: 30

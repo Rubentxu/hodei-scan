@@ -2,20 +2,18 @@
 name = "hodei-cli"
 version = "0.1.0"
 edition = "2024"
-description = "CLI tool for hodei-scan"
+description = "CLI for hodei-scan"
 license = "MIT"
-repository = "https://github.com/hodei-scan/hodei-scan"
-
-[[bin]]
-name = "hodei"
-path = "src/main.rs"
 
 [dependencies]
 hodei-ir = { path = "../hodei-ir" }
 hodei-engine = { path = "../hodei-engine" }
-hodei-dsl = { path = "../hodei-dsl" }
 hodei-extractors = { path = "../hodei-extractors" }
-clap = { workspace = true, features = ["derive", "cargo"] }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-anyhow = { workspace = true }
+hodei-metrics = { path = "../hodei-metrics" }
+hodei-persistence = { path = "../hodei-persistence" }
+clap = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }

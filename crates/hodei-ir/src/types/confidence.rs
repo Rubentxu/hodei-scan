@@ -24,8 +24,10 @@ impl Confidence {
         }
         Ok(Self(value))
     }
-    
-    pub fn get(&self) -> f64 { self.0 }
+
+    pub fn get(&self) -> f64 {
+        self.0
+    }
     pub const HIGH: Self = Self(0.9);
     pub const MEDIUM: Self = Self(0.6);
     pub const LOW: Self = Self(0.3);
@@ -38,10 +40,17 @@ impl fmt::Display for Confidence {
 }
 
 impl Eq for Confidence {}
-impl std::hash::Hash for Confidence { fn hash<H: std::hash::Hasher>(&self, s: &mut H) { self.0.to_bits().hash(s); } }
+impl std::hash::Hash for Confidence {
+    fn hash<H: std::hash::Hasher>(&self, s: &mut H) {
+        self.0.to_bits().hash(s);
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test] fn test_confidence() { assert!(Confidence::new(0.5).is_ok()); }
+    #[test]
+    fn test_confidence() {
+        assert!(Confidence::new(0.5).is_ok());
+    }
 }

@@ -1,0 +1,99 @@
+// hodei-dsl Grammar - PEG rules for Hodei Scan rule language
+// Inspired by Cedar (AWS Policy Language)
+
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT = _{ "//" ~ (!"\n" ~ ANY)* }
+
+// Top-level
+rule_file = { SOI ~ rule_def* ~ EOI }
+
+rule_def = {
+    "rule" ~ IDENT ~ "{" ~
+        metadata_block ~
+        match_block ~
+        emit_block ~
+    "}"
+}
+
+// Metadata
+metadata_block = { metadata_item* }
+
+metadata_item = {
+    "description:" ~ STRING |
+    "severity:" ~ severity |
+    "tags:" ~ tag_list
+}
+
+severity = { "Critical" | "High" | "Medium" | "Low" | "Info" }
+
+tag_list = { "[" ~ (STRING ~ ("," ~ STRING)*)? ~ "]" }
+
+// Match block
+match_block = {
+    "match" ~ "{" ~
+        pattern+ ~
+        where_clause? ~
+    "}"
+}
+
+pattern = { IDENT ~ ":" ~ fact_type ~ condition* }
+
+fact_type = {
+    "TaintSink" | "TaintSource" | "UncoveredLine" |
+    "Vulnerability" | "Dependency" | "License" |
+    "CodeSmell" | "DependencyVulnerability" |
+    "LowTestCoverage" | "CoverageStats" |
+    "Sanitization" | "UnsafeCall" |
+    "CryptographicOperation" | "Function" | "Variable"
+}
+
+condition = { path ~ comparison_op ~ literal }
+
+where_clause = { "where" ~ expr }
+
+// Expressions
+expr = { term ~ (binary_op ~ term)* }
+
+term = { literal | path | function_call | "(" ~ expr ~ ")" }
+
+path = { IDENT ~ ("." ~ IDENT)* }
+
+function_call = { IDENT ~ "(" ~ (expr ~ ("," ~ expr)*)? ~ ")" }
+
+binary_op = { "==" | "!=" | "<" | ">" | "<=" | ">=" | "and" | "or" }
+
+comparison_op = { "==" | "!=" | "contains" | "matches" }
+
+literal = { STRING | NUMBER | BOOLEAN | NULL }
+
+STRING = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+
+NUMBER = @{ "-"? ~ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+
+BOOLEAN = { "true" | "false" }
+
+NULL = { "null" }
+
+// Emit block
+emit_block = {
+    "emit" ~ "Finding" ~ "{" ~
+        emit_field+ ~
+    "}"
+}
+
+emit_field = {
+    "message:" ~ string_template |
+    "confidence:" ~ confidence |
+    "metadata:" ~ metadata_map
+}
+
+confidence = { "High" | "Medium" | "Low" }
+
+string_template = @{ "\"" ~ (template_var | (!"\"" ~ ANY))* ~ "\"" }
+
+template_var = { "{" ~ path ~ "}" }
+
+metadata_map = { "{" ~ (IDENT ~ ":" ~ literal ~ ("," ~ IDENT ~ ":" ~ literal)*)? ~ "}" }
+
+// Identifiers
+IDENT = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }

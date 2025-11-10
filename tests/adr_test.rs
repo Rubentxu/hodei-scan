@@ -21,11 +21,7 @@ mod adr_tests {
         ];
 
         for adr_path in required_adrs {
-            assert!(
-                Path::new(adr_path).exists(),
-                "ADR '{}' no existe",
-                adr_path
-            );
+            assert!(Path::new(adr_path).exists(), "ADR '{}' no existe", adr_path);
         }
     }
 
@@ -38,17 +34,10 @@ mod adr_tests {
             "INDEX.md no existe en docs/adr/"
         );
 
-        let content = fs::read_to_string(index_path)
-            .expect("No se pudo leer INDEX.md");
+        let content = fs::read_to_string(index_path).expect("No se pudo leer INDEX.md");
 
         // Verificar que lista las ADRs
-        assert!(
-            content.contains("ADR-001"),
-            "INDEX.md debe listar ADR-001"
-        );
-        assert!(
-            content.contains("ADR-002"),
-            "INDEX.md debe listar ADR-002"
-        );
+        assert!(content.contains("ADR-001"), "INDEX.md debe listar ADR-001");
+        assert!(content.contains("ADR-002"), "INDEX.md debe listar ADR-002");
     }
 }

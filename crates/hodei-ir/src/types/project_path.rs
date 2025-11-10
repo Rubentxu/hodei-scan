@@ -1,6 +1,6 @@
-use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ProjectPath {
@@ -10,6 +10,10 @@ pub struct ProjectPath {
 impl ProjectPath {
     pub fn new(path: PathBuf) -> Self {
         Self { path }
+    }
+
+    pub fn as_str(&self) -> &str {
+        self.path.to_str().unwrap_or("")
     }
 }
 

@@ -1,0 +1,104 @@
+// Reglas de Calidad de Código para Java
+// Archivo: rules/quality.rules
+
+rule "High Cyclomatic Complexity" {
+    description: "Detecta funciones con complejidad ciclomática muy alta"
+    severity: "High"
+    tags: ["quality", "complexity", "java", "maintainability"]
+
+    match {
+        func: Function {
+            complexity > 10
+        }
+    }
+
+    emit Finding {
+        message: "Complejidad ciclomática alta ({func.complexity}) en método {func.name} - refactorizar"
+        confidence: "High"
+        metadata: {
+            complexity = func.complexity,
+            lines = func.lines_of_code,
+            file = func.location.file
+        }
+    }
+}
+
+rule "Long Method" {
+    description: "Detecta métodos demasiado largos (> 100 líneas)"
+    severity: "Medium"
+    tags: ["quality", "maintainability", "java"]
+
+    match {
+        func: Function {
+            lines_of_code > 100
+        }
+    }
+
+    emit Finding {
+        message: "Método muy largo ({func.lines_of_code} líneas): {func.name}"
+        confidence: "Medium"
+        metadata: {
+            lines = func.lines_of_code
+        }
+    }
+}
+
+rule "Too Many Parameters" {
+    description: "Detecta funciones con demasiados parámetros (> 5)"
+    severity: "Medium"
+    tags: ["quality", "design", "java"]
+
+    match {
+        func: Function {
+            complexity > 3  // Asumiendo 1 complejidad por parámetro
+        }
+    }
+
+    emit Finding {
+        message: "Función con demasiados parámetros: {func.name}"
+        confidence: "Medium"
+        metadata: {
+            param_count = func.complexity
+        }
+    }
+}
+
+rule "Empty Catch Block" {
+    description: "Detecta bloques catch vacíos que pueden ocultar excepciones"
+    severity: "High"
+    tags: ["quality", "error-handling", "java"]
+
+    match {
+        func: Function {
+            source_code ~= "catch\s*\([^)]*\)\s*\{[^}]*\}"
+        }
+    }
+
+    emit Finding {
+        message: "Bloque catch vacío detectado - manejar la excepción apropiadamente"
+        confidence: "High"
+        metadata: {
+            type = "empty_catch"
+        }
+    }
+}
+
+rule "System.out.println in Production Code" {
+    description: "Detecta uso de System.out.println en lugar de logging"
+    severity: "Low"
+    tags: ["quality", "logging", "java"]
+
+    match {
+        func: Function {
+            source_code ~= "System\.out\.println"
+        }
+    }
+
+    emit Finding {
+        message: "Uso de System.out.println detectado - usar framework de logging"
+        confidence: "Low"
+        metadata: {
+            type = "print_statement"
+        }
+    }
+}

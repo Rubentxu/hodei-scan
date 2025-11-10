@@ -13,11 +13,7 @@ pub struct Provenance {
 }
 
 impl Provenance {
-    pub fn new(
-        extractor: ExtractorId,
-        version: String,
-        confidence: Confidence,
-    ) -> Self {
+    pub fn new(extractor: ExtractorId, version: String, confidence: Confidence) -> Self {
         Self {
             extractor,
             version,

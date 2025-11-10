@@ -1,17 +1,24 @@
-//! hodei-dsl: DSL parser for hodei-scan rules
+//! hodei-dsl: Parser for Hodei Scan rule DSL
 //!
-//! This crate provides a Cedar-like DSL for defining security and quality rules
-//! that can be evaluated against IR facts.
+//! This crate provides a formal parser for the Hodei Scan rule language,
+//! using PEG grammar with pest. The DSL is type-safe and inspired by Cedar.
 
 #![warn(missing_docs)]
 
-/// Rule parser
-#[derive(Debug)]
-pub struct RuleParser;
+pub mod ast;
+pub mod error;
+pub mod parser;
+pub mod type_checker;
 
-impl RuleParser {
-    /// Parse a rule from string
-    pub fn parse_rule(_rule: &str) -> Result<String, String> {
-        Ok("Rule parsed".to_string())
-    }
+#[cfg(test)]
+mod tests;
+
+pub use ast::*;
+pub use error::*;
+pub use parser::RuleParser;
+pub use type_checker::TypeChecker;
+
+/// Parse a rule file and return the AST
+pub fn parse_rule_file(input: &str) -> ParseResult<RuleFile> {
+    RuleParser::parse_file(input)
 }

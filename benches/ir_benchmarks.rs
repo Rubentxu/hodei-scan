@@ -2,7 +2,7 @@
 //!
 //! This module contains performance benchmarks for IR operations.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 
 fn create_ir_benchmark(c: &mut Criterion) {
     c.bench_function("create_ir", |b| {

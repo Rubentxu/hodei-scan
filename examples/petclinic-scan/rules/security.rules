@@ -1,0 +1,67 @@
+// Reglas de Seguridad para Aplicaciones Java/Spring
+// Archivo: rules/security.rules
+
+rule "SQL Injection in JPQL" {
+    description: "Detecta concatenación de strings en consultas JPQL/JPA"
+    severity: "High"
+    tags: ["security", "sqli", "jpa", "java"]
+
+    match {
+        func: Function {
+            name =~ ".*Repository.*|.*Service.*"
+        }
+        where: func.source_code ~= "String\s+\w+\s*=\s*.*\+\s*.*"
+    }
+
+    emit Finding {
+        message: "Posible inyección SQL: concatenación de strings en consulta JPQL"
+        confidence: "High"
+        metadata: {
+            file = func.location.file,
+            line = func.location.start_line
+        }
+    }
+}
+
+rule "Insecure Random Number Generation" {
+    description: "Detecta uso de Math.random() o Random en contextos de seguridad"
+    severity: "Medium"
+    tags: ["security", "crypto", "java"]
+
+    match {
+        var: Variable {
+            var_type == "Random"
+        }
+        where: var.scope == "class_field"
+    }
+
+    emit Finding {
+        message: "Uso de Random inseguro - usar SecureRandom para contextos criptográficos"
+        confidence: "High"
+        metadata: {
+            type = "insecure_random"
+        }
+    }
+}
+
+rule "Hardcoded Credentials" {
+    description: "Detecta credenciales hardcodeadas en el código"
+    severity: "Critical"
+    tags: ["security", "secrets", "java"]
+
+    match {
+        var: Variable {
+            var_type == "String"
+        }
+        where: var.name =~ ".*password|.*secret|.*key|.*token.*" &&
+               var.source_code ~= "=.*['\"].{10,}.*['\"]"
+    }
+
+    emit Finding {
+        message: "Posible credencial hardcodeada detectada"
+        confidence: "Critical"
+        metadata: {
+            type = "hardcoded_secret"
+        }
+    }
+}

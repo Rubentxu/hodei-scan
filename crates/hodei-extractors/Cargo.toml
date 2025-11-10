@@ -2,13 +2,19 @@
 name = "hodei-extractors"
 version = "0.1.0"
 edition = "2024"
-description = "Extractors for various code analysis tools"
+description = "Source code analyzers for hodei-scan"
 license = "MIT"
 repository = "https://github.com/hodei-scan/hodei-scan"
 
 [dependencies]
 hodei-ir = { path = "../hodei-ir" }
+ahash = { workspace = true }
+smallvec = { workspace = true }
 thiserror = { workspace = true }
-anyhow = { workspace = true }
+serde = { workspace = true }
+tokio = { workspace = true }
+walkdir = "2.0"
 
 [dev-dependencies]
+criterion = { workspace = true }
+tempfile = "3.0"

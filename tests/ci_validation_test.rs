@@ -13,8 +13,7 @@ mod ci_tests {
         );
 
         // Leer el contenido del archivo
-        let content = fs::read_to_string(ci_path)
-            .expect("No se pudo leer el archivo CI");
+        let content = fs::read_to_string(ci_path).expect("No se pudo leer el archivo CI");
 
         // Verificar que contiene elementos esenciales del workflow
         assert!(
@@ -22,10 +21,7 @@ mod ci_tests {
             "Workflow debe tener 'name: CI'"
         );
 
-        assert!(
-            content.contains("on:"),
-            "Workflow debe tener触发器 'on:'"
-        );
+        assert!(content.contains("on:"), "Workflow debe tener触发器 'on:'");
 
         assert!(
             content.contains("push:"),
@@ -37,26 +33,17 @@ mod ci_tests {
             "Workflow debe tener 'pull_request:' trigger"
         );
 
-        assert!(
-            content.contains("jobs:"),
-            "Workflow debe tener 'jobs:'"
-        );
+        assert!(content.contains("jobs:"), "Workflow debe tener 'jobs:'");
 
         // Verificar jobs específicos
-        assert!(
-            content.contains("test:"),
-            "Workflow debe tener job 'test'"
-        );
+        assert!(content.contains("test:"), "Workflow debe tener job 'test'");
 
         assert!(
             content.contains("clippy:"),
             "Workflow debe tener job 'clippy'"
         );
 
-        assert!(
-            content.contains("fmt:"),
-            "Workflow debe tener job 'fmt'"
-        );
+        assert!(content.contains("fmt:"), "Workflow debe tener job 'fmt'");
 
         assert!(
             content.contains("security:"),

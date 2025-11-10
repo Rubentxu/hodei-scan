@@ -95,19 +95,19 @@ pub enum FactType {
     // Coverage (3 variants)
     UncoveredLine {
         location: SourceLocation,
-        coverage: f32,
+        coverage: String,
     },
     LowTestCoverage {
         file: ProjectPath,
-        percentage: f32,
+        percentage: u32,
         total_lines: u32,
         covered_lines: u32,
     },
     CoverageStats {
         scope: String,
         path: ProjectPath,
-        line_coverage: f32,
-        branch_coverage: f32,
+        line_coverage: u32,
+        branch_coverage: u32,
     },
 }
 
@@ -123,7 +123,7 @@ pub struct Fact {
 impl Fact {
     pub fn new(fact_type: FactType, location: SourceLocation, provenance: Provenance) -> Self {
         Self {
-            id: FactId(uuid::Uuid::new_v4()),
+            id: FactId::new(),
             fact_type,
             location,
             provenance,

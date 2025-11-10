@@ -5,24 +5,10 @@
 
 #![warn(missing_docs)]
 
-/// Rule evaluation engine
-#[derive(Debug)]
-pub struct RuleEngine {
-    /// Maximum rules to evaluate
-    pub max_rules: usize,
-}
+pub mod engine;
+pub mod gates;
+pub mod store;
 
-impl RuleEngine {
-    /// Create a new rule engine
-    pub fn new() -> Self {
-        Self {
-            max_rules: 1000,
-        }
-    }
-}
-
-impl Default for RuleEngine {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+pub use engine::*;
+pub use gates::*;
+pub use store::*;

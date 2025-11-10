@@ -29,9 +29,21 @@ impl SourceLocation {
             end_column,
         }
     }
-    
+
     pub fn span(&self) -> (LineNumber, LineNumber) {
         (self.start_line, self.end_line)
+    }
+}
+
+impl Default for SourceLocation {
+    fn default() -> Self {
+        Self {
+            file: ProjectPath::new(std::path::PathBuf::from("unknown")),
+            start_line: LineNumber::new(1).unwrap(),
+            start_column: None,
+            end_line: LineNumber::new(1).unwrap(),
+            end_column: None,
+        }
     }
 }
 

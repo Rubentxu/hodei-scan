@@ -1,0 +1,269 @@
+# Pipeline de CI/CD para hodei-scan
+# Archivo: .github/workflows/hodei-scan.yml
+
+name: Hodei Scan - Code Quality & Security
+
+on:
+  # Ejecutar en cada push y pull request
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  # Ejecutar manualmente
+  workflow_dispatch:
+  # Programado - ejecutar cada día a las 2 AM UTC
+  schedule:
+    - cron: '0 2 * * *'
+
+env:
+  JAVA_VERSION: '17'
+  MAVEN_VERSION: '3.9.0'
+
+jobs:
+  # Job 1: Preparar el entorno
+  setup:
+    name: Setup Environment
+    runs-on: ubuntu-latest
+    outputs:
+      java-version: ${{ steps.setup-java.outputs.java-version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        id: setup-java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+
+      - name: Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+  # Job 2: Compilar el proyecto Java
+  build:
+    name: Build Java Project
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+
+      - name: Build with Maven
+        run: mvn clean compile -DskipTests
+
+      - name: Run Unit Tests
+        run: mvn test
+
+      - name: Generate Test Report
+        run: |
+          mkdir -p reports
+          # Generar reporte de cobertura (ejemplo con JaCoCo)
+          mvn jacoco:report
+          cp target/site/jacoco/jacoco.xml reports/coverage.xml || true
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results
+          path: |
+            reports/
+            target/site/jacoco/
+
+  # Job 3: Escanear con hodei-scan
+  hodei-scan:
+    name: Run Hodei Scan
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+
+      # Nota: En un escenario real, aquí instalarías hodei-scan
+      # Por ahora, simulamos el escaneo con un script
+      - name: Install hodei-scan
+        run: |
+          # En implementación real:
+          # curl -L https://github.com/hodei-scan/hodei-scan/releases/latest/download/hodei-scan-linux.tar.gz | tar xz
+          # chmod +x hodei-scan
+          echo "Simulando instalación de hodei-scan..."
+          mkdir -p bin
+          echo '#!/bin/bash' > bin/hodei-scan
+          echo 'echo "Simulated hodei-scan execution"' >> bin/hodei-scan
+          chmod +x bin/hodei-scan
+          echo "$GITHUB_WORKSPACE/bin" >> $GITHUB_PATH
+
+      - name: Run hodei-scan Security Rules
+        run: |
+          echo "🔍 Ejecutando escaneo de seguridad..."
+          hodei-scan scan \
+            --rules rules/security.rules \
+            --output reports/security-scan.json \
+            --format json \
+            --severity-filter High,Critical \
+            src/
+
+      - name: Run hodei-scan Quality Rules
+        run: |
+          echo "📊 Ejecutando escaneo de calidad..."
+          hodei-scan scan \
+            --rules rules/quality.rules \
+            --output reports/quality-scan.json \
+            --format json \
+            src/
+
+      - name: Run hodei-scan Testing Rules
+        run: |
+          echo "🧪 Ejecutando escaneo de testing..."
+          hodei-scan scan \
+            --rules rules/testing.rules \
+            --coverage-file reports/coverage.xml \
+            --output reports/testing-scan.json \
+            --format json \
+            src/
+
+      - name: Run hodei-scan with Quality Gates
+        run: |
+          echo "🚦 Validando quality gates..."
+          hodei-scan scan \
+            --rules rules/*.rules \
+            --config config/quality-gates.yml \
+            --output reports/full-scan.json \
+            --format json \
+            --format sarif \
+            --report-summary \
+            --fail-on-quality-gate \
+            src/
+
+      - name: Generate Scan Summary
+        run: |
+          echo "📋 Generando resumen del escaneo..."
+          cat > reports/scan-summary.md << 'EOF'
+          # Hodei Scan - Resumen de Resultados
+
+          ## Fecha del Escaneo
+          $(date)
+
+          ## Archivos Escaneados
+          - Directorio: src/
+          - Extensiones: .java
+
+          ## Reglas Aplicadas
+          - **Security Rules**: SQL Injection, Hardcoded Credentials, Insecure Random
+          - **Quality Rules**: Cyclomatic Complexity, Long Methods, Too Many Parameters
+          - **Testing Rules**: Test Coverage, Missing Tests
+
+          ## Quality Gates
+          - Security Gate: enabled
+          - Code Quality Gate: enabled
+          - Testing Gate: enabled
+
+          ## Resultados Detallados
+          Ver archivos JSON adjuntos para detalles completos.
+          EOF
+
+      - name: Upload Scan Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: hodei-scan-results
+          path: reports/
+
+  # Job 4: Validar Quality Gates
+  quality-gate-validation:
+    name: Quality Gate Validation
+    runs-on: ubuntu-latest
+    needs: hodei-scan
+    if: always()
+    steps:
+      - name: Download scan results
+        uses: actions/download-artifact@v3
+        with:
+          name: hodei-scan-results
+          path: reports/
+
+      - name: Validate Quality Gates
+        run: |
+          echo "🔐 Validando quality gates..."
+          # Verificar que no hay vulnerabilidades críticas
+          if grep -q '"severity": "Critical"' reports/full-scan.json; then
+            echo "❌ FALLO: Vulnerabilidades críticas detectadas"
+            grep '"severity": "Critical"' reports/full-scan.json
+            exit 1
+          fi
+
+          # Verificar cobertura mínima
+          COVERAGE=$(jq -r '.summary.coverage.percentage // 0' reports/full-scan.json)
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "❌ FALLO: Cobertura de tests insuficiente ($COVERAGE% < 80%)"
+            exit 1
+          fi
+
+          echo "✅ Todos los quality gates pasaron"
+          echo "Cobertura: $COVERAGE%"
+
+      - name: Comment PR (si es pull request)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('reports/scan-summary.md', 'utf8');
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ✅ Hodei Scan Results\n\n${summary}\n\n📊 [Descargar reporte completo](${context.payload.pull_request.html_url}/checks)`
+            });
+
+  # Job 5: Notificaciones (opcional)
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [hodei-scan, quality-gate-validation]
+    if: always() && (github.ref == 'refs/heads/main' || github.event_name == 'schedule')
+    steps:
+      - name: Notify on Failure
+        if: needs.quality-gate-validation.result == 'failure'
+        run: |
+          echo "🚨 Quality gates failed - sending notification"
+          # Implementar notificación (Slack, email, etc.)
+          # Ejemplo para Slack:
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data "{\"text\":\"Hodei Scan falló en ${{ github.repository }}\"}" \
+          #   ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Notify on Success
+        if: needs.quality-gate-validation.result == 'success'
+        run: |
+          echo "🎉 All quality gates passed - enviar notificación de éxito"
+
+  # Job 6: Subir resultados a GitHub Security tab (SARIF)
+  security-tab:
+    name: Upload to GitHub Security Tab
+    runs-on: ubuntu-latest
+    needs: hodei-scan
+    if: always()
+    steps:
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: reports/full-scan.sarif
+        if: always()
