@@ -1,0 +1,15 @@
+[package]
+name = "hodei-dsl"
+version = "0.1.0"
+edition = "2024"
+description = "DSL parser for hodei-scan rules"
+license = "MIT"
+repository = "https://github.com/hodei-scan/hodei-scan"
+
+[dependencies]
+hodei-ir = { path = "../hodei-ir" }
+pest = { workspace = true }
+pest_derive = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]

@@ -1,7 +1,7 @@
 [package]
 name = "hodei-scan"
-version = "3.0.0"
-edition = "2021"
+version = "0.1.0"
+edition = "2024"
 authors = ["hodei-scan Team"]
 description = "Advanced Static Code Analysis with IR Architecture"
 license = "MIT"
@@ -9,15 +9,24 @@ repository = "https://github.com/hodei-scan/hodei-scan"
 keywords = ["static-analysis", "security", "sast", "ir"]
 categories = ["development-tools::debugging"]
 
-[dependencies]
+[workspace]
+members = [
+    "crates/hodei-ir",
+    "crates/hodei-engine",
+    "crates/hodei-dsl",
+    "crates/hodei-extractors",
+    "crates/hodei-cli",
+]
+resolver = "2"
 
-# Async runtime
-tokio = { version = "1.0", features = ["full"] }
-tokio-util = "0.7"
-
-# Serialization
+[workspace.dependencies]
+# Core serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
 
 # UUID and identifiers
 uuid = { version = "1.0", features = ["v4", "serde"] }
@@ -25,34 +34,38 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 # Date and time
 chrono = { version = "0.4", features = ["serde"] }
 
-# Error handling
-thiserror = "1.0"
-anyhow = "1.0"
-
 # Hash maps and concurrent data structures
-dashmap = "5.0"
+ahash = "0.8"
+smallvec = { version = "1.0", features = ["serde"] }
 
-# Collections
-im = "15.0"
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
 
-# Logging
-env_logger = "0.10"
-log = "0.4"
-
-# HTTP client
-reqwest = { version = "0.11", features = ["json"] }
-
-# String manipulation
-regex = "1.0"
-lazy_static = "1.4"
-
-[dev-dependencies]
 # Testing
-tempfile = "3.0"
-assert_matches = "1.5"
-mockall = "0.12"
+proptest = "1.0"
 criterion = { version = "0.5", features = ["html_reports"] }
 
-[[bench]]
-name = "ir_benchmarks"
-harness = false
+# CLI
+clap = { version = "4.0", features = ["derive", "cargo"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+
+# Parser
+pest = "2.7"
+pest_derive = "2.7"
+
+# Dev tools
+cargo-husky = { version = "1.5", default-features = false, features = ["precommit-hook", "run-cargo-fmt", "run-cargo-clippy"] }
+
+[profile.dev]
+opt-level = 0
+debug = true
+split-debuginfo = "unpacked"
+lto = false
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1

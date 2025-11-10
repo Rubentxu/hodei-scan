@@ -12,7 +12,7 @@
 
 ### Propósito del Documento
 
-Este documento especifica la arquitectura definitiva de **hodei-scan v3.1**, un Motor de Gobernanza de Calidad de Software que evoluciona el paradigma tradicional SAST hacia un sistema de correlación de hechos multi-dominio basado en principios de Cedar (AWS Authorization Engine).
+Este documento especifica la arquitectura definitiva de **hodei-scan v3.2**, un Motor de Gobernanza de Calidad de Software que evoluciona el paradigma tradicional SAST hacia un sistema de correlación de hechos multi-dominio basado en principios de Cedar (AWS Authorization Engine).
 
 ### Objetivos de la Arquitectura v3.1
 
