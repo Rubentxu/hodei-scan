@@ -66,10 +66,30 @@ bytecheck = "0.6"
 
 # File system utilities
 walkdir = "2.0"
-tempfile = "3.0"
 
 # Dev tools
 cargo-husky = { version = "1.5", default-features = false, features = ["precommit-hook", "run-cargo-fmt", "run-cargo-clippy"] }
+tempfile = "3.0"
+
+[dev-dependencies]
+# Test dependencies
+hodei-ir = { path = "crates/hodei-ir" }
+hodei-extractors = { path = "crates/hodei-extractors" }
+hodei-engine = { path = "crates/hodei-engine" }
+hodei-dsl = { path = "crates/hodei-dsl" }
+uuid = { version = "1.0", features = ["v4"] }
+
+[[test]]
+name = "integration"
+path = "tests/integration/mod.rs"
+
+[[test]]
+name = "e2e"
+path = "tests/e2e/mod.rs"
+
+[[test]]
+name = "performance"
+path = "tests/perf/mod.rs"
 
 [profile.dev]
 opt-level = 0

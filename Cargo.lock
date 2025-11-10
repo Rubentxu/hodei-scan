@@ -595,6 +595,13 @@ dependencies = [
 [[package]]
 name = "hodei-scan"
 version = "0.1.0"
+dependencies = [
+ "hodei-dsl",
+ "hodei-engine",
+ "hodei-extractors",
+ "hodei-ir",
+ "uuid",
+]
 
 [[package]]
 name = "iana-time-zone"
