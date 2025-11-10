@@ -1,93 +1,173 @@
 //! hodei-ir: Intermediate Representation core types
-//!
-//! This crate provides the core data structures and types for representing
-//! code analysis facts in a type-safe, language-agnostic format.
 
 #![warn(missing_docs)]
 
-/// Core fact types
-pub mod types {
-    /// Fact identifier
-    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-    pub struct FactId {
-        /// Unique identifier
-        pub id: String,
-    }
+pub mod types;
+pub mod validator;
 
-    impl FactId {
-        /// Create a new fact ID
-        pub fn new(id: String) -> Self {
-            Self { id }
-        }
-    }
+pub use types::*;
+pub use validator::*;
 
-    /// Source code location
-    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-    pub struct SourceLocation {
-        /// File path
-        pub file: String,
-        /// Line number (1-based)
-        pub line: u32,
-        /// Column number (1-based)
-        pub column: Option<u32>,
-    }
+/// The main FactType enum (17 atomic variants)
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum FactType {
+    // SAST (6 variants)
+    TaintSource {
+        var: VariableName,
+        flow_id: FlowId,
+        source_type: String,
+        confidence: Confidence,
+    },
+    TaintSink {
+        func: FunctionName,
+        consumes_flow: FlowId,
+        category: String,
+        severity: Severity,
+    },
+    Sanitization {
+        method: String,
+        sanitizes_flow: FlowId,
+        effective: bool,
+        confidence: Confidence,
+    },
+    UnsafeCall {
+        function_name: FunctionName,
+        reason: String,
+        severity: Severity,
+    },
+    CryptographicOperation {
+        algorithm: String,
+        key_length: Option<u32>,
+        secure: bool,
+        recommendation: Option<String>,
+    },
+    Vulnerability {
+        cwe_id: Option<String>,
+        owasp_category: Option<String>,
+        severity: Severity,
+        cvss_score: Option<f32>,
+        description: String,
+        confidence: Confidence,
+    },
 
-    impl SourceLocation {
-        /// Create a new source location
-        pub fn new(file: String, line: u32) -> Self {
-            Self {
-                file,
-                line,
-                column: None,
-            }
-        }
-    }
+    // Quality (4 variants)
+    Function {
+        name: FunctionName,
+        complexity: u32,
+        lines_of_code: u32,
+    },
+    Variable {
+        name: VariableName,
+        scope: String,
+        var_type: String,
+    },
+    CodeSmell {
+        smell_type: String,
+        severity: Severity,
+        message: String,
+    },
+    ComplexityViolation {
+        metric: String,
+        actual: u32,
+        threshold: u32,
+    },
 
-    /// Fact type enum
-    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-    pub enum FactType {
-        /// Taint source (where data enters the system)
-        TaintSource {
-            /// Variable name
-            var: String,
-            /// Source type
-            source_type: String,
-        },
-        /// Taint sink (where data is used dangerously)
-        TaintSink {
-            /// Function name
-            func: String,
-            /// Sink category
-            category: String,
-        },
-    }
+    // SCA (3 variants)
+    Dependency {
+        name: String,
+        version: String,
+        ecosystem: Ecosystem,
+    },
+    DependencyVulnerability {
+        dependency: String,
+        cve_id: Option<String>,
+        severity: Severity,
+        cvss_score: Option<f32>,
+        description: String,
+    },
+    License {
+        dependency: String,
+        license_type: String,
+        compatible: bool,
+    },
+
+    // Coverage (3 variants)
+    UncoveredLine {
+        location: SourceLocation,
+        coverage: f32,
+    },
+    LowTestCoverage {
+        file: ProjectPath,
+        percentage: f32,
+        total_lines: u32,
+        covered_lines: u32,
+    },
+    CoverageStats {
+        scope: String,
+        path: ProjectPath,
+        line_coverage: f32,
+        branch_coverage: f32,
+    },
 }
 
-/// A single fact in the IR
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// A single fact
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Fact {
-    /// Unique fact identifier
-    pub id: types::FactId,
-    /// Type of fact
-    pub fact_type: types::FactType,
-    /// Source location
-    pub location: types::SourceLocation,
-    /// When the fact was extracted
-    pub extracted_at: chrono::DateTime<chrono::Utc>,
+    pub id: FactId,
+    pub fact_type: FactType,
+    pub location: SourceLocation,
+    pub provenance: Provenance,
 }
 
 impl Fact {
-    /// Create a new fact
-    pub fn new(
-        id: types::FactId,
-        fact_type: types::FactType,
-        location: types::SourceLocation,
-    ) -> Self {
+    pub fn new(fact_type: FactType, location: SourceLocation, provenance: Provenance) -> Self {
         Self {
-            id,
+            id: FactId(uuid::Uuid::new_v4()),
             fact_type,
             location,
-            extracted_at: chrono::Utc::now(),
+            provenance,
+        }
+    }
+}
+
+/// Intermediate representation container
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct IntermediateRepresentation {
+    pub facts: Vec<Fact>,
+    pub metadata: ProjectMetadata,
+    pub schema_version: String,
+}
+
+impl IntermediateRepresentation {
+    pub fn new(metadata: ProjectMetadata) -> Self {
+        Self {
+            facts: Vec::new(),
+            metadata,
+            schema_version: "3.2.0".to_string(),
+        }
+    }
+    pub fn add_fact(&mut self, fact: Fact) {
+        self.facts.push(fact);
+    }
+    pub fn fact_count(&self) -> usize {
+        self.facts.len()
+    }
+}
+
+/// Project metadata
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct ProjectMetadata {
+    pub name: String,
+    pub version: String,
+    pub root_path: ProjectPath,
+}
+
+impl ProjectMetadata {
+    pub fn new(name: String, version: String, root_path: ProjectPath) -> Self {
+        Self {
+            name,
+            version,
+            root_path,
         }
     }
 }
