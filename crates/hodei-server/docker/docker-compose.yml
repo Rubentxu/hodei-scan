@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # TimescaleDB database
+  timescale:
+    image: timescale/timescaledb:2.14.2-pg16
+    container_name: hodei-timescale
+    environment:
+      - POSTGRES_DB=hodei_db
+      - POSTGRES_USER=hodei
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hodei -d hodei_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hodei-network
+
+  # hodei-server application
+  hodei-server:
+    build:
+      context: ../../
+      dockerfile: crates/hodei-server/docker/Dockerfile
+    container_name: hodei-server
+    environment:
+      - HODEI_DATABASE_URL=postgresql://hodei:password@timescale:5432/hodei_db
+      - HODEI_BIND_ADDRESS=0.0.0.0:8080
+      - HODEI_JWT_SECRET=super-secret-jwt-key-change-in-production-minimum-32-chars
+      - HODEI_JWT_EXPIRATION=24
+      - HODEI_DEBUG=false
+      - HODEI_CORS_ORIGINS=http://localhost:3000,http://localhost:8080
+      - RUST_LOG=info
+    ports:
+      - "8080:8080"
+    depends_on:
+      timescale:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - hodei-network
+    restart: unless-stopped
+
+  # Optional: pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:8.7
+    container_name: hodei-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@hodei.local
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    ports:
+      - "5050:80"
+    depends_on:
+      - timescale
+    networks:
+      - hodei-network
+    restart: unless-stopped
+
+volumes:
+  timescale_data:
+    driver: local
+
+networks:
+  hodei-network:
+    driver: bridge

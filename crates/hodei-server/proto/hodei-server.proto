@@ -1,0 +1,160 @@
+syntax = "proto3";
+
+package hodei.server.v1;
+
+option go_package = "github.com/hodei-scan/hodei-server/pkg/api/v1";
+option java_package = "com.hodei.server.v1";
+option csharp_namespace = "Hodei.Server.V1";
+
+service HodeiGovernanceService {
+  // Publish analysis results from hodei-scan CLI
+  rpc PublishAnalysis(stream PublishAnalysisRequest) returns (PublishAnalysisResponse);
+  
+  // Get analysis by ID
+  rpc GetAnalysis(GetAnalysisRequest) returns (GetAnalysisResponse);
+  
+  // Get baseline analysis for a branch
+  rpc GetBaseline(GetBaselineRequest) returns (GetBaselineResponse);
+  
+  // Update baseline from current analysis
+  rpc UpdateBaseline(UpdateBaselineRequest) returns (UpdateBaselineResponse);
+  
+  // Stream real-time notifications
+  rpc StreamNotifications(StreamNotificationsRequest) returns (stream NotificationEvent);
+}
+
+message PublishAnalysisRequest {
+  string project_id = 1;
+  string branch = 2;
+  string commit = 3;
+  repeated Finding findings = 4;
+  AnalysisMetadata metadata = 5;
+}
+
+message PublishAnalysisResponse {
+  string analysis_id = 1;
+  uint32 new_findings = 2;
+  uint32 resolved_findings = 3;
+  uint32 total_findings = 4;
+  TrendDirection trend = 5;
+}
+
+message GetAnalysisRequest {
+  string project_id = 1;
+  string analysis_id = 2;
+}
+
+message GetAnalysisResponse {
+  Analysis analysis = 1;
+}
+
+message GetBaselineRequest {
+  string project_id = 1;
+  string branch = 2;
+}
+
+message GetBaselineResponse {
+  Analysis baseline = 1;
+}
+
+message UpdateBaselineRequest {
+  string project_id = 1;
+  string branch = 2;
+  string analysis_id = 3;
+}
+
+message UpdateBaselineResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message StreamNotificationsRequest {
+  string project_id = 1;
+}
+
+message NotificationEvent {
+  EventType event_type = 1;
+  string project_id = 2;
+  string analysis_id = 3;
+  string message = 4;
+  int64 timestamp = 5;
+}
+
+enum EventType {
+  ANALYSIS_PUBLISHED = 0;
+  BASELINE_UPDATED = 1;
+  TREND_CHANGED = 2;
+}
+
+// Core data structures
+
+message Finding {
+  string fact_type = 1;
+  Severity severity = 2;
+  FindingLocation location = 3;
+  string message = 4;
+  string metadata = 5; // JSON string
+  repeated string tags = 6;
+  string fingerprint = 7;
+}
+
+message FindingLocation {
+  string file = 1;
+  uint32 line = 2;
+  uint32 column = 3;
+  uint32 end_line = 4;
+  uint32 end_column = 5;
+}
+
+enum Severity {
+  CRITICAL = 0;
+  MAJOR = 1;
+  MINOR = 2;
+  INFO = 3;
+}
+
+message Analysis {
+  string id = 1;
+  string project_id = 2;
+  string branch = 3;
+  string commit = 4;
+  int64 timestamp = 5; // Unix timestamp
+  uint32 findings_count = 6;
+  AnalysisMetadata metadata = 7;
+  int64 created_at = 8; // Unix timestamp
+}
+
+message AnalysisMetadata {
+  string build_url = 1;
+  string author = 2;
+  string ci_run_id = 3;
+  uint64 scan_duration_ms = 4;
+  string rule_version = 5;
+}
+
+enum TrendDirection {
+  IMPROVING = 0;
+  DEGRADING = 1;
+  STABLE = 2;
+}
+
+// Health check service
+service HealthService {
+  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {
+  string service = 1;
+}
+
+message HealthCheckResponse {
+  HealthStatus status = 1;
+  string version = 2;
+  string message = 3;
+}
+
+enum HealthStatus {
+  HEALTHY = 0;
+  DEGRADED = 1;
+  UNHEALTHY = 2;
+}

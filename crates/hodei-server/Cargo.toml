@@ -1,0 +1,70 @@
+[package]
+name = "hodei-server"
+version = "0.1.0"
+edition = "2021"
+authors = ["hodei-scan team"]
+license = "MIT OR Apache-2.0"
+description = "Backend governance server for hodei-scan - historical storage and trend analysis"
+
+[dependencies]
+# Core web framework
+axum = { version = "0.7", features = ["json", "macros", "tracing"] }
+tower = { version = "0.4", features = ["util", "timeout", "load-shed"] }
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+hyper = { version = "1.0", features = ["full"] }
+tokio = { version = "1.0", features = ["full"] }
+
+# gRPC with Tonic
+tonic = { version = "0.10", features = ["tls", "tls-roots", "prost"] }
+prost = "0.12"
+prost-types = "0.12"
+
+# Database
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Authentication
+jsonwebtoken = "9.0"
+bcrypt = "0.15"
+
+# Configuration
+config = "0.14"
+dotenvy = "0.15"
+
+# Logging and observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+
+# Utilities
+bytes = "1.0"
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.0"
+tonic-build = { version = "0.10", features = ["prost"] }
+
+[features]
+default = []
+grpc = []
+rest = []
+timescale = []
+
+[[bin]]
+name = "hodei-server"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+debug = false
+lto = true
+codegen-units = 1
+panic = "abort"
