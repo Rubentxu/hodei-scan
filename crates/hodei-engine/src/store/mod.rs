@@ -83,17 +83,11 @@ impl IndexedFactStore {
 
     /// Get facts by file
     pub fn by_file(&self, file: &str) -> Vec<&Fact> {
-        self.spatial_index
-            .file_lines
-            .get(file)
-            .map(|lines| {
-                lines
-                    .values()
-                    .flatten()
-                    .filter_map(|id| self.facts.get(id))
-                    .collect()
-            })
-            .unwrap_or_else(Vec::new)
+        let fact_ids = self.spatial_index.by_file(file);
+        fact_ids
+            .iter()
+            .filter_map(|id| self.facts.get(id))
+            .collect()
     }
 
     /// Get all facts

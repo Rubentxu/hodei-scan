@@ -189,6 +189,186 @@ pub enum FactType {
     },
 }
 
+impl std::hash::Hash for FactType {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        // Hash the discriminant
+        std::mem::discriminant(self).hash(state);
+
+        match self {
+            FactType::TaintSource {
+                var,
+                flow_id,
+                source_type,
+                confidence,
+            } => {
+                var.hash(state);
+                flow_id.hash(state);
+                source_type.hash(state);
+                confidence.hash(state);
+            }
+            FactType::TaintSink {
+                func,
+                consumes_flow,
+                category,
+                severity,
+            } => {
+                func.hash(state);
+                consumes_flow.hash(state);
+                category.hash(state);
+                severity.hash(state);
+            }
+            FactType::Sanitization {
+                method,
+                sanitizes_flow,
+                effective,
+                confidence,
+            } => {
+                method.hash(state);
+                sanitizes_flow.hash(state);
+                effective.hash(state);
+                confidence.hash(state);
+            }
+            FactType::UnsafeCall {
+                function_name,
+                reason,
+                severity,
+            } => {
+                function_name.hash(state);
+                reason.hash(state);
+                severity.hash(state);
+            }
+            FactType::CryptographicOperation {
+                algorithm,
+                key_length,
+                secure,
+                recommendation,
+            } => {
+                algorithm.hash(state);
+                key_length.hash(state);
+                secure.hash(state);
+                recommendation.hash(state);
+            }
+            FactType::Vulnerability {
+                cwe_id,
+                owasp_category,
+                severity,
+                cvss_score,
+                description,
+                confidence,
+            } => {
+                cwe_id.hash(state);
+                owasp_category.hash(state);
+                severity.hash(state);
+                // Hash f32 as raw bytes
+                if let Some(score) = cvss_score {
+                    let bits = score.to_bits();
+                    bits.hash(state);
+                }
+                description.hash(state);
+                confidence.hash(state);
+            }
+            FactType::Function {
+                name,
+                complexity,
+                lines_of_code,
+            } => {
+                name.hash(state);
+                complexity.hash(state);
+                lines_of_code.hash(state);
+            }
+            FactType::Variable {
+                name,
+                scope,
+                var_type,
+            } => {
+                name.hash(state);
+                scope.hash(state);
+                var_type.hash(state);
+            }
+            FactType::CodeSmell {
+                smell_type,
+                severity,
+                message,
+            } => {
+                smell_type.hash(state);
+                severity.hash(state);
+                message.hash(state);
+            }
+            FactType::ComplexityViolation {
+                metric,
+                actual,
+                threshold,
+            } => {
+                metric.hash(state);
+                actual.hash(state);
+                threshold.hash(state);
+            }
+            FactType::Dependency {
+                name,
+                version,
+                ecosystem,
+            } => {
+                name.hash(state);
+                version.hash(state);
+                ecosystem.hash(state);
+            }
+            FactType::DependencyVulnerability {
+                dependency,
+                cve_id,
+                severity,
+                cvss_score,
+                description,
+            } => {
+                dependency.hash(state);
+                cve_id.hash(state);
+                severity.hash(state);
+                // Hash f32 as raw bytes
+                if let Some(score) = cvss_score {
+                    score.to_bits().hash(state);
+                }
+                description.hash(state);
+            }
+            FactType::License {
+                dependency,
+                license_type,
+                compatible,
+            } => {
+                dependency.hash(state);
+                license_type.hash(state);
+                compatible.hash(state);
+            }
+            FactType::UncoveredLine { location, coverage } => {
+                location.hash(state);
+                coverage.hash(state);
+            }
+            FactType::LowTestCoverage {
+                file,
+                percentage,
+                total_lines,
+                covered_lines,
+            } => {
+                file.hash(state);
+                percentage.hash(state);
+                total_lines.hash(state);
+                covered_lines.hash(state);
+            }
+            FactType::CoverageStats {
+                scope,
+                path,
+                line_coverage,
+                branch_coverage,
+            } => {
+                scope.hash(state);
+                path.hash(state);
+                line_coverage.hash(state);
+                branch_coverage.hash(state);
+            }
+        }
+    }
+}
+
+impl Eq for FactType {}
+
 /// A single fact
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Fact {

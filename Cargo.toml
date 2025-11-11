@@ -67,6 +67,10 @@ bytecheck = "0.6"
 # File system utilities
 walkdir = "2.0"
 
+# Spatial and graph indexes (EPIC-04)
+rstar = "0.12"
+petgraph = "0.6"
+
 # Dev tools
 cargo-husky = { version = "1.5", default-features = false, features = ["precommit-hook", "run-cargo-fmt", "run-cargo-clippy"] }
 tempfile = "3.0"
