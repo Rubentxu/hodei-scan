@@ -2,6 +2,8 @@
 //!
 //! This crate provides the CLI for hodei-scan.
 
+pub mod analysis;
+
 use clap::{Arg, Command};
 use hodei_engine::{EngineConfig, RuleEngine};
 use hodei_extractors::{Extractor, RegexExtractor};

@@ -13,9 +13,21 @@ ahash = { workspace = true }
 smallvec = { workspace = true }
 thiserror = { workspace = true }
 rayon = { workspace = true }
+crossbeam = { workspace = true }
 serde = { workspace = true }
 rstar = { workspace = true }
 petgraph = { workspace = true }
+enum-map = { workspace = true }
+regex = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }
+chrono = { workspace = true }
+
+[[bench]]
+name = "rule_engine"
+harness = false
+
+[[bench]]
+name = "enum_map_bench"
+harness = false

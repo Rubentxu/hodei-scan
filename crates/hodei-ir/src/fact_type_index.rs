@@ -23,6 +23,9 @@ pub enum FactTypeDiscriminant {
     UncoveredLine,
     LowTestCoverage,
     CoverageStats,
+    VulnerableUncovered,
+    SecurityTechnicalDebt,
+    QualitySecurityCorrelation,
 }
 
 /// Index for facts by type using EnumMap for optimal performance

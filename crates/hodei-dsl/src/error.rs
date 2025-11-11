@@ -6,49 +6,46 @@ use thiserror::Error;
 pub type ParseResult<T> = Result<T, ParseError>;
 
 /// Main error type for all DSL operations
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum ParseError {
-    #[error("Parse error: {message}")]
-    PestError { message: String },
+    #[error("Pest parsing error")]
+    PestError(String),
 
-    #[error("IO error: {source}")]
-    IoError {
-        #[from]
-        source: std::io::Error,
-    },
+    #[error("IO error: {message}")]
+    IoError { message: String },
 
     #[error("Type error: {0}")]
     TypeError(#[from] TypeError),
 
-    #[error("Missing match block in rule '{0}'")]
-    MissingMatchBlock(String),
+    #[error("Missing field: {field}")]
+    MissingField { field: String },
 
-    #[error("Missing emit block in rule '{0}'")]
-    MissingEmitBlock(String),
+    #[error("Unexpected token: {token}, expected: {expected}")]
+    UnexpectedToken { token: String, expected: String },
 
-    #[error("Unknown fact type: {0}")]
-    UnknownFactType(String),
+    #[error("Invalid expression")]
+    InvalidExpression,
 
-    #[error("Undefined variable: {0}")]
-    UndefinedVariable(String),
+    #[error("Invalid number")]
+    InvalidNumber,
 
-    #[error("Type mismatch: expected {expected}, found {found}")]
-    TypeMismatch { expected: String, found: String },
+    #[error("Invalid boolean")]
+    InvalidBoolean,
 
-    #[error("Expected number, found {0}")]
-    ExpectedNumber(String),
+    #[error("Invalid severity value")]
+    InvalidSeverity,
 
-    #[error("Expected boolean, found {0}")]
-    ExpectedBoolean(String),
+    #[error("Invalid confidence value")]
+    InvalidConfidence,
 
-    #[error("No such field '{field}' on type '{ty}'")]
-    NoSuchField { ty: String, field: String },
+    #[error("Invalid operator")]
+    InvalidOperator,
 
-    #[error("Cannot access field on type: {0}")]
-    CannotAccessField(String),
+    #[error("Invalid literal")]
+    InvalidLiteral,
 
-    #[error("Unknown function: {0}")]
-    UnknownFunction(String),
+    #[error("Expected a single rule")]
+    ExpectedSingleRule,
 
     #[error("Custom error: {0}")]
     Custom(String),
@@ -64,7 +61,7 @@ impl ParseError {
 pub type TypeResult<T> = Result<T, TypeError>;
 
 /// Type checking errors
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq, Clone)]
 pub enum TypeError {
     #[error("Unknown fact type: {0:?}")]
     UnknownFactType(String),

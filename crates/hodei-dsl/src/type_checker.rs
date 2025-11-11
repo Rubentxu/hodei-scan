@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 /// Type checker for DSL rules
 pub struct TypeChecker {
-    fact_schemas: HashMap<String, FactSchema>,
+    pub fact_schemas: HashMap<String, FactSchema>,
 }
 
 /// Schema for fact types

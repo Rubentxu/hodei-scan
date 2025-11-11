@@ -3,17 +3,17 @@
 //! This module provides high-performance fact storage and querying
 //! using multiple indexes (type, spatial, flow).
 
-mod flow_index;
-mod planner;
-mod spatial_index;
-mod type_index;
+pub mod flow_index;
+pub mod planner;
+pub mod spatial_index;
+pub mod type_index;
 
 pub use flow_index::*;
 pub use planner::*;
 pub use spatial_index::*;
 pub use type_index::*;
 
-use hodei_ir::{Fact, FactId};
+use hodei_ir::{Fact, FactId, FactType};
 use std::collections::HashMap;
 
 /// Main indexed fact store
@@ -23,7 +23,7 @@ pub struct IndexedFactStore {
     type_index: TypeIndex,
     spatial_index: SpatialIndex,
     flow_index: FlowIndex,
-    stats: IndexStats,
+    stats: IndexStatistics,
 }
 
 impl IndexedFactStore {
@@ -37,7 +37,7 @@ impl IndexedFactStore {
         let type_index = TypeIndex::build(&facts_slice);
         let spatial_index = SpatialIndex::build(&facts_slice);
         let flow_index = FlowIndex::build(&facts_slice);
-        let stats = IndexStats::compute(&facts_slice);
+        let stats = IndexStatistics::compute(&facts_slice);
 
         Self {
             facts: facts_map,
@@ -49,8 +49,9 @@ impl IndexedFactStore {
     }
 
     /// Get facts by type
-    pub fn by_type(&self, fact_type: &hodei_ir::FactType) -> Vec<&Fact> {
-        if let Some(fact_ids) = self.type_index.get(fact_type) {
+    pub fn by_type(&self, fact_type: FactType) -> Vec<&Fact> {
+        let discriminant = fact_type.discriminant();
+        if let Some(fact_ids) = self.type_index.get(discriminant) {
             fact_ids
                 .iter()
                 .filter_map(|id| self.facts.get(id))
@@ -101,7 +102,7 @@ impl IndexedFactStore {
     }
 
     /// Get statistics
-    pub fn stats(&self) -> &IndexStats {
+    pub fn stats(&self) -> &IndexStatistics {
         &self.stats
     }
 }

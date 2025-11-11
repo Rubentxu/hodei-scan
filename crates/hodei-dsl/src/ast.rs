@@ -94,6 +94,26 @@ pub struct Path {
     pub span: Span,
 }
 
+impl Path {
+    /// Create a new path from segments
+    pub fn new(segments: Vec<String>) -> Self {
+        Self {
+            segments,
+            span: Span::default(),
+        }
+    }
+
+    /// Get the first segment
+    pub fn first(&self) -> Option<&str> {
+        self.segments.first().map(|s| s.as_str())
+    }
+
+    /// Get the last segment
+    pub fn last(&self) -> Option<&str> {
+        self.segments.last().map(|s| s.as_str())
+    }
+}
+
 /// Binary operators
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BinaryOp {
@@ -142,7 +162,7 @@ pub enum Confidence {
 }
 
 /// Span for error reporting (start and end positions in source)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct Span {
     pub start: usize,
     pub end: usize,

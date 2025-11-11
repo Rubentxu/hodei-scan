@@ -12,5 +12,15 @@ pest = { workspace = true }
 pest_derive = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
+regex = { workspace = true }
 
 [dev-dependencies]
+criterion = { workspace = true }
+
+[[bench]]
+name = "security_bench"
+harness = false
+
+[[bench]]
+name = "dsl_parser_bench"
+harness = false

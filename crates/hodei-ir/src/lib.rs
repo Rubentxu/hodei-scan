@@ -369,6 +369,32 @@ impl std::hash::Hash for FactType {
 
 impl Eq for FactType {}
 
+impl FactType {
+    /// Get the discriminant of this fact type
+    pub fn discriminant(&self) -> FactTypeDiscriminant {
+        match self {
+            FactType::TaintSource { .. } => FactTypeDiscriminant::TaintSource,
+            FactType::TaintSink { .. } => FactTypeDiscriminant::TaintSink,
+            FactType::Sanitization { .. } => FactTypeDiscriminant::Sanitization,
+            FactType::UnsafeCall { .. } => FactTypeDiscriminant::UnsafeCall,
+            FactType::CryptographicOperation { .. } => FactTypeDiscriminant::CryptographicOperation,
+            FactType::Vulnerability { .. } => FactTypeDiscriminant::Vulnerability,
+            FactType::Function { .. } => FactTypeDiscriminant::Function,
+            FactType::Variable { .. } => FactTypeDiscriminant::Variable,
+            FactType::CodeSmell { .. } => FactTypeDiscriminant::CodeSmell,
+            FactType::ComplexityViolation { .. } => FactTypeDiscriminant::ComplexityViolation,
+            FactType::Dependency { .. } => FactTypeDiscriminant::Dependency,
+            FactType::DependencyVulnerability { .. } => {
+                FactTypeDiscriminant::DependencyVulnerability
+            }
+            FactType::License { .. } => FactTypeDiscriminant::License,
+            FactType::UncoveredLine { .. } => FactTypeDiscriminant::UncoveredLine,
+            FactType::LowTestCoverage { .. } => FactTypeDiscriminant::LowTestCoverage,
+            FactType::CoverageStats { .. } => FactTypeDiscriminant::CoverageStats,
+        }
+    }
+}
+
 /// A single fact
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Fact {

@@ -23,15 +23,16 @@ pub struct Finding {
     pub created_at: SystemTime,
 }
 
-/// Builder for creating findings
+/// Builder for creating findings with template interpolation
 #[derive(Debug, Clone)]
 pub struct FindingBuilder {
     rule_name: Option<String>,
-    message: Option<String>,
+    message_template: Option<String>,
     location: Option<SourceLocation>,
     confidence: Option<Confidence>,
     severity: Option<String>,
     metadata: std::collections::HashMap<String, String>,
+    fact: Option<hodei_ir::Fact>,
 }
 
 impl FindingBuilder {
@@ -39,11 +40,12 @@ impl FindingBuilder {
     pub fn new() -> Self {
         Self {
             rule_name: None,
-            message: None,
+            message_template: None,
             location: None,
             confidence: None,
             severity: None,
             metadata: std::collections::HashMap::new(),
+            fact: None,
         }
     }
 
@@ -53,9 +55,9 @@ impl FindingBuilder {
         self
     }
 
-    /// Set the finding message
-    pub fn message(mut self, msg: &str) -> Self {
-        self.message = Some(msg.to_string());
+    /// Set the message template with placeholders like {variable.field}
+    pub fn message(mut self, template: &str) -> Self {
+        self.message_template = Some(template.to_string());
         self
     }
 
@@ -83,27 +85,47 @@ impl FindingBuilder {
         self
     }
 
-    /// Build the finding
-    pub fn build(self) -> Result<Finding, FindingError> {
-        let rule_name = self.rule_name.ok_or(FindingError::MissingField {
+    /// Associate a fact with this finding for template interpolation
+    pub fn with_fact(mut self, fact: hodei_ir::Fact) -> Self {
+        self.fact = Some(fact);
+        self
+    }
+
+    /// Build the finding with template interpolation
+    pub fn build(mut self) -> Result<Finding, FindingError> {
+        // Extract all required fields first
+        let rule_name = self.rule_name.take().ok_or(FindingError::MissingField {
             field: "rule_name".to_string(),
         })?;
 
-        let message = self.message.ok_or(FindingError::MissingField {
-            field: "message".to_string(),
-        })?;
+        let message_template = self
+            .message_template
+            .take()
+            .ok_or(FindingError::MissingField {
+                field: "message_template".to_string(),
+            })?;
 
-        let location = self.location.ok_or(FindingError::MissingField {
+        let location = self.location.take().ok_or(FindingError::MissingField {
             field: "location".to_string(),
         })?;
 
-        let confidence = self.confidence.ok_or(FindingError::MissingField {
+        let confidence = self.confidence.take().ok_or(FindingError::MissingField {
             field: "confidence".to_string(),
         })?;
 
-        let severity = self.severity.ok_or(FindingError::MissingField {
+        let severity = self.severity.take().ok_or(FindingError::MissingField {
             field: "severity".to_string(),
         })?;
+
+        // Clone metadata for use in interpolation
+        let metadata = self.metadata.clone();
+
+        // Interpolate message template
+        let message = if let Some(ref fact) = self.fact {
+            self.interpolate_template(&message_template, fact, &metadata)?
+        } else {
+            message_template
+        };
 
         let id = format!("{}-{:?}", rule_name, SystemTime::now());
 
@@ -118,6 +140,82 @@ impl FindingBuilder {
             created_at: SystemTime::now(),
         })
     }
+
+    /// Interpolate template placeholders like {variable.field}
+    fn interpolate_template(
+        &self,
+        template: &str,
+        fact: &hodei_ir::Fact,
+        metadata: &std::collections::HashMap<String, String>,
+    ) -> Result<String, FindingError> {
+        let re = regex::Regex::new(r"\{([^}]+)\}")
+            .map_err(|e| FindingError::TemplateError(format!("Invalid regex: {}", e)))?;
+
+        let mut result = template.to_string();
+
+        for cap in re.captures_iter(template) {
+            let placeholder = &cap[0];
+            let path_str = &cap[1];
+
+            // Parse and resolve the path
+            let value = self
+                .resolve_path(path_str, fact, metadata)
+                .map_err(|e| FindingError::TemplateError(e))?;
+
+            result = result.replace(placeholder, &value);
+        }
+
+        Ok(result)
+    }
+
+    /// Resolve a path like "fact.location.file" to its string value
+    fn resolve_path(
+        &self,
+        path: &str,
+        fact: &hodei_ir::Fact,
+        metadata: &std::collections::HashMap<String, String>,
+    ) -> Result<String, String> {
+        let segments: Vec<&str> = path.split('.').collect();
+
+        match segments[0] {
+            "fact" => {
+                if segments.len() == 1 {
+                    return Ok(format!("{:?}", fact.fact_type));
+                }
+
+                match segments[1] {
+                    "type" => Ok(format!("{:?}", fact.fact_type.discriminant())),
+                    "confidence" => Ok(format!("{:.2}", fact.provenance.confidence.get())),
+                    "id" => Ok(format!("{:?}", fact.id)),
+                    "location" => {
+                        if segments.len() == 3 {
+                            match segments[2] {
+                                "file" => Ok(fact.location.file.as_str().to_string()),
+                                "start_line" => Ok(fact.location.start_line.get().to_string()),
+                                _ => Err(format!("Unknown location field: {}", segments[2])),
+                            }
+                        } else {
+                            Ok(format!("{:?}", fact.location))
+                        }
+                    }
+                    _ => Err(format!("Unknown fact field: {}", segments[1])),
+                }
+            }
+            "metadata" => {
+                if segments.len() >= 2 {
+                    let key = segments[1];
+                    if let Some(value) = metadata.get(key) {
+                        Ok(value.clone())
+                    } else {
+                        Ok("unknown".to_string())
+                    }
+                } else {
+                    Err("Metadata path requires key".to_string())
+                }
+            }
+            _ => Err(format!("Unknown root path: {}", segments[0])),
+        }
+    }
 }
 
 impl Default for FindingBuilder {
@@ -131,6 +229,9 @@ impl Default for FindingBuilder {
 pub enum FindingError {
     #[error("Missing required field: {field}")]
     MissingField { field: String },
+
+    #[error("Template interpolation error: {0}")]
+    TemplateError(String),
 }
 
 #[cfg(test)]
@@ -195,5 +296,68 @@ mod tests {
         if let Err(FindingError::MissingField { field }) = result {
             assert_eq!(field, "rule_name");
         }
+    }
+
+    #[test]
+    fn test_finding_builder_template_interpolation() {
+        // Create a test fact
+        let fact = hodei_ir::Fact::new(
+            hodei_ir::FactType::Function {
+                name: hodei_ir::VariableName::new("test_func".to_string()),
+                complexity: 5,
+                lines_of_code: 10,
+            },
+            create_test_source_location(),
+            hodei_ir::Provenance::new(
+                hodei_ir::ExtractorId::TreeSitter,
+                hodei_ir::SemanticVersion::new(1, 0, 0),
+                Confidence::MEDIUM,
+            ),
+        );
+
+        let finding = FindingBuilder::new()
+            .rule_name("function-check")
+            .message("Found {fact.type} with confidence {fact.confidence}")
+            .location(create_test_source_location())
+            .confidence(Confidence::new(0.95).unwrap())
+            .severity("critical")
+            .with_fact(fact)
+            .build()
+            .unwrap();
+
+        assert!(finding.message.contains("Function"));
+        assert!(finding.message.contains("0.60"));
+    }
+
+    #[test]
+    fn test_finding_builder_template_interpolation_with_metadata() {
+        // Create a test fact
+        let fact = hodei_ir::Fact::new(
+            hodei_ir::FactType::Function {
+                name: hodei_ir::VariableName::new("test_func".to_string()),
+                complexity: 5,
+                lines_of_code: 10,
+            },
+            create_test_source_location(),
+            hodei_ir::Provenance::new(
+                hodei_ir::ExtractorId::TreeSitter,
+                hodei_ir::SemanticVersion::new(1, 0, 0),
+                Confidence::HIGH,
+            ),
+        );
+
+        let finding = FindingBuilder::new()
+            .rule_name("function-check")
+            .message("Type: {fact.type}, File: {fact.location.file}")
+            .location(create_test_source_location())
+            .confidence(Confidence::new(0.95).unwrap())
+            .severity("critical")
+            .metadata("test", "value")
+            .with_fact(fact)
+            .build()
+            .unwrap();
+
+        assert!(finding.message.contains("Type: Function"));
+        assert!(finding.message.contains("test.rs"));
     }
 }

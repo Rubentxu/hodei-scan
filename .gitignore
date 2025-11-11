@@ -112,3 +112,4 @@ benches/target/
 .project
 .settings/
 .classpath
+.hodei-cache

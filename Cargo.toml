@@ -58,6 +58,14 @@ tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 # Parser
 pest = "2.7"
 pest_derive = "2.7"
+regex = "1.0"
+
+# Concurrency and timeouts
+crossbeam = "0.8"
+
+# String interning and optimizations
+string-interner = "0.3"
+enum-map = "2.0"
 
 # Zero-copy serialization
 rkyv = "0.7"
