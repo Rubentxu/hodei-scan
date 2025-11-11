@@ -566,6 +566,7 @@ dependencies = [
  "serde",
  "serde_json",
  "smallvec",
+ "string-interner",
  "tempfile",
  "thiserror",
  "uuid",
@@ -1211,6 +1212,12 @@ dependencies = [
  "libc",
  "windows-sys 0.60.2",
 ]
+
+[[package]]
+name = "string-interner"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef47e7b99f8ddc86fbf750e6f970c80c7bcdf40bd22c8d2715064cc3a72fc525"
 
 [[package]]
 name = "strsim"

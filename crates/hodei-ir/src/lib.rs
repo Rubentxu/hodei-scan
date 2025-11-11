@@ -5,6 +5,7 @@
 pub mod types;
 pub mod validator;
 pub mod zero_copy;
+pub mod interning;
 
 pub use types::*;
 pub use validator::*;
