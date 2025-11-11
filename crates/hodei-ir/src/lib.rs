@@ -11,6 +11,7 @@ pub mod zero_copy;
 pub use fact_type_index::*;
 pub use types::*;
 pub use validator::*;
+pub use zero_copy::*;
 
 /// The main FactType enum (17 atomic variants)
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -136,6 +137,7 @@ impl Fact {
 
 /// Intermediate representation container
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "rkyv_derive", rkyv::derive(Archive, Serialize, Deserialize))]
 pub struct IntermediateRepresentation {
     pub facts: Vec<Fact>,
     pub metadata: ProjectMetadata,
