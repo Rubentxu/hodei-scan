@@ -8,7 +8,7 @@ description = "Backend governance server for hodei-scan - historical storage and
 
 [dependencies]
 # Core web framework
-axum = { version = "0.7", features = ["json", "macros", "tracing"] }
+axum = { version = "0.7", features = ["json", "macros", "tracing", "ws"] }
 tower = { version = "0.4", features = ["util", "timeout", "load-shed"] }
 tower-http = { version = "0.5", features = ["cors", "trace"] }
 hyper = { version = "1.0", features = ["full"] }
@@ -47,6 +47,7 @@ tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 
 # Utilities
 bytes = "1.0"
+dashmap = "5.0"
 
 [dev-dependencies]
 tokio-test = "0.4"

@@ -11,6 +11,7 @@ use crate::modules::types::{
     TrendDirection, TrendMetrics, UserId,
 };
 use crate::modules::validation::{validate_publish_request, validate_project_exists, ValidationConfig};
+use crate::modules::websocket::{WebSocketManager, DashboardEvent};
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
@@ -44,6 +45,7 @@ pub struct HodeiServer {
     retention_manager: RetentionManager,
     validation_config: ValidationConfig,
     diff_engine: DiffEngine,
+    websocket_manager: WebSocketManager,
 }
 
 impl HodeiServer {
@@ -85,6 +87,9 @@ impl HodeiServer {
         // Initialize diff engine
         let diff_engine = DiffEngine::new();
 
+        // Initialize WebSocket manager
+        let websocket_manager = WebSocketManager::new(database.clone());
+
         // Create the REST router
         let rest_app = Self::create_rest_router(
             &config, 
@@ -92,7 +97,8 @@ impl HodeiServer {
             &auth_service, 
             &rate_limiter, 
             &retention_manager,
-            &diff_engine
+            &diff_engine,
+            &websocket_manager
         ).await?;
 
         let start_time = SystemTime::now();
@@ -111,6 +117,7 @@ impl HodeiServer {
             retention_manager,
             validation_config,
             diff_engine,
+            websocket_manager,
         })
     }
 
@@ -122,6 +129,7 @@ impl HodeiServer {
         rate_limiter: &RateLimiter,
         retention_manager: &RetentionManager,
         diff_engine: &DiffEngine,
+        websocket_manager: &WebSocketManager,
     ) -> Result<Router> {
         let cors = CorsLayer::new()
             .allow_origin(Any)
@@ -135,6 +143,9 @@ impl HodeiServer {
             // Authentication endpoints
             .route("/api/v1/auth/login", post(login))
             .route("/api/v1/auth/refresh", post(refresh_token))
+            
+            // WebSocket endpoint for real-time dashboard updates
+            .route("/ws/dashboard", get(websocket_dashboard))
             
             // Analysis endpoints (auth required with rate limiting)
             .route(
@@ -183,6 +194,7 @@ impl HodeiServer {
                 retention_manager: retention_manager.clone(),
                 validation_config: ValidationConfig::default(),
                 diff_engine: diff_engine.clone(),
+                websocket_manager: websocket_manager.clone(),
             })
     }
 
@@ -248,6 +260,11 @@ impl HodeiServer {
     pub fn database(&self) -> &DatabaseConnection {
         &self.database
     }
+
+    /// Get WebSocket manager for broadcasting events
+    pub fn websocket_manager(&self) -> &WebSocketManager {
+        &self.websocket_manager
+    }
 }
 
 /// Application state shared across handlers
@@ -260,6 +277,7 @@ pub struct AppState {
     retention_manager: RetentionManager,
     validation_config: ValidationConfig,
     diff_engine: DiffEngine,
+    websocket_manager: WebSocketManager,
 }
 
 /// Diff analysis query parameters
@@ -269,6 +287,12 @@ struct DiffQueryParams {
     head: Option<String>,
     commit_base: Option<String>,
     commit_head: Option<String>,
+}
+
+/// WebSocket query parameters
+#[derive(Debug, serde::Deserialize)]
+struct WebSocketQueryParams {
+    project_id: Option<String>,
 }
 
 /// Health check handler
@@ -295,6 +319,19 @@ async fn health_check(State(state): State<AppState>) -> Result<impl IntoResponse
     };
 
     Ok((StatusCode::OK, Json(health)))
+}
+
+/// WebSocket dashboard handler - US-13.04
+async fn websocket_dashboard(
+    ws: axum::extract::ws::WebSocketUpgrade,
+    State(state): State<AppState>,
+    Query(params): Query<WebSocketQueryParams>,
+) -> impl IntoResponse {
+    info!("WebSocket dashboard connection request: project_id={:?}", params.project_id);
+
+    ws.on_upgrade(|socket| {
+        state.websocket_manager.handle_connection(socket, state, params.project_id)
+    })
 }
 
 /// Login handler (placeholder)
@@ -365,6 +402,18 @@ async fn publish_analysis(
         0, // TODO: Calculate resolved findings vs baseline
     );
 
+    // 6. Broadcast to WebSocket subscribers
+    let event = DashboardEvent::AnalysisPublished {
+        project_id: project_id.clone(),
+        analysis_id: analysis_id.to_string(),
+        findings_count: request.findings.len() as u32,
+        timestamp: Utc::now().to_rfc3339(),
+    };
+
+    if let Err(e) = state.websocket_manager.broadcast_to_project(&project_id, &event).await {
+        warn!("Failed to broadcast analysis published event: {}", e);
+    }
+
     info!("Analysis published successfully for project {}: analysis_id={}, findings={}", 
           project_id, analysis_id, request.findings.len());
 
@@ -417,6 +466,20 @@ async fn get_diff_analysis(
 
     // Calculate diff summary for performance monitoring
     let summary = state.diff_engine.calculate_diff_summary(&diff);
+
+    // Broadcast diff calculated event
+    if let (Some(base), Some(head)) = (params.base, params.head) {
+        let event = DashboardEvent::DiffCalculated {
+            project_id: project_id.clone(),
+            base_branch: base,
+            head_branch: head,
+            summary: summary.into(),
+        };
+
+        if let Err(e) = state.websocket_manager.broadcast_to_project(&project_id, &event).await {
+            warn!("Failed to broadcast diff calculated event: {}", e);
+        }
+    }
 
     info!("Diff calculated successfully: {}", summary.to_summary());
 
@@ -480,7 +543,22 @@ async fn get_baseline(
 async fn update_baseline(
     Path((project_id, branch)): Path<(ProjectId, String)>,
     State(state): State<AppState>,
+    Json(request): Json<serde_json::Value>,
 ) -> Result<impl IntoResponse> {
     // TODO: Implement baseline update
+    // For now, just log the update
+    info!("Baseline update requested for project {} branch {}", project_id, branch);
+
+    // Broadcast baseline updated event
+    let event = DashboardEvent::BaselineUpdated {
+        project_id: project_id.clone(),
+        branch: branch.clone(),
+        analysis_id: "updated".to_string(), // TODO: Include actual analysis ID
+    };
+
+    if let Err(e) = state.websocket_manager.broadcast_to_project(&project_id, &event).await {
+        warn!("Failed to broadcast baseline updated event: {}", e);
+    }
+
     Ok(StatusCode::OK)
 }

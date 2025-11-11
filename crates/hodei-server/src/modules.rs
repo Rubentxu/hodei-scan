@@ -8,6 +8,7 @@ pub mod policies;
 pub mod server;
 pub mod types;
 pub mod validation;
+pub mod websocket;
 
 pub use auth::AuthService;
 pub use config::{ServerConfig, ConfigError};
@@ -18,3 +19,4 @@ pub use policies::{RateLimiter, RetentionManager, CleanupTask};
 pub use server::HodeiServer;
 pub use types::*;
 pub use validation::{validate_publish_request, ValidationConfig};
+pub use websocket::{WebSocketManager, DashboardEvent, DashboardTrendMetrics};
