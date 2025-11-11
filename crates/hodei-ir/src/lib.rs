@@ -2,13 +2,18 @@
 
 #![warn(missing_docs)]
 
+pub mod custom_fact_tests;
 pub mod fact_type_index;
 pub mod interning;
+pub mod migration;
+pub mod plugin_schema_registry;
 pub mod types;
 pub mod validator;
 pub mod zero_copy;
 
 pub use fact_type_index::*;
+pub use migration::*;
+pub use plugin_schema_registry::*;
 pub use types::*;
 pub use validator::*;
 pub use zero_copy::*;
@@ -187,6 +192,15 @@ pub enum FactType {
         /// Branch coverage percentage
         branch_coverage: u32,
     },
+
+    // Custom FactType for plugin extensibility
+    /// Custom fact type defined by plugins
+    Custom {
+        /// Unique identifier for the custom fact type (e.g., "terraform::aws::insecure_s3_bucket")
+        discriminant: String,
+        /// Data fields for the custom fact
+        data: std::collections::HashMap<String, FactValue>,
+    },
 }
 
 impl std::hash::Hash for FactType {
@@ -363,6 +377,14 @@ impl std::hash::Hash for FactType {
                 line_coverage.hash(state);
                 branch_coverage.hash(state);
             }
+            FactType::Custom { discriminant, data } => {
+                discriminant.hash(state);
+                // Hash each entry in the HashMap
+                for (k, v) in data {
+                    k.hash(state);
+                    v.hash(state);
+                }
+            }
         }
     }
 }
@@ -391,6 +413,23 @@ impl FactType {
             FactType::UncoveredLine { .. } => FactTypeDiscriminant::UncoveredLine,
             FactType::LowTestCoverage { .. } => FactTypeDiscriminant::LowTestCoverage,
             FactType::CoverageStats { .. } => FactTypeDiscriminant::CoverageStats,
+            FactType::Custom { .. } => FactTypeDiscriminant::Custom,
+        }
+    }
+
+    /// Get a field value from a Custom fact type
+    pub fn get_field(&self, key: &str) -> Option<&FactValue> {
+        match self {
+            FactType::Custom { data, .. } => data.get(key),
+            _ => None,
+        }
+    }
+
+    /// Get the discriminant string for Custom facts
+    pub fn get_discriminant(&self) -> Option<&str> {
+        match self {
+            FactType::Custom { discriminant, .. } => Some(discriminant.as_str()),
+            _ => None,
         }
     }
 }
@@ -447,7 +486,7 @@ impl IntermediateRepresentation {
         Self {
             facts: Vec::new(),
             metadata,
-            schema_version: "3.2.0".to_string(),
+            schema_version: "3.3.0".to_string(),
         }
     }
 

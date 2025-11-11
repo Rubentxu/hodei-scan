@@ -26,6 +26,7 @@ pub enum FactTypeDiscriminant {
     VulnerableUncovered,
     SecurityTechnicalDebt,
     QualitySecurityCorrelation,
+    Custom,
 }
 
 /// Index for facts by type using EnumMap for optimal performance

@@ -59,7 +59,7 @@ mod tests {
             ProjectPath::new(std::path::PathBuf::new()),
         );
         let ir = IntermediateRepresentation::new(metadata);
-        let validator = IRValidator::new("3.2.0".to_string());
+        let validator = IRValidator::new("3.3.0".to_string());
         assert!(validator.validate(&ir).is_ok());
     }
 }
