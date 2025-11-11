@@ -49,7 +49,6 @@ impl IRValidator {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_validator_accepts_valid_ir() {

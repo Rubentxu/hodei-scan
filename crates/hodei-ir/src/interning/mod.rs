@@ -258,7 +258,6 @@ impl Default for ProjectPathInterner {
 #[cfg(test)]
 mod project_path_interner_tests {
     use super::*;
-    use std::path::Path;
 
     #[test]
     fn test_path_normalization() {

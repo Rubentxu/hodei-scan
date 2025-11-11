@@ -23,9 +23,7 @@ pub use source_location::*;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct ColumnNumber(u32);
 
 impl ColumnNumber {
