@@ -527,62 +527,185 @@ fn test_complexity_calculation() {
 ### **Impacto**: Muy Alto | **Complejidad**: Media | **ROI**: Muy Alto
 
 #### Contexto
-El análisis incremental es crítico para CI/CD. Solo re-analizar archivos changed usando git diff y cache.
+El análisis incremental es crítico para CI/CD. Solo re-analizar archivos changed usando detection de cambios y cache. El sistema debe ser **agnóstico al SCM** y soportar múltiples gestores de código fuente.
+
+#### Arquitectura: Abstraction Pattern (Strategy Pattern)
+
+**🗺️ El Truco: "Detector de Cambios" (Change Detector)**
+
+En lugar de acoplarse a Git, creamos un **rol genérico** que puede ser implementado por diferentes estrategias:
+
+```rust
+pub trait ChangeDetector {
+    fn detect_changed_files(&self) -> Result<Vec<ChangedFile>, DetectionError>;
+}
+
+pub struct IncrementalAnalyzer {
+    change_detector: Box<dyn ChangeDetector>,
+    cache_manager: CacheManager,
+}
+```
+
+**👷‍♂️ Diferentes Implementaciones (Strategies):**
+
+1. **GitDetector** (El Conserje de Git - Plan A):
+   - Detecta cambios súper rápido con `git diff`
+   - Ideal para repositorios Git
+   - **Performance**: ~2 segundos para PR típico
+
+2. **PerforceDetector** (El Conserje de Perforce - Plan A):
+   - Detecta cambios con `p4 changes` o `p4 describe`
+   - Ideal para repositorios Perforce
+   - **Performance**: ~3-5 segundos
+
+3. **MercurialDetector** (El Conserje de Mercurial - Plan A):
+   - Detecta cambios con `hg log`
+   - Ideal para repositorios Mercurial
+   - **Performance**: ~3-5 segundos
+
+4. **HashBasedDetector** (El Conserje "Puerta a Puerta" - Plan B):
+   - Calcula hash de TODOS los archivos y compara con cache
+   - Fallback cuando no hay SCM detectado
+   - **Performance**: ~15-30 segundos (pero 5-10x más rápido que full analysis)
+
+**🎯 Auto-Detection Logic:**
+
+```rust
+impl IncrementalAnalyzer {
+    pub fn new() -> Self {
+        let change_detector: Box<dyn ChangeDetector> = if GitDetector::is_available() {
+            Box::new(GitDetector::new())
+        } else if PerforceDetector::is_available() {
+            Box::new(PerforceDetector::new())
+        } else if MercurialDetector::is_available() {
+            Box::new(MercurialDetector::new())
+        } else {
+            Box::new(HashBasedDetector::new())
+        };
+
+        Self {
+            change_detector,
+            cache_manager: CacheManager::new(),
+        }
+    }
+}
+```
+
+**💡 Ventajas de Esta Arquitectura:**
+
+- ✅ **Extensible**: Fácil agregar soporte para nuevos SCMs
+- ✅ **Polimórfico**: El orquestador (US-12) no cambia
+- ✅ **Fallback inteligente**: Auto-detecta y usa la mejor estrategia
+- ✅ **Testeable**: Cada detector puede testearse independientemente
+- ✅ **Agnóstico**: No asumimos Git como requisito
 
 #### User Stories
 
 ---
 
-##### US-10: Implementar Git Diff Analyzer
+##### US-09A: Implementar ChangeDetector Trait (Nueva)
 **Como** sistema de análisis incremental  
-**Quiero** detectar archivos modificados con git diff  
-**Para** saber qué re-analizar
+**Quiero** una abstracción genérica para detectar cambios  
+**Para** soportar múltiples SCMs de forma extensible
 
 **Criterios de Aceptación:**
-- ✅ `GitAnalyzer` que ejecuta git diff
-- ✅ Support para added, modified, deleted files
-- ✅ Hash y timestamp de archivos
-- ✅ Integration con git repository
+- ✅ Definir `ChangeDetector` trait con método `detect_changed_files()`
+- ✅ Crear `ChangedFile` struct con metadata (path, change_type, timestamp)
+- ✅ Implementar auto-detection logic en factory
+- ✅ Tests para verificar abstraction funciona
 
 **TDD Tests (RED):**
 ```rust
 #[test]
-fn test_git_diff_detects_changes() {
-    let temp_repo = TempRepository::new();
-    temp_repo.commit_file("src/main.rs", "initial");
-
-    // Modify file
-    temp_repo.write_file("src/main.rs", "modified");
-    temp_repo.commit_file("src/main.rs", "modified");
-
-    let analyzer = GitAnalyzer::new(&temp_repo.path());
-    let changes = analyzer.diff("HEAD~1", "HEAD").unwrap();
-
-    assert!(changes.modified_files().contains(Path::new("src/main.rs")));
+fn test_change_detector_trait() {
+    let detector: Box<dyn ChangeDetector> = Box::new(MockDetector::new());
+    let changes = detector.detect_changed_files().unwrap();
+    assert!(!changes.is_empty());
 }
 
 #[test]
-fn test_git_diff_handles_deletions() {
-    let temp_repo = TempRepository::new();
-    temp_repo.commit_file("src/deleted.rs", "content");
-    temp_repo.remove_file("src/deleted.rs");
-    temp_repo.commit_all("deleted file");
-
-    let analyzer = GitAnalyzer::new(&temp_repo.path());
-    let changes = analyzer.diff("HEAD~1", "HEAD").unwrap();
-
-    assert!(changes.deleted_files().contains(Path::new("src/deleted.rs")));
+fn test_auto_detection_prefers_git() {
+    let analyzer = IncrementalAnalyzer::new();
+    // Should use GitDetector if .git exists
+    assert!(matches!(analyzer.change_detector, GitDetector { .. }));
 }
 ```
 
 **Implementation Tasks:**
-1. Crear `hodei-cli/src/analysis/git_analyzer.rs`
-2. Usar `git2` crate para git operations
-3. Implement diff parsing (added, modified, deleted)
-4. File hash calculation
-5. Tests con temporary repositories
+1. Crear `hodei-cli/src/analysis/change_detector.rs`
+2. Definir trait y estructuras base
+3. Implementar factory con auto-detection
+4. Tests de integración
 
-**Commit**: `feat(cli): implement GitAnalyzer for incremental change detection`
+**Commit**: `feat(cli): add ChangeDetector trait for SCM-agnostic analysis`
+
+---
+
+##### US-10: Implementar GitDetector Strategy
+**Como** ChangeDetector implementation  
+**Quiero** detectar cambios usando Git diff  
+**Para** máxima performance en repositorios Git
+
+**Criterios de Aceptación:**
+- ✅ GitDetector que implementa ChangeDetector trait
+- ✅ Support para added, modified, deleted files
+- ✅ Integration con git2 crate
+- ✅ 2 segundos para PR típico con 3-10 changed files
+
+**TDD Tests (RED):**
+```rust
+#[test]
+fn test_git_detector_detects_changes() {
+    let temp_repo = TempRepository::new();
+    temp_repo.commit_file("src/main.rs", "initial");
+
+    temp_repo.write_file("src/main.rs", "modified");
+    temp_repo.commit_file("src/main.rs", "modified");
+
+    let detector = GitDetector::new(&temp_repo.path());
+    let changes = detector.detect_changed_files().unwrap();
+
+    assert!(changes.iter().any(|c| c.path == "src/main.rs"));
+}
+```
+
+**Commit**: `feat(cli): implement GitDetector strategy for optimal Git repos`
+
+---
+
+##### US-10B: Implementar HashBasedDetector Strategy (Fallback)
+**Como** ChangeDetector implementation  
+**Quiero** detectar cambios calculando hash de archivos  
+**Para** funcionar sin SCM o SCM no soportado
+
+**Criterios de Aceptación:**
+- ✅ HashBasedDetector que implementa ChangeDetector trait
+- ✅ Calcula hash SHA-256 de todos los archivos
+- ✅ Compara con cache para detectar cambios
+- ✅ Performance: 15-30 segundos para 10K archivos
+- ✅ Warning logs indicando modo sin SCM
+
+**TDD Tests (RED):**
+```rust
+#[test]
+fn test_hash_based_detector_finds_changes() {
+    let temp_dir = TempDir::new();
+    create_test_files(&temp_dir);
+
+    let mut detector = HashBasedDetector::new(&temp_dir.path());
+    let changes = detector.detect_changed_files().unwrap();
+
+    assert!(changes.len() > 0);
+    assert!(changes.iter().all(|c| c.change_type != ChangeType::Unchanged));
+}
+```
+
+**Commit**: `feat(cli): implement HashBasedDetector fallback for SCM-agnostic analysis`
+
+---
+
+##### US-10-FALLBACK: Análisis sin Git (DEPRECATED - Reemplazado por US-10B)
+~~Esta historia se reemplaza por el diseño más genérico de ChangeDetector trait.~~
 
 ---
 

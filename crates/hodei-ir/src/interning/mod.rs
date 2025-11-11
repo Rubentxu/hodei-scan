@@ -177,3 +177,172 @@ mod tests {
         unique_strings * 64
     }
 }
+
+/// A specialized string interner for project paths with normalization
+pub struct ProjectPathInterner {
+    base_interner: Interner,
+}
+
+impl ProjectPathInterner {
+    /// Create a new project path interner
+    pub fn new() -> Self {
+        ProjectPathInterner {
+            base_interner: Interner::new(),
+        }
+    }
+
+    /// Intern a path with normalization
+    pub fn intern_path(&mut self, path: &str) -> usize {
+        let normalized = Self::normalize_path(path);
+        self.base_interner.intern(&normalized)
+    }
+
+    /// Resolve a symbol back to its normalized path
+    pub fn resolve_path(&self, symbol: usize) -> Option<&str> {
+        self.base_interner.resolve(symbol)
+    }
+
+    /// Get the number of interned paths
+    pub fn len(&self) -> usize {
+        self.base_interner.len()
+    }
+
+    /// Check if the interner is empty
+    pub fn is_empty(&self) -> bool {
+        self.base_interner.is_empty()
+    }
+
+    /// Normalize a path by resolving . and .. components
+    fn normalize_path(path: &str) -> String {
+        use std::path::Component;
+        use std::path::Path as StdPath;
+
+        let path = StdPath::new(path);
+        let mut normalized = Vec::new();
+        let mut path_depth = 0; // Track the current depth relative to starting point
+
+        for component in path.components() {
+            match component {
+                Component::CurDir => {
+                    // Skip current directory references
+                }
+                Component::ParentDir => {
+                    // Go up one level if we're not at the starting point
+                    if path_depth > 0 {
+                        normalized.pop();
+                        path_depth -= 1;
+                    }
+                    // If we're at starting point (depth 0), don't go up
+                }
+                Component::RootDir | Component::Normal(_) | Component::Prefix(_) => {
+                    normalized.push(component.as_os_str().to_string_lossy().into_owned());
+                    path_depth += 1;
+                }
+            }
+        }
+
+        if normalized.is_empty() {
+            return ".".to_string();
+        }
+
+        normalized.join(std::path::MAIN_SEPARATOR_STR)
+    }
+}
+
+impl Default for ProjectPathInterner {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(test)]
+mod project_path_interner_tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn test_path_normalization() {
+        let mut path_interner = ProjectPathInterner::new();
+
+        // Test simple path
+        let s1 = path_interner.intern_path("src/main.rs");
+
+        // Test path with ../ that should normalize
+        let s2 = path_interner.intern_path("src/../src/main.rs");
+
+        // They should resolve to the same symbol
+        assert_eq!(s1, s2);
+        assert_eq!(path_interner.resolve_path(s1), Some("src/main.rs"));
+    }
+
+    #[test]
+    fn test_trailing_slash_removal() {
+        let mut path_interner = ProjectPathInterner::new();
+
+        let s1 = path_interner.intern_path("src/");
+        let s2 = path_interner.intern_path("src");
+
+        assert_eq!(s1, s2);
+        assert_eq!(path_interner.resolve_path(s1), Some("src"));
+    }
+
+    #[test]
+    fn test_current_directory_reference() {
+        let mut path_interner = ProjectPathInterner::new();
+
+        let s1 = path_interner.intern_path("src/main.rs");
+        let s2 = path_interner.intern_path("./src/main.rs");
+
+        assert_eq!(s1, s2);
+        assert_eq!(path_interner.resolve_path(s1), Some("src/main.rs"));
+    }
+
+    #[test]
+    fn test_path_deduplication() {
+        let mut path_interner = ProjectPathInterner::new();
+
+        let paths = vec!["src/a.rs", "src/../src/a.rs", "src/b.rs", "./src/b.rs"];
+
+        let symbols: Vec<_> = paths.iter().map(|p| path_interner.intern_path(p)).collect();
+
+        // Should deduplicate to 2 unique paths
+        assert_eq!(path_interner.len(), 2);
+        assert_eq!(symbols[0], symbols[1]);
+        assert_eq!(symbols[2], symbols[3]);
+        assert_ne!(symbols[0], symbols[2]);
+    }
+
+    #[test]
+    fn test_complex_path_normalization() {
+        let mut path_interner = ProjectPathInterner::new();
+
+        // Complex normalization case: src/../src/lib/../src/main.rs
+        // This normalizes to: src/src/main.rs
+        // because each time we go "back to base" (with ..), we start fresh
+        let complex = "src/../src/lib/../src/main.rs";
+        let s1 = path_interner.intern_path(complex);
+
+        // The complex path normalizes to src/src/main.rs
+        assert_eq!(path_interner.resolve_path(s1), Some("src/src/main.rs"));
+    }
+
+    #[test]
+    fn test_separator_normalization() {
+        let mut path_interner = ProjectPathInterner::new();
+
+        // Test that different separators are handled (on Unix, backslash might be part of filename)
+        let path1 = "src/main.rs";
+        let path2 = "src\\main.rs"; // On Unix, this is a different path
+
+        let s1 = path_interner.intern_path(path1);
+        let s2 = path_interner.intern_path(path2);
+
+        // On Unix, these should be different
+        #[cfg(unix)]
+        assert_ne!(s1, s2);
+
+        // Both should resolve to their original form
+        assert_eq!(path_interner.resolve_path(s1), Some(path1));
+        assert_eq!(path_interner.resolve_path(s2), Some(path2));
+    }
+}
