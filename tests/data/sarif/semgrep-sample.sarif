@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Semgrep",
+          "version": "1.45.0",
+          "informationUri": "https://semgrep.dev/",
+          "rules": [
+            {
+              "id": "python.lang.security.audit.dangerous-system-call",
+              "name": "Dangerous system call",
+              "shortDescription": {
+                "text": "Avoid using os.system() with user input"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "python.lang.security.audit.dangerous-system-call",
+          "level": "error",
+          "message": {
+            "text": "Detected dangerous system call with user-controlled input"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/utils.py"
+                },
+                "region": {
+                  "startLine": 25,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "python.lang.security.audit.dangerous-system-call",
+          "level": "note",
+          "message": {
+            "text": "Consider using subprocess module instead"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/admin.py"
+                },
+                "region": {
+                  "startLine": 89,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

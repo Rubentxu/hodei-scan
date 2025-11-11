@@ -16,6 +16,7 @@ pub enum ExtractorId {
     JaCoCoParser,
     LcovParser,
     CoberturaParser,
+    SarifAdapter,
     Custom,
 }
 
@@ -33,6 +34,7 @@ impl ExtractorId {
             Self::JaCoCoParser => "jacoco",
             Self::LcovParser => "lcov",
             Self::CoberturaParser => "cobertura",
+            Self::SarifAdapter => "sarif-adapter",
             Self::Custom => "custom",
         }
     }

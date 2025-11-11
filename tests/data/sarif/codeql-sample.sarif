@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "CodeQL",
+          "version": "2.15.0",
+          "informationUri": "https://codeql.github.com/",
+          "rules": [
+            {
+              "id": "js/sql-injection",
+              "name": "Database query built from user-controlled sources",
+              "shortDescription": {
+                "text": "SQL injection"
+              },
+              "fullDescription": {
+                "text": "Building a database query with user-controlled data may allow an attacker to execute malicious SQL commands."
+              },
+              "help": {
+                "text": "Use parameterized queries to avoid SQL injection vulnerabilities."
+              },
+              "properties": {
+                "tags": ["security", "external/cwe/cwe-089"],
+                "precision": "high"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "js/sql-injection",
+          "level": "error",
+          "message": {
+            "text": "This query depends on a user-provided value."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/database.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 42,
+                  "startColumn": 15,
+                  "endLine": 42,
+                  "endColumn": 45
+                }
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "src/database.js"
+                          },
+                          "region": {
+                            "startLine": 40,
+                            "startColumn": 21
+                          }
+                        },
+                        "message": {
+                          "text": "user input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "src/database.js"
+                          },
+                          "region": {
+                            "startLine": 42,
+                            "startColumn": 15
+                          }
+                        },
+                        "message": {
+                          "text": "SQL query"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "js/sql-injection",
+          "level": "warning",
+          "message": {
+            "text": "This query may depend on a user-provided value."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/api/users.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 105,
+                  "startColumn": 20,
+                  "endLine": 105,
+                  "endColumn": 50
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

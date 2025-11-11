@@ -7,14 +7,18 @@
 pub mod error;
 pub mod orchestrator;
 pub mod protocol;
+pub mod sarif_adapter;
+pub mod sarif_extractor;
 
 // Re-export public types
 pub use error::{OrchestratorError, Result};
-pub use orchestrator::ExtractorOrchestrator;
+pub use orchestrator::{ExtractorOrchestrator, ResourceStats};
 pub use protocol::{
     AggregatedIR, ErrorResponse, ExtractorConfig, ExtractorDef, ExtractorMessage, ExtractorRequest,
     ExtractorResponse, Heartbeat,
 };
+pub use sarif_adapter::{SarifAdapter, SarifConfig, SarifError};
+pub use sarif_extractor::SarifExtractor;
 
 #[cfg(test)]
 mod tests {

@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Severity {
     Info,
     Minor,
@@ -34,19 +32,3 @@ pub struct CveId(pub u32);
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct CoveragePercentage(pub f32);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum ExtractorId {
-    TreeSitter,
-    OxcParser,
-    SemgrepTaint,
-    DataFlowAnalyzer,
-    SymbolicExecutor,
-    CargoAudit,
-    NpmAudit,
-    TrivyScanner,
-    JaCoCoParser,
-    LcovParser,
-    CoberturaParser,
-    Custom,
-}
