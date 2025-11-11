@@ -1,20 +1,18 @@
-/// Core hodei-server implementation with both REST and gRPC support
+/// Core hodei-server implementation with REST API
 use crate::modules::auth::AuthService;
 use crate::modules::config::ServerConfig;
 use crate::modules::database::DatabaseConnection;
 use crate::modules::error::{Result, ServerError};
-use crate::modules::grpc::{HodeiGrpcServer, proto::health_server::HealthServer};
 use crate::modules::policies::{RateLimiter, RetentionManager, CleanupTask, create_analysis_summary};
 use crate::modules::types::{
-    AnalysisDiff, AnalysisId, AnalysisMetadata, ApiError, AuthToken, HealthStatus,
+    AnalysisDiff, AnalysisId, AnalysisMetadata, AuthToken, HealthStatus,
     HealthCheckStatus, PublishRequest, PublishResponse, ProjectId, Severity, StoredAnalysis,
     TrendDirection, TrendMetrics, UserId,
 };
-use crate::modules::validation::{validate_publish_request, validate_project_exists, calculate_summary, ValidationConfig};
+use crate::modules::validation::{validate_publish_request, validate_project_exists, ValidationConfig};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    middleware,
     response::IntoResponse,
     routing::{get, post},
     Json, Router,
@@ -27,7 +25,6 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::sync::broadcast;
-use tonic::transport::{Server, ServerTlsConfig};
 use tower_http::{
     cors::{Any, CorsLayer},
     trace::TraceLayer,
@@ -40,7 +37,6 @@ pub struct HodeiServer {
     database: DatabaseConnection,
     auth_service: AuthService,
     rest_app: Router,
-    grpc_server: Option<HodeiGrpcServer>,
     start_time: SystemTime,
     shutdown_sender: broadcast::Sender<()>,
     rate_limiter: RateLimiter,
@@ -84,9 +80,6 @@ impl HodeiServer {
         // Initialize validation config
         let validation_config = ValidationConfig::default();
 
-        // Create gRPC server
-        let grpc_server = Some(HodeiGrpcServer::new(database.clone()));
-
         // Create the REST router
         let rest_app = Self::create_rest_router(&config, &database, &auth_service, &rate_limiter, &retention_manager).await?;
 
@@ -100,7 +93,6 @@ impl HodeiServer {
             database,
             auth_service,
             rest_app,
-            grpc_server,
             start_time,
             shutdown_sender,
             rate_limiter,
@@ -179,7 +171,7 @@ impl HodeiServer {
             })
     }
 
-    /// Start the server (both REST and gRPC)
+    /// Start the server (REST API only)
     pub async fn run(self) -> Result<()> {
         let addr = self.config.bind_address;
         info!("Starting hodei-server on {}", addr);
@@ -368,7 +360,7 @@ async fn get_diff_analysis(
     Path(project_id): Path<ProjectId>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, ServerError> {
-    // TODO: Implement diff analysis
+    // TODO: Implement diff analysis for US-13.03
     let diff = AnalysisDiff {
         base_analysis: None,
         head_analysis: None,

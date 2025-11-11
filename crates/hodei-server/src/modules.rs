@@ -3,7 +3,6 @@ pub mod auth;
 pub mod config;
 pub mod database;
 pub mod error;
-pub mod grpc;
 pub mod policies;
 pub mod server;
 pub mod types;
