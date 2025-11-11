@@ -46,4 +46,7 @@ pub enum OrchestratorError {
 
     #[error("Join error: {0}")]
     JoinError(String),
+
+    #[error("IO error: {0}")]
+    FromIo(#[from] std::io::Error),
 }

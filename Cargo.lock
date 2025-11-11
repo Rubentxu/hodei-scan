@@ -853,6 +853,7 @@ dependencies = [
  "enum-map",
  "hodei-dsl",
  "hodei-ir",
+ "libc",
  "petgraph",
  "rayon",
  "regex",

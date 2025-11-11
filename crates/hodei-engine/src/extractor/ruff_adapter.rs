@@ -262,7 +262,7 @@ impl Default for RuffAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hodei_ir::types::FactType;
+    use hodei_ir::FactType;
 
     #[tokio::test]
     async fn test_parse_ruff_json_error() {

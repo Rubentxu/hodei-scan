@@ -143,31 +143,39 @@ mod tests {
     fn test_reachable_from() {
         // Create test facts with flow relationships
         let fact1 = Fact {
-            id: FactId(0),
+            id: hodei_ir::FactId::new(),
             fact_type: FactType::TaintSource {
-                var: VariableName("user_input".to_string()),
+                var: hodei_ir::VariableName("user_input".to_string()),
                 flow_id: FlowId::new_uuid(),
                 source_type: "http".to_string(),
-                confidence: Confidence::new(0.8).unwrap(),
+                confidence: Confidence::MEDIUM,
             },
             location: create_test_location("test.rs", 1, 1, 1, 10),
-            provenance: Provenance::default(),
+            provenance: Provenance::new(
+                ExtractorId::TreeSitter,
+                "1.0.0".to_string(),
+                Confidence::MEDIUM,
+            ),
         };
 
         let fact2 = Fact {
-            id: FactId(1),
+            id: hodei_ir::FactId::new(),
             fact_type: FactType::TaintSink {
-                func: FunctionName("write".to_string()),
+                func: hodei_ir::FunctionName("write".to_string()),
                 consumes_flow: FlowId::new_uuid(),
                 category: "write".to_string(),
-                severity: Severity::High,
+                severity: hodei_ir::Severity::Major,
             },
             location: create_test_location("test.rs", 10, 10, 1, 10),
-            provenance: Provenance::default(),
+            provenance: Provenance::new(
+                ExtractorId::TreeSitter,
+                "1.0.0".to_string(),
+                Confidence::MEDIUM,
+            ),
         };
 
         let index = FlowIndex::build(&[&fact1, &fact2]);
-        let reachable = index.reachable_from(FactId(0));
+        let reachable = index.reachable_from(fact1.id);
         // Should be able to reach itself (or related facts in same flow)
         assert!(!reachable.is_empty());
     }
@@ -182,11 +190,11 @@ fn create_test_location(
 ) -> SourceLocation {
     use hodei_ir::{ColumnNumber, LineNumber, ProjectPath};
 
-    SourceLocation {
-        file: ProjectPath::new(std::path::PathBuf::from(file)),
-        start_line: LineNumber::new(start_line).unwrap(),
-        end_line: LineNumber::new(end_line).unwrap(),
-        start_column: Some(ColumnNumber::new(start_col).unwrap()),
-        end_column: Some(ColumnNumber::new(end_col).unwrap()),
-    }
+    SourceLocation::new(
+        ProjectPath::new(std::path::PathBuf::from(file)),
+        LineNumber::new(start_line).unwrap(),
+        Some(ColumnNumber::new(start_col).unwrap()),
+        LineNumber::new(end_line).unwrap(),
+        Some(ColumnNumber::new(end_col).unwrap()),
+    )
 }

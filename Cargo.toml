@@ -83,6 +83,9 @@ walkdir = "2.0"
 rstar = "0.12"
 petgraph = "0.6"
 
+# System APIs for resource limits
+libc = "0.2"
+
 # Dev tools
 cargo-husky = { version = "1.5", default-features = false, features = ["precommit-hook", "run-cargo-fmt", "run-cargo-clippy"] }
 tempfile = "3.0"

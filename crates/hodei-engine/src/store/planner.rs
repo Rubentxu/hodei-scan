@@ -617,7 +617,7 @@ mod tests {
         );
 
         let mut spatial_stats = HashMap::new();
-        let path = ProjectPath::new("src/main.rs").unwrap();
+        let path = hodei_ir::ProjectPath::new(std::path::PathBuf::from("src/main.rs"));
         spatial_stats.insert(
             "src/main.rs".to_string(),
             SpatialStat {
@@ -666,7 +666,7 @@ mod tests {
         let stats = create_test_stats();
         let mut planner = QueryPlanner::new(stats);
 
-        let path = ProjectPath::new("src/main.rs").unwrap();
+        let path = hodei_ir::ProjectPath::new(std::path::PathBuf::from("src/main.rs"));
         let start = LineNumber::new(10).unwrap();
         let end = LineNumber::new(50).unwrap();
         let query = Query::ByLineRange {

@@ -260,7 +260,7 @@ mod tests {
             span: hodei_dsl::ast::Span { start: 0, end: 0 },
         }];
 
-        let results = matcher.match_patterns(&patterns);
+        let results = matcher.match_patterns(&patterns).unwrap();
         assert_eq!(results.len(), 0);
     }
 
@@ -270,7 +270,9 @@ mod tests {
         let evaluator = ExprEvaluator::new(store);
 
         let expr = Expr::Literal(Literal::Boolean(true));
-        let result = evaluator.eval_expr(&expr, &[], &SourceLocation::default());
+        let result = evaluator
+            .eval_expr(&expr, &[], &SourceLocation::default())
+            .unwrap();
         assert!(result);
     }
 
@@ -284,7 +286,9 @@ mod tests {
             op: BinaryOp::And,
             right: Box::new(Expr::Literal(Literal::Boolean(true))),
         };
-        let result = evaluator.eval_expr(&expr, &[], &SourceLocation::default());
+        let result = evaluator
+            .eval_expr(&expr, &[], &SourceLocation::default())
+            .unwrap();
         assert!(result);
     }
 }

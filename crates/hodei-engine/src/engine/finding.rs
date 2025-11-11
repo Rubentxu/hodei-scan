@@ -241,7 +241,7 @@ mod tests {
 
     fn create_test_source_location() -> SourceLocation {
         SourceLocation::new(
-            ProjectPath::new(std::path::PathBuf::from("test.rs")),
+            hodei_ir::ProjectPath::new(std::path::PathBuf::from("test.rs")),
             LineNumber::new(1).unwrap(),
             None,
             LineNumber::new(1).unwrap(),
@@ -255,7 +255,7 @@ mod tests {
             .rule_name("test-rule")
             .message("Test finding")
             .location(create_test_source_location())
-            .confidence(Confidence::new(0.9).unwrap())
+            .confidence(Confidence::HIGH)
             .severity("high")
             .build()
             .unwrap();
@@ -272,7 +272,7 @@ mod tests {
             .rule_name("security-check")
             .message("Security issue detected")
             .location(create_test_source_location())
-            .confidence(Confidence::new(0.95).unwrap())
+            .confidence(Confidence::HIGH)
             .severity("critical")
             .metadata("cwe", "CWE-79")
             .metadata("owasp", "A03:2021")
@@ -288,7 +288,7 @@ mod tests {
         let result = FindingBuilder::new()
             .message("Incomplete finding")
             .location(create_test_source_location())
-            .confidence(Confidence::new(0.5).unwrap())
+            .confidence(Confidence::MEDIUM)
             .severity("medium")
             .build();
 
@@ -303,14 +303,14 @@ mod tests {
         // Create a test fact
         let fact = hodei_ir::Fact::new(
             hodei_ir::FactType::Function {
-                name: hodei_ir::VariableName::new("test_func".to_string()),
+                name: hodei_ir::FunctionName("test_func".to_string()),
                 complexity: 5,
                 lines_of_code: 10,
             },
             create_test_source_location(),
             hodei_ir::Provenance::new(
                 hodei_ir::ExtractorId::TreeSitter,
-                hodei_ir::SemanticVersion::new(1, 0, 0),
+                "1.0.0".to_string(),
                 Confidence::MEDIUM,
             ),
         );
@@ -319,7 +319,7 @@ mod tests {
             .rule_name("function-check")
             .message("Found {fact.type} with confidence {fact.confidence}")
             .location(create_test_source_location())
-            .confidence(Confidence::new(0.95).unwrap())
+            .confidence(Confidence::HIGH)
             .severity("critical")
             .with_fact(fact)
             .build()
@@ -334,14 +334,14 @@ mod tests {
         // Create a test fact
         let fact = hodei_ir::Fact::new(
             hodei_ir::FactType::Function {
-                name: hodei_ir::VariableName::new("test_func".to_string()),
+                name: hodei_ir::FunctionName("test_func".to_string()),
                 complexity: 5,
                 lines_of_code: 10,
             },
             create_test_source_location(),
             hodei_ir::Provenance::new(
                 hodei_ir::ExtractorId::TreeSitter,
-                hodei_ir::SemanticVersion::new(1, 0, 0),
+                "1.0.0".to_string(),
                 Confidence::HIGH,
             ),
         );
@@ -350,7 +350,7 @@ mod tests {
             .rule_name("function-check")
             .message("Type: {fact.type}, File: {fact.location.file}")
             .location(create_test_source_location())
-            .confidence(Confidence::new(0.95).unwrap())
+            .confidence(Confidence::HIGH)
             .severity("critical")
             .metadata("test", "value")
             .with_fact(fact)

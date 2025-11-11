@@ -18,6 +18,14 @@ pub struct ExtractorConfig {
     pub max_concurrent: Option<usize>,
     /// Default timeout for all extractors (if not overridden)
     pub default_timeout: Option<Duration>,
+    /// Global memory limit in bytes for all extractors combined
+    pub global_memory_limit: Option<u64>,
+    /// Global CPU limit as percentage (0-100)
+    pub global_cpu_limit: Option<u8>,
+    /// Default nice value for CPU priority
+    pub default_nice: Option<i32>,
+    /// Default I/O priority class
+    pub default_io_priority: Option<u8>,
 }
 
 /// Definition of a single extractor
@@ -33,6 +41,12 @@ pub struct ExtractorDef {
     pub timeout: Option<Duration>,
     /// Environment variables
     pub env: Option<HashMap<String, String>>,
+    /// Memory limit in bytes (None for unlimited)
+    pub memory_limit: Option<u64>,
+    /// CPU priority (nice value: -20 to 19, None for default)
+    pub cpu_priority: Option<i32>,
+    /// I/O priority (ionice class: 0-3, None for default)
+    pub io_priority: Option<u8>,
 }
 
 /// Request sent to extractor via stdin
@@ -253,9 +267,16 @@ mod tests {
                 args: vec![],
                 timeout: None,
                 env: None,
+                memory_limit: None,
+                cpu_priority: None,
+                io_priority: None,
             }],
             max_concurrent: Some(4),
             default_timeout: Some(Duration::from_secs(30)),
+            global_memory_limit: None,
+            global_cpu_limit: None,
+            default_nice: None,
+            default_io_priority: None,
         };
 
         assert!(validate_config(&config).is_ok());

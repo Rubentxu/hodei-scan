@@ -110,28 +110,34 @@ mod tests {
                 id: FactId::new(),
                 fact_type: if i % 3 == 0 {
                     FactType::TaintSource {
-                        var: format!("var{}", i).into(),
+                        var: hodei_ir::VariableName(format!("var{}", i)),
                         flow_id: hodei_ir::FlowId::new_uuid(),
-                        source_type: "user_input".into(),
+                        source_type: "user_input".to_string(),
                         confidence: Confidence::HIGH,
                     }
                 } else if i % 3 == 1 {
                     FactType::Vulnerability {
-                        location: SourceLocation::default(),
-                        cwe_id: Some(format!("CWE-{}", i)).into(),
+                        cwe_id: Some(format!("CWE-{}", i)),
                         owasp_category: None,
-                        severity: "high".into(),
+                        severity: hodei_ir::Severity::Major,
                         cvss_score: Some(8.5),
-                        description: format!("Vuln {}", i).into(),
+                        description: format!("Vuln {}", i),
+                        confidence: Confidence::MEDIUM,
                     }
                 } else {
                     FactType::Function {
-                        name: format!("func{}", i).into(),
+                        name: hodei_ir::FunctionName(format!("func{}", i)),
                         complexity: 5,
                         lines_of_code: 50,
                     }
                 },
-                location: SourceLocation::default(),
+                location: SourceLocation::new(
+                    hodei_ir::ProjectPath::new(std::path::PathBuf::from("test.rs")),
+                    hodei_ir::LineNumber::new(1).unwrap(),
+                    None,
+                    hodei_ir::LineNumber::new(10).unwrap(),
+                    None,
+                ),
                 provenance: Provenance::new(
                     ExtractorId::TreeSitter,
                     "1.0.0".to_string(),
