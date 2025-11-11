@@ -16,6 +16,7 @@ members = [
     "crates/hodei-dsl",
     "crates/hodei-extractors",
     "crates/hodei-cli",
+    "crates/hodei-config",
 ]
 resolver = "2"
 

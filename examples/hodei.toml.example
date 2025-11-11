@@ -1,0 +1,79 @@
+# Example hodei.toml configuration
+# Copy this file to your project root as 'hodei.toml' and customize as needed
+
+[extractors]
+# Enable or disable all extractors
+enabled = true
+
+# Maximum number of extractors to run concurrently
+# Default: 4
+max_concurrent = 4
+
+# Default timeout for all extractors
+# Format: 100ms, 5s, 2m, 1h
+# Default: 30s
+default_timeout = "30s"
+
+# Global memory limit in bytes (applies to all extractors combined)
+# Default: no limit
+global_memory_limit = 1_000_000_000
+
+# Global CPU limit percentage (0-100)
+# Default: no limit
+global_cpu_limit = 80
+
+# Default nice value for CPU priority (-20 to 19, lower = higher priority)
+# Default: no priority adjustment
+default_nice = 5
+
+# Default I/O priority (0-7, 0 is highest priority)
+# Default: no I/O priority adjustment
+default_io_priority = 2
+
+# ========================================
+# Individual Extractor Definitions
+# ========================================
+
+# Ruff Python Linter
+[[extractors.def]]
+name = "ruff"
+command = "ruff-to-hodei"
+source = "ruff"
+args = ["--config", "ruff.toml"]
+timeout = "30s"
+env = { RUST_BACKTRACE = "1" }
+
+# SARIF Adapter for various tools (Semgrep, CodeQL, etc.)
+[[extractors.def]]
+name = "semgrep"
+command = "sarif-to-hodei"
+source = "semgrep"
+timeout = "60s"
+memory_limit = 500_000_000  # 500MB
+
+# Custom Extractor Example
+[[extractors.def]]
+name = "custom-linter"
+command = "custom-linter-to-hodei"
+args = ["--format", "json"]
+timeout = "45s"
+env = {
+    CUSTOM_LINTER_CONFIG = "/path/to/config.json",
+    LOG_LEVEL = "info"
+}
+cpu_priority = 10  # Lower priority than default
+io_priority = 5   # Medium I/O priority
+
+# Example for CI/CD (more aggressive settings)
+[extractors.ci]
+enabled = true
+max_concurrent = 8  # Use all available cores
+default_timeout = "10s"  # Faster for CI
+default_nice = 10  # Lower priority to not interfere with build
+
+# Example for local development (more conservative settings)
+[extractors.dev]
+enabled = true
+max_concurrent = 1  # Sequential for easier debugging
+default_timeout = "300s"  # No timeouts during development
+default_nice = 0  # Highest priority

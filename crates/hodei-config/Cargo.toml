@@ -1,0 +1,12 @@
+[package]
+name = "hodei-config"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { workspace = true }
+toml = { version = "0.8", features = ["parse"] }
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
+tracing = { workspace = true }
+hodei-engine = { path = "../hodei-engine" }
