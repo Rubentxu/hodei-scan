@@ -6,6 +6,9 @@ description = "Rule evaluation engine for hodei-scan"
 license = "MIT"
 repository = "https://github.com/hodei-scan/hodei-scan"
 
+[build-dependencies]
+capnpc = "0.20"
+
 [dependencies]
 hodei-ir = { path = "../hodei-ir" }
 hodei-dsl = { path = "../hodei-dsl" }

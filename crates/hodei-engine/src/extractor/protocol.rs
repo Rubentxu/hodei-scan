@@ -2,7 +2,9 @@
 //!
 //! This module defines the message format for communication between
 //! hodei-scan orchestrator and external extractor processes.
+//! Currently uses JSON for serialization, but structured for Cap'n Proto migration.
 
+use crate::extractor::error::OrchestratorError;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
@@ -34,8 +36,10 @@ pub struct ExtractorDef {
 }
 
 /// Request sent to extractor via stdin
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExtractorRequest {
+    /// Unique request ID for tracking
+    pub request_id: u64,
     /// Path to project being analyzed
     pub project_path: String,
     /// Programming language of the project
@@ -44,19 +48,116 @@ pub struct ExtractorRequest {
     pub config: String,
     /// Timeout in milliseconds
     pub timeout_ms: u32,
+    /// Protocol version
+    pub version: String,
+}
+
+impl ExtractorRequest {
+    /// Serialize to JSON (temporary, will be Cap'n Proto in future)
+    pub fn to_json(&self) -> Result<Vec<u8>, serde_json::Error> {
+        serde_json::to_vec(self)
+    }
+
+    /// Deserialize from JSON (temporary, will be Cap'n Proto in future)
+    pub fn from_json(buffer: &[u8]) -> Result<Self, serde_json::Error> {
+        serde_json::from_slice(buffer)
+    }
 }
 
 /// Response received from extractor via stdout
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExtractorResponse {
+    /// Must match request ID
+    pub request_id: u64,
     /// Whether the extraction succeeded
     pub success: bool,
-    /// Serialized IR data (Cap'n Proto format)
+    /// Serialized IR data
     pub ir: Vec<u8>,
-    /// Error message if success = false
-    pub error_message: Option<String>,
     /// Metadata about the extraction (version, stats, etc.)
     pub metadata: String,
+    /// Time taken for extraction in milliseconds
+    pub processing_time_ms: u32,
+}
+
+impl ExtractorResponse {
+    /// Serialize to JSON (temporary, will be Cap'n Proto in future)
+    pub fn to_json(&self) -> Result<Vec<u8>, serde_json::Error> {
+        serde_json::to_vec(self)
+    }
+
+    /// Deserialize from JSON (temporary, will be Cap'n Proto in future)
+    pub fn from_json(buffer: &[u8]) -> Result<Self, serde_json::Error> {
+        serde_json::from_slice(buffer)
+    }
+}
+
+/// Error response for failed extractions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ErrorResponse {
+    /// Must match request ID
+    pub request_id: u64,
+    /// Error code
+    pub error_code: u32,
+    /// Human-readable error message
+    pub error_message: String,
+    /// Additional error details (JSON)
+    pub error_details: String,
+}
+
+impl ErrorResponse {
+    /// Serialize to JSON (temporary, will be Cap'n Proto in future)
+    pub fn to_json(&self) -> Result<Vec<u8>, serde_json::Error> {
+        serde_json::to_vec(self)
+    }
+
+    /// Deserialize from JSON (temporary, will be Cap'n Proto in future)
+    pub fn from_json(buffer: &[u8]) -> Result<Self, serde_json::Error> {
+        serde_json::from_slice(buffer)
+    }
+}
+
+/// Heartbeat for liveness checks
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Heartbeat {
+    /// Unix timestamp
+    pub timestamp: u64,
+    /// Name of extractor
+    pub extractor_name: String,
+    /// Status: "running", "idle", etc.
+    pub status: String,
+}
+
+impl Heartbeat {
+    /// Serialize to JSON (temporary, will be Cap'n Proto in future)
+    pub fn to_json(&self) -> Result<Vec<u8>, serde_json::Error> {
+        serde_json::to_vec(self)
+    }
+
+    /// Deserialize from JSON (temporary, will be Cap'n Proto in future)
+    pub fn from_json(buffer: &[u8]) -> Result<Self, serde_json::Error> {
+        serde_json::from_slice(buffer)
+    }
+}
+
+/// Main message union for request/response pattern
+#[derive(Debug, Serialize, Deserialize)]
+pub enum ExtractorMessage {
+    Request(ExtractorRequest),
+    Response(ExtractorResponse),
+    Error(ErrorResponse),
+    Heartbeat(Heartbeat),
+}
+
+impl ExtractorMessage {
+    /// Serialize message to bytes (currently JSON, will be Cap'n Proto)
+    pub fn serialize(&self) -> Result<Vec<u8>, serde_json::Error> {
+        serde_json::to_vec(self)
+    }
+
+    /// Deserialize message from bytes (currently JSON, will be Cap'n Proto)
+    pub fn deserialize(buffer: &[u8]) -> Result<Self, serde_json::Error> {
+        serde_json::from_slice(buffer)
+    }
 }
 
 /// Aggregated IR from multiple extractors
@@ -85,13 +186,15 @@ impl AggregatedIR {
         response: &ExtractorResponse,
     ) -> Result<(), OrchestratorError> {
         if !response.success {
-            self.extractor_status.insert(extractor_name.to_string(), false);
+            self.extractor_status
+                .insert(extractor_name.to_string(), false);
             return Err(OrchestratorError::AggregatorError(
-                response.error_message.clone().unwrap_or_default(),
+                "Extractor failed".to_string(),
             ));
         }
 
-        self.extractor_status.insert(extractor_name.to_string(), true);
+        self.extractor_status
+            .insert(extractor_name.to_string(), true);
 
         // Parse metadata
         if !response.metadata.is_empty() {
@@ -159,19 +262,55 @@ mod tests {
     }
 
     #[test]
-    fn test_extractor_request_serialization() {
+    fn test_message_serialization() {
         let request = ExtractorRequest {
+            request_id: 12345,
             project_path: "/path/to/project".to_string(),
             language: "rust".to_string(),
             config: r#"{"rule": "test"}"#.to_string(),
             timeout_ms: 30000,
+            version: "1.0.0".to_string(),
         };
 
-        let json = serde_json::to_string(&request).unwrap();
-        let deserialized: ExtractorRequest = serde_json::from_str(&json).unwrap();
+        // Serialize to JSON
+        let message = ExtractorMessage::Request(request.clone());
+        let serialized = message.serialize().unwrap();
 
-        assert_eq!(request.project_path, deserialized.project_path);
-        assert_eq!(request.language, deserialized.language);
-        assert_eq!(request.timeout_ms, deserialized.timeout_ms);
+        // Deserialize from JSON
+        let deserialized = ExtractorMessage::deserialize(&serialized).unwrap();
+
+        match deserialized {
+            ExtractorMessage::Request(deserialized_request) => {
+                assert_eq!(request.request_id, deserialized_request.request_id);
+                assert_eq!(request.project_path, deserialized_request.project_path);
+                assert_eq!(request.language, deserialized_request.language);
+                assert_eq!(request.timeout_ms, deserialized_request.timeout_ms);
+            }
+            _ => panic!("Expected Request message"),
+        }
+    }
+
+    #[test]
+    fn test_response_serialization() {
+        let response = ExtractorResponse {
+            request_id: 12345,
+            success: true,
+            ir: vec![1, 2, 3, 4],
+            metadata: r#"{"version": "1.0"}"#.to_string(),
+            processing_time_ms: 150,
+        };
+
+        let message = ExtractorMessage::Response(response.clone());
+        let serialized = message.serialize().unwrap();
+        let deserialized = ExtractorMessage::deserialize(&serialized).unwrap();
+
+        match deserialized {
+            ExtractorMessage::Response(deserialized_response) => {
+                assert_eq!(response.request_id, deserialized_response.request_id);
+                assert_eq!(response.success, deserialized_response.success);
+                assert_eq!(response.ir, deserialized_response.ir);
+            }
+            _ => panic!("Expected Response message"),
+        }
     }
 }

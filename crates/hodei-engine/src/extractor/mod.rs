@@ -12,7 +12,8 @@ pub mod protocol;
 pub use error::{OrchestratorError, Result};
 pub use orchestrator::ExtractorOrchestrator;
 pub use protocol::{
-    AggregatedIR, ExtractorConfig, ExtractorDef, ExtractorRequest, ExtractorResponse,
+    AggregatedIR, ErrorResponse, ExtractorConfig, ExtractorDef, ExtractorMessage, ExtractorRequest,
+    ExtractorResponse, Heartbeat,
 };
 
 #[cfg(test)]

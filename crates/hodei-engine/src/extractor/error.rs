@@ -1,6 +1,5 @@
 //! Error types for extractor orchestration
 
-use std::io;
 use thiserror::Error;
 
 /// Result type for extractor operations
@@ -10,13 +9,13 @@ pub type Result<T> = std::result::Result<T, OrchestratorError>;
 #[derive(Error, Debug)]
 pub enum OrchestratorError {
     #[error("IO error: {0}")]
-    Io(#[from] io::Error),
+    Io(String),
 
     #[error("Async IO error: {0}")]
-    AsyncIo(#[from] tokio::io::Error),
+    AsyncIo(String),
 
     #[error("Failed to spawn extractor process: {0}")]
-    SpawnFailed(#[source] std::io::Error),
+    SpawnFailed(String),
 
     #[error("Extractor process failed with exit code {0}")]
     ProcessFailed(i32),
@@ -25,7 +24,7 @@ pub enum OrchestratorError {
     Timeout,
 
     #[error("Failed to kill extractor process: {0}")]
-    KillFailed(#[source] std::io::Error),
+    KillFailed(String),
 
     #[error("Invalid Cap'n Proto message: {0}")]
     ProtoError(String),
