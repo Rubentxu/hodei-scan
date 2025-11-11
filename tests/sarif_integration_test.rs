@@ -338,5 +338,5 @@ async fn test_sarif_provenance_tracking() {
     // Verify provenance
     let fact = &facts[0];
     assert_eq!(fact.provenance.version, "1.0.0");
-    assert!(fact.provenance.confidence.value() >= 0.8);
+    assert!(fact.provenance.confidence.get() >= 0.8);
 }

@@ -7,6 +7,7 @@
 pub mod error;
 pub mod orchestrator;
 pub mod protocol;
+pub mod ruff_adapter;
 pub mod sarif_adapter;
 pub mod sarif_extractor;
 
@@ -17,6 +18,7 @@ pub use protocol::{
     AggregatedIR, ErrorResponse, ExtractorConfig, ExtractorDef, ExtractorMessage, ExtractorRequest,
     ExtractorResponse, Heartbeat,
 };
+pub use ruff_adapter::{RuffAdapter, RuffConfig, RuffError};
 pub use sarif_adapter::{SarifAdapter, SarifConfig, SarifError};
 pub use sarif_extractor::SarifExtractor;
 
