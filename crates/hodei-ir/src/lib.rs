@@ -2,11 +2,13 @@
 
 #![warn(missing_docs)]
 
+pub mod fact_type_index;
+pub mod interning;
 pub mod types;
 pub mod validator;
 pub mod zero_copy;
-pub mod interning;
 
+pub use fact_type_index::*;
 pub use types::*;
 pub use validator::*;
 

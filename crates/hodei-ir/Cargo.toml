@@ -18,6 +18,7 @@ rkyv = "0.7"
 rkyv_derive = "0.7"
 bytecheck = "0.6"
 string-interner = "0.3"
+enum-map = "2.7"
 
 [dev-dependencies]
 proptest = { workspace = true }
