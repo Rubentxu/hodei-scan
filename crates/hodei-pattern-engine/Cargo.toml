@@ -1,0 +1,57 @@
+[package]
+name = "hodei-pattern-engine"
+version = "0.1.0"
+edition = "2021"
+description = "Declarative Pattern Engine using Tree-sitter and YAML Rules"
+authors = ["hodei-scan Team"]
+license = "MIT"
+repository = "https://github.com/hodei-scan/hodei-scan"
+keywords = ["static-analysis", "pattern-engine", "tree-sitter", "yaml"]
+categories = ["development-tools::debugging"]
+
+[dependencies]
+# Core serialization
+serde = "1.0"
+serde_yaml = "0.9"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Tree-sitter for AST parsing
+tree-sitter = "0.20"
+tree-sitter-python = "0.20"
+
+# Optional tree-sitter grammars (optional dependencies)
+tree-sitter-java = { version = "0.20", optional = true }
+tree-sitter-javascript = { version = "0.20", optional = true }
+tree-sitter-rust = { version = "0.20", optional = true }
+tree-sitter-cpp = { version = "0.20", optional = true }
+tree-sitter-go = { version = "0.20", optional = true }
+tree-sitter-typescript = { version = "0.20", optional = true }
+tree-sitter-ruby = { version = "0.20", optional = true }
+tree-sitter-php = { version = "0.20", optional = true }
+
+# File system
+walkdir = "2.0"
+glob = "0.3"
+
+# IR integration
+hodei-ir = { path = "../hodei-ir" }
+
+# Type maps
+enum-map = "2.7"
+
+# Parallel processing
+rayon = "1.11"
+num_cpus = "1.17"
+
+[dev-dependencies]
+tempfile = "3.23"
+
+[[test]]
+name = "yaml_rule_tests"
+path = "tests/yaml_rule_tests.rs"
+
+[build-dependencies]
+cc = "1.0"

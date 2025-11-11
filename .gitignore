@@ -113,3 +113,6 @@ benches/target/
 .settings/
 .classpath
 .hodei-cache
+docs/post
+
+.idea

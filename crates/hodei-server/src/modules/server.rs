@@ -4,11 +4,13 @@ use crate::modules::config::ServerConfig;
 use crate::modules::database::DatabaseConnection;
 use crate::modules::error::{Result, ServerError};
 use crate::modules::grpc::{HodeiGrpcServer, proto::health_server::HealthServer};
+use crate::modules::policies::{RateLimiter, RetentionManager, CleanupTask, create_analysis_summary};
 use crate::modules::types::{
     AnalysisDiff, AnalysisId, AnalysisMetadata, ApiError, AuthToken, HealthStatus,
     HealthCheckStatus, PublishRequest, PublishResponse, ProjectId, Severity, StoredAnalysis,
     TrendDirection, TrendMetrics, UserId,
 };
+use crate::modules::validation::{validate_publish_request, validate_project_exists, calculate_summary, ValidationConfig};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -41,6 +43,9 @@ pub struct HodeiServer {
     grpc_server: Option<HodeiGrpcServer>,
     start_time: SystemTime,
     shutdown_sender: broadcast::Sender<()>,
+    rate_limiter: RateLimiter,
+    retention_manager: RetentionManager,
+    validation_config: ValidationConfig,
 }
 
 impl HodeiServer {
@@ -70,11 +75,20 @@ impl HodeiServer {
         // Initialize authentication service
         let auth_service = AuthService::new(config.jwt_secret.clone(), config.jwt_expiration_hours);
 
+        // Initialize rate limiter
+        let rate_limiter = RateLimiter::new(config.rate_limit_rpm);
+
+        // Initialize retention manager
+        let retention_manager = RetentionManager::new(365); // 1 year default
+
+        // Initialize validation config
+        let validation_config = ValidationConfig::default();
+
         // Create gRPC server
         let grpc_server = Some(HodeiGrpcServer::new(database.clone()));
 
         // Create the REST router
-        let rest_app = Self::create_rest_router(&config, &database, &auth_service).await?;
+        let rest_app = Self::create_rest_router(&config, &database, &auth_service, &rate_limiter, &retention_manager).await?;
 
         let start_time = SystemTime::now();
         let (shutdown_sender, _) = broadcast::channel(1);
@@ -89,6 +103,9 @@ impl HodeiServer {
             grpc_server,
             start_time,
             shutdown_sender,
+            rate_limiter,
+            retention_manager,
+            validation_config,
         })
     }
 
@@ -97,6 +114,8 @@ impl HodeiServer {
         config: &ServerConfig,
         database: &DatabaseConnection,
         auth_service: &AuthService,
+        rate_limiter: &RateLimiter,
+        retention_manager: &RetentionManager,
     ) -> Result<Router> {
         let cors = CorsLayer::new()
             .allow_origin(Any)
@@ -111,7 +130,7 @@ impl HodeiServer {
             .route("/api/v1/auth/login", post(login))
             .route("/api/v1/auth/refresh", post(refresh_token))
             
-            // Analysis endpoints (auth required)
+            // Analysis endpoints (auth required with rate limiting)
             .route(
                 "/api/v1/projects/:project_id/analyses",
                 post(publish_analysis),
@@ -154,6 +173,9 @@ impl HodeiServer {
                 database: database.clone(),
                 auth_service: auth_service.clone(),
                 config: config.clone(),
+                rate_limiter: rate_limiter.clone(),
+                retention_manager: retention_manager.clone(),
+                validation_config: ValidationConfig::default(),
             })
     }
 
@@ -161,6 +183,17 @@ impl HodeiServer {
     pub async fn run(self) -> Result<()> {
         let addr = self.config.bind_address;
         info!("Starting hodei-server on {}", addr);
+
+        // Start background tasks
+        let cleanup_task = CleanupTask::new(
+            self.retention_manager,
+            self.database.clone(),
+            24, // Run cleanup every 24 hours
+        );
+        
+        tokio::spawn(async move {
+            cleanup_task.run().await;
+        });
 
         let (shutdown_recv, shutdown_server) = tokio::sync::oneshot::channel::<()>();
         let shutdown_sender = self.shutdown_sender.clone();
@@ -216,6 +249,9 @@ pub struct AppState {
     database: DatabaseConnection,
     auth_service: AuthService,
     config: ServerConfig,
+    rate_limiter: RateLimiter,
+    retention_manager: RetentionManager,
+    validation_config: ValidationConfig,
 }
 
 /// Health check handler
@@ -261,7 +297,7 @@ async fn refresh_token() -> Result<impl IntoResponse, ServerError> {
     Ok(StatusCode::NOT_IMPLEMENTED)
 }
 
-/// Publish analysis handler
+/// Publish analysis handler with full validation and rate limiting
 async fn publish_analysis(
     Path(project_id): Path<ProjectId>,
     State(state): State<AppState>,
@@ -269,10 +305,26 @@ async fn publish_analysis(
 ) -> Result<impl IntoResponse, ServerError> {
     info!("Publishing analysis for project: {}", project_id);
 
-    // TODO: Add authentication check
-    // TODO: Validate project exists
+    // 1. Rate limiting check
+    let rate_limit_key = format!("{}-analysis", project_id);
+    if let Err(rate_err) = state.rate_limiter.check_limit(&rate_limit_key).await {
+        warn!("Rate limit exceeded for project: {}", project_id);
+        return Err(ServerError::RateLimit(rate_err.to_string()));
+    }
 
-    // Store the analysis
+    // 2. Validate project exists
+    if !validate_project_exists(&project_id, &state.database).await? {
+        return Err(ServerError::NotFound(format!("Project not found: {}", project_id)));
+    }
+
+    // 3. Validate request payload
+    validate_publish_request(&project_id, &request, &state.validation_config)
+        .map_err(|e| {
+            warn!("Validation failed for project {}: {}", project_id, e);
+            e
+        })?;
+
+    // 4. Store the analysis
     let analysis_id = state
         .database
         .store_analysis(
@@ -282,24 +334,24 @@ async fn publish_analysis(
             &request.findings,
             &request.metadata,
         )
-        .await?;
+        .await
+        .map_err(|e| {
+            warn!("Failed to store analysis for project {}: {}", project_id, e);
+            e
+        })?;
 
-    // Calculate summary metrics
-    let new_findings = request.findings.len() as u32;
-    let resolved_findings = 0; // TODO: Calculate vs baseline
-    let total_findings = new_findings;
-    let trend = TrendDirection::Stable;
-
-    let response = PublishResponse {
+    // 5. Calculate summary metrics
+    let summary = create_analysis_summary(
         analysis_id,
-        new_findings,
-        resolved_findings,
-        total_findings,
-        trend,
-        summary_url: format!("/api/v1/analyses/{}", analysis_id),
-    };
+        request.findings.len() as u32,
+        request.findings.len() as u32, // All are new in this case
+        0, // TODO: Calculate resolved findings vs baseline
+    );
 
-    Ok((StatusCode::CREATED, Json(response)))
+    info!("Analysis published successfully for project {}: analysis_id={}, findings={}", 
+          project_id, analysis_id, request.findings.len());
+
+    Ok((StatusCode::CREATED, Json(summary)))
 }
 
 /// Get analysis handler

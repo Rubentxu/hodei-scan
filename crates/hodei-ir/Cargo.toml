@@ -35,9 +35,13 @@ all-features = true
 
 [dev-dependencies]
 proptest = { workspace = true }
-tempfile = "3.0"
+tempfile = "3.23.0"
 criterion = { workspace = true }
 
 [[bench]]
 name = "string_interner_bench"
+harness = false
+
+[[bench]]
+name = "custom_fact_bench"
 harness = false

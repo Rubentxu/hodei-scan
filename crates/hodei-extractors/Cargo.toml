@@ -13,8 +13,8 @@ smallvec = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true }
 tokio = { workspace = true }
-walkdir = "2.0"
+walkdir = "2.5"
 
 [dev-dependencies]
 criterion = { workspace = true }
-tempfile = "3.0"
+tempfile = "3.23.0"
