@@ -19,6 +19,11 @@ rstar = { workspace = true }
 petgraph = { workspace = true }
 enum-map = { workspace = true }
 regex = { workspace = true }
+capnp = { workspace = true }
+capnp-futures = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }

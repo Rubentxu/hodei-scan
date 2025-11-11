@@ -6,9 +6,11 @@
 #![warn(missing_docs)]
 
 pub mod engine;
+pub mod extractor;
 pub mod gates;
 pub mod store;
 
 pub use engine::*;
+pub use extractor::*;
 pub use gates::*;
 pub use store::*;

@@ -63,6 +63,10 @@ regex = "1.0"
 # Concurrency and timeouts
 crossbeam = "0.8"
 
+# Cap'n Proto for extractor protocol
+capnp = "0.20"
+capnp-futures = "0.23"
+
 # String interning and optimizations
 string-interner = "0.3"
 enum-map = "2.0"
