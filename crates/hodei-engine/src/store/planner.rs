@@ -226,6 +226,9 @@ impl IndexStatistics {
             FactType::Sanitization { .. } => "Sanitization".to_string(),
             FactType::UnsafeCall { .. } => "UnsafeCall".to_string(),
             FactType::CryptographicOperation { .. } => "CryptographicOperation".to_string(),
+            FactType::Custom { discriminant, .. } => {
+                format!("Custom:{}", discriminant)
+            }
         }
     }
 }
@@ -552,6 +555,9 @@ impl QueryPlanner {
             FactType::Sanitization { .. } => "Sanitization".to_string(),
             FactType::UnsafeCall { .. } => "UnsafeCall".to_string(),
             FactType::CryptographicOperation { .. } => "CryptographicOperation".to_string(),
+            FactType::Custom { discriminant, .. } => {
+                format!("Custom:{}", discriminant)
+            }
         }
     }
 
