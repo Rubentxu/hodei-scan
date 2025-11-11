@@ -2,6 +2,7 @@
 use crate::modules::auth::AuthService;
 use crate::modules::config::ServerConfig;
 use crate::modules::database::DatabaseConnection;
+use crate::modules::diff::{DiffEngine, DiffSummary};
 use crate::modules::error::{Result, ServerError};
 use crate::modules::policies::{RateLimiter, RetentionManager, CleanupTask, create_analysis_summary};
 use crate::modules::types::{
@@ -11,7 +12,7 @@ use crate::modules::types::{
 };
 use crate::modules::validation::{validate_publish_request, validate_project_exists, ValidationConfig};
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
@@ -42,6 +43,7 @@ pub struct HodeiServer {
     rate_limiter: RateLimiter,
     retention_manager: RetentionManager,
     validation_config: ValidationConfig,
+    diff_engine: DiffEngine,
 }
 
 impl HodeiServer {
@@ -80,8 +82,18 @@ impl HodeiServer {
         // Initialize validation config
         let validation_config = ValidationConfig::default();
 
+        // Initialize diff engine
+        let diff_engine = DiffEngine::new();
+
         // Create the REST router
-        let rest_app = Self::create_rest_router(&config, &database, &auth_service, &rate_limiter, &retention_manager).await?;
+        let rest_app = Self::create_rest_router(
+            &config, 
+            &database, 
+            &auth_service, 
+            &rate_limiter, 
+            &retention_manager,
+            &diff_engine
+        ).await?;
 
         let start_time = SystemTime::now();
         let (shutdown_sender, _) = broadcast::channel(1);
@@ -98,6 +110,7 @@ impl HodeiServer {
             rate_limiter,
             retention_manager,
             validation_config,
+            diff_engine,
         })
     }
 
@@ -108,6 +121,7 @@ impl HodeiServer {
         auth_service: &AuthService,
         rate_limiter: &RateLimiter,
         retention_manager: &RetentionManager,
+        diff_engine: &DiffEngine,
     ) -> Result<Router> {
         let cors = CorsLayer::new()
             .allow_origin(Any)
@@ -132,7 +146,7 @@ impl HodeiServer {
                 get(get_analysis),
             )
             
-            // Diff analysis endpoint
+            // Diff analysis endpoint - supports both branch and commit comparison
             .route(
                 "/api/v1/projects/:project_id/diff",
                 get(get_diff_analysis),
@@ -168,6 +182,7 @@ impl HodeiServer {
                 rate_limiter: rate_limiter.clone(),
                 retention_manager: retention_manager.clone(),
                 validation_config: ValidationConfig::default(),
+                diff_engine: diff_engine.clone(),
             })
     }
 
@@ -244,10 +259,20 @@ pub struct AppState {
     rate_limiter: RateLimiter,
     retention_manager: RetentionManager,
     validation_config: ValidationConfig,
+    diff_engine: DiffEngine,
+}
+
+/// Diff analysis query parameters
+#[derive(Debug, serde::Deserialize)]
+struct DiffQueryParams {
+    base: Option<String>,
+    head: Option<String>,
+    commit_base: Option<String>,
+    commit_head: Option<String>,
 }
 
 /// Health check handler
-async fn health_check(State(state): State<AppState>) -> Result<impl IntoResponse, ServerError> {
+async fn health_check(State(state): State<AppState>) -> Result<impl IntoResponse> {
     // Check database health
     let db_healthy = state.database.health_check().await.unwrap_or(false);
 
@@ -273,7 +298,7 @@ async fn health_check(State(state): State<AppState>) -> Result<impl IntoResponse
 }
 
 /// Login handler (placeholder)
-async fn login() -> Result<impl IntoResponse, ServerError> {
+async fn login() -> Result<impl IntoResponse> {
     // TODO: Implement actual login with username/password
     let response = AuthToken {
         token: "mock-jwt-token".to_string(),
@@ -284,7 +309,7 @@ async fn login() -> Result<impl IntoResponse, ServerError> {
 }
 
 /// Refresh token handler (placeholder)
-async fn refresh_token() -> Result<impl IntoResponse, ServerError> {
+async fn refresh_token() -> Result<impl IntoResponse> {
     // TODO: Implement token refresh
     Ok(StatusCode::NOT_IMPLEMENTED)
 }
@@ -294,7 +319,7 @@ async fn publish_analysis(
     Path(project_id): Path<ProjectId>,
     State(state): State<AppState>,
     Json(request): Json<PublishRequest>,
-) -> Result<impl IntoResponse, ServerError> {
+) -> Result<impl IntoResponse> {
     info!("Publishing analysis for project: {}", project_id);
 
     // 1. Rate limiting check
@@ -350,26 +375,51 @@ async fn publish_analysis(
 async fn get_analysis(
     Path((project_id, analysis_id)): Path<(ProjectId, AnalysisId)>,
     State(state): State<AppState>,
-) -> Result<impl IntoResponse, ServerError> {
+) -> Result<impl IntoResponse> {
     // TODO: Implement actual analysis retrieval
     Ok((StatusCode::OK, Json(serde_json::json!({}))))
 }
 
-/// Get diff analysis handler
+/// Get diff analysis handler - US-13.03 implementation
 async fn get_diff_analysis(
     Path(project_id): Path<ProjectId>,
+    Query(params): Query<DiffQueryParams>,
     State(state): State<AppState>,
-) -> Result<impl IntoResponse, ServerError> {
-    // TODO: Implement diff analysis for US-13.03
-    let diff = AnalysisDiff {
-        base_analysis: None,
-        head_analysis: None,
-        new_findings: vec![],
-        resolved_findings: vec![],
-        severity_increased: vec![],
-        severity_decreased: vec![],
-        wont_fix_changed: vec![],
+) -> Result<impl IntoResponse> {
+    info!("Calculating diff for project: {}", project_id);
+
+    // Validate that we have either branch or commit parameters
+    if params.base.is_none() && params.commit_base.is_none() {
+        return Err(ServerError::Validation(
+            "Must provide either 'base' (branch) or 'commit_base' parameter".to_string()
+        ));
+    }
+
+    if params.head.is_none() && params.commit_head.is_none() {
+        return Err(ServerError::Validation(
+            "Must provide either 'head' (branch) or 'commit_head' parameter".to_string()
+        ));
+    }
+
+    let diff = if let (Some(base), Some(head)) = (params.base, params.head) {
+        // Branch-based diff
+        info!("Calculating branch diff: {} -> {}", base, head);
+        state.diff_engine.calculate_branch_diff(&project_id, &base, &head, &state.database).await?
+    } else if let (Some(commit_base), Some(commit_head)) = (params.commit_base, params.commit_head) {
+        // Commit-based diff
+        info!("Calculating commit diff: {} -> {}", commit_base, commit_head);
+        state.diff_engine.calculate_commit_diff(&project_id, &commit_base, &commit_head, &state.database).await?
+    } else {
+        return Err(ServerError::Validation(
+            "Invalid combination of parameters".to_string()
+        ));
     };
+
+    // Calculate diff summary for performance monitoring
+    let summary = state.diff_engine.calculate_diff_summary(&diff);
+
+    info!("Diff calculated successfully: {}", summary.to_summary());
+
     Ok((StatusCode::OK, Json(diff)))
 }
 
@@ -377,7 +427,7 @@ async fn get_diff_analysis(
 async fn get_trends(
     Path(project_id): Path<ProjectId>,
     State(state): State<AppState>,
-) -> Result<impl IntoResponse, ServerError> {
+) -> Result<impl IntoResponse> {
     let end = Utc::now();
     let start = end - chrono::Duration::days(30);
 
@@ -402,13 +452,13 @@ async fn get_trends(
 }
 
 /// List projects handler
-async fn list_projects() -> Result<impl IntoResponse, ServerError> {
+async fn list_projects() -> Result<impl IntoResponse> {
     // TODO: Implement project listing
     Ok((StatusCode::OK, Json(vec![])))
 }
 
 /// Get project handler
-async fn get_project(Path(project_id): Path<ProjectId>) -> Result<impl IntoResponse, ServerError> {
+async fn get_project(Path(project_id): Path<ProjectId>) -> Result<impl IntoResponse> {
     // TODO: Implement project retrieval
     Ok((StatusCode::OK, Json(serde_json::json!({}))))
 }
@@ -417,7 +467,7 @@ async fn get_project(Path(project_id): Path<ProjectId>) -> Result<impl IntoRespo
 async fn get_baseline(
     Path((project_id, branch)): Path<(ProjectId, String)>,
     State(state): State<AppState>,
-) -> Result<impl IntoResponse, ServerError> {
+) -> Result<impl IntoResponse> {
     let baseline = state
         .database
         .get_latest_analysis(&project_id, &branch)
@@ -430,7 +480,7 @@ async fn get_baseline(
 async fn update_baseline(
     Path((project_id, branch)): Path<(ProjectId, String)>,
     State(state): State<AppState>,
-) -> Result<impl IntoResponse, ServerError> {
+) -> Result<impl IntoResponse> {
     // TODO: Implement baseline update
     Ok(StatusCode::OK)
 }
