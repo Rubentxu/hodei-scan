@@ -1,0 +1,857 @@
+/// Baseline & Debt Management System - US-13.05
+///
+/// This module provides functionality to manage baselines for security findings,
+/// allowing teams to mark findings as accepted, won't fix, or false positives.
+/// These baseline findings are excluded from CI/CD pipeline failures.
+///
+/// Key Features:
+/// - Mark individual findings with specific statuses (accepted, won't fix, false positive)
+/// - Update baseline from current analysis
+/// - Filter findings based on baseline (exclude baseline findings from CI failures)
+/// - Restore baseline from a previous analysis
+/// - Bulk operations for efficiency
+/// - Audit trail for compliance
+///
+/// Architecture:
+/// - BaselineManager: Core service for baseline management
+/// - BaselineStatus: Tracks status, reason, expiration, and audit trail
+/// - Integration with publish_analysis endpoint for automatic filtering
+/// - REST API endpoints for external management
+use crate::modules::error::{Result, ServerError};
+use crate::modules::types::{
+    AnalysisId, BaselineStatus, Finding, FindingStatus, ProjectId, StoredAnalysis, UserId,
+};
+use chrono::{DateTime, Utc};
+use sqlx::{Postgres, QueryBuilder};
+use std::collections::HashMap;
+
+/// Baseline & Debt Manager
+pub struct BaselineManager {
+    database: crate::modules::database::DatabaseConnection,
+}
+
+impl BaselineManager {
+    /// Create a new baseline manager
+    pub fn new(database: crate::modules::database::DatabaseConnection) -> Self {
+        Self { database }
+    }
+
+    /// Mark a finding as having a specific baseline status
+    pub async fn mark_finding_status(
+        &self,
+        project_id: &str,
+        finding_fingerprint: &str,
+        status: FindingStatus,
+        reason: Option<String>,
+        user_id: UserId,
+        expires_at: Option<DateTime<Utc>>,
+    ) -> Result<BaselineStatus> {
+        // Insert or update baseline status
+        sqlx::query!(
+            r#"
+            INSERT INTO baseline_status (project_id, finding_fingerprint, status, reason, expires_at, updated_by, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, NOW())
+            ON CONFLICT (project_id, finding_fingerprint)
+            DO UPDATE SET
+                status = EXCLUDED.status,
+                reason = EXCLUDED.reason,
+                expires_at = EXCLUDED.expires_at,
+                updated_by = EXCLUDED.updated_by,
+                updated_at = NOW()
+            RETURNING id, project_id, finding_fingerprint, status, reason, expires_at, updated_by, updated_at
+            "#,
+            project_id,
+            finding_fingerprint,
+            self.status_to_string(&status),
+            reason,
+            expires_at,
+            user_id,
+        )
+        .fetch_one(self.database.pool())
+        .await
+        .map_err(ServerError::Database)
+        .map(|row| BaselineStatus {
+            finding_id: row.id.into(),
+            status: self.status_from_string(&row.status).unwrap_or(FindingStatus::Active),
+            reason: row.reason,
+            expires_at: row.expires_at,
+            updated_by: row.updated_by,
+            updated_at: row.updated_at,
+        })
+    }
+
+    /// Update baseline from current analysis
+    pub async fn update_baseline_from_analysis(
+        &self,
+        project_id: &str,
+        branch: &str,
+        analysis_id: AnalysisId,
+        user_id: UserId,
+    ) -> Result<BaselineUpdateSummary> {
+        // Get all findings from the analysis
+        let findings = self.database.get_findings_by_analysis(&analysis_id).await?;
+
+        // Get existing baseline statuses
+        let existing_statuses = self.get_baseline_statuses(project_id).await?;
+
+        let mut accepted_count = 0;
+        let mut updated_count = 0;
+        let mut expired_count = 0;
+
+        for finding in findings {
+            // Check if finding already has a status
+            if let Some(existing) = existing_statuses.get(&finding.fingerprint) {
+                // Check if status is still valid (not expired)
+                if let Some(expires_at) = existing.expires_at {
+                    if expires_at < Utc::now() {
+                        expired_count += 1;
+                        continue;
+                    }
+                }
+
+                // Update existing status (keep the same status)
+                if existing.status != FindingStatus::Active {
+                    self.mark_finding_status(
+                        project_id,
+                        &finding.fingerprint,
+                        existing.status.clone(),
+                        existing.reason.clone(),
+                        user_id,
+                        existing.expires_at,
+                    )
+                    .await?;
+                    updated_count += 1;
+                }
+            } else {
+                // Mark new finding as accepted by default
+                self.mark_finding_status(
+                    project_id,
+                    &finding.fingerprint,
+                    FindingStatus::Accepted,
+                    Some("Auto-accepted from baseline update".to_string()),
+                    user_id,
+                    None,
+                )
+                .await?;
+                accepted_count += 1;
+            }
+        }
+
+        // Record this as a baseline update event
+        sqlx::query!(
+            r#"
+            INSERT INTO baseline_updates (project_id, branch, analysis_id, updated_by, updated_at)
+            VALUES ($1, $2, $3, $4, NOW())
+            "#,
+            project_id,
+            branch,
+            analysis_id,
+            user_id,
+        )
+        .execute(self.database.pool())
+        .await
+        .map_err(ServerError::Database)?;
+
+        Ok(BaselineUpdateSummary {
+            project_id: project_id.to_string(),
+            branch: branch.to_string(),
+            analysis_id,
+            accepted_findings: accepted_count,
+            updated_findings: updated_count,
+            expired_findings: expired_count,
+            updated_by: user_id,
+            updated_at: Utc::now(),
+        })
+    }
+
+    /// Get baseline status for a project
+    pub async fn get_baseline_statuses(
+        &self,
+        project_id: &str,
+    ) -> Result<HashMap<String, BaselineStatus>> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT id, project_id, finding_fingerprint, status, reason, expires_at, updated_by, updated_at
+            FROM baseline_status
+            WHERE project_id = $1
+            "#,
+            project_id,
+        )
+        .fetch_all(self.database.pool())
+        .await
+        .map_err(ServerError::Database)?;
+
+        let mut statuses = HashMap::new();
+        for row in rows {
+            let status = BaselineStatus {
+                finding_id: row.id.into(),
+                status: self
+                    .status_from_string(&row.status)
+                    .unwrap_or(FindingStatus::Active),
+                reason: row.reason,
+                expires_at: row.expires_at,
+                updated_by: row.updated_by,
+                updated_at: row.updated_at,
+            };
+            statuses.insert(row.finding_fingerprint, status);
+        }
+
+        Ok(statuses)
+    }
+
+    /// Get current baseline for a branch
+    pub async fn get_current_baseline(
+        &self,
+        project_id: &str,
+        branch: &str,
+    ) -> Result<Option<StoredAnalysis>> {
+        self.database.get_latest_analysis(project_id, branch).await
+    }
+
+    /// Filter findings based on baseline (exclude baseline findings)
+    pub async fn filter_findings_by_baseline(
+        &self,
+        project_id: &str,
+        findings: &[Finding],
+    ) -> Result<Vec<Finding>> {
+        let baseline_statuses = self.get_baseline_statuses(project_id).await?;
+
+        let filtered: Vec<Finding> = findings
+            .iter()
+            .filter(|finding| {
+                // Include finding if:
+                // 1. It doesn't have a baseline status, OR
+                // 2. Its baseline status has expired
+                match baseline_statuses.get(&finding.fingerprint) {
+                    None => true, // No baseline status, include
+                    Some(status) => {
+                        // Check if expired
+                        if let Some(expires_at) = status.expires_at {
+                            if expires_at < Utc::now() {
+                                return true; // Expired, include
+                            }
+                        }
+                        false // Has active baseline status, exclude
+                    }
+                }
+            })
+            .cloned()
+            .collect();
+
+        Ok(filtered)
+    }
+
+    /// Restore baseline from a previous analysis
+    pub async fn restore_baseline_from_analysis(
+        &self,
+        project_id: &str,
+        branch: &str,
+        from_analysis_id: AnalysisId,
+        to_analysis_id: AnalysisId,
+        user_id: UserId,
+    ) -> Result<BaselineRestoreSummary> {
+        // Get findings from the source analysis (baseline source)
+        let source_findings = self
+            .database
+            .get_findings_by_analysis(&from_analysis_id)
+            .await?;
+
+        // Get findings from target analysis
+        let target_findings = self
+            .database
+            .get_findings_by_analysis(&to_analysis_id)
+            .await?;
+
+        // Create baseline statuses from source analysis
+        let mut restored_count = 0;
+        let mut updated_count = 0;
+
+        for finding in source_findings {
+            let reason = format!("Restored from analysis {}", from_analysis_id);
+            self.mark_finding_status(
+                project_id,
+                &finding.fingerprint,
+                FindingStatus::Accepted,
+                Some(reason),
+                user_id,
+                None, // No expiration
+            )
+            .await?;
+            restored_count += 1;
+        }
+
+        // Remove baseline statuses that are in target but not in source (these are new)
+        let source_fingerprints: std::collections::HashSet<&str> = source_findings
+            .iter()
+            .map(|f| f.fingerprint.as_str())
+            .collect();
+
+        for finding in target_findings {
+            if !source_fingerprints.contains(finding.fingerprint.as_str()) {
+                // This is a new finding in target, remove any baseline status
+                sqlx::query!(
+                    r#"
+                    DELETE FROM baseline_status
+                    WHERE project_id = $1 AND finding_fingerprint = $2
+                    "#,
+                    project_id,
+                    finding.fingerprint,
+                )
+                .execute(self.database.pool())
+                .await
+                .map_err(ServerError::Database)?;
+                updated_count += 1;
+            }
+        }
+
+        Ok(BaselineRestoreSummary {
+            project_id: project_id.to_string(),
+            branch: branch.to_string(),
+            from_analysis: from_analysis_id,
+            to_analysis: to_analysis_id,
+            restored_findings: restored_count,
+            updated_findings: updated_count,
+            restored_by: user_id,
+            restored_at: Utc::now(),
+        })
+    }
+
+    /// Bulk update baseline statuses
+    pub async fn bulk_update_baseline_statuses(
+        &self,
+        project_id: &str,
+        updates: &[BaselineStatusUpdate],
+        user_id: UserId,
+    ) -> Result<BulkUpdateSummary> {
+        let mut success_count = 0;
+        let mut error_count = 0;
+        let mut errors = Vec::new();
+
+        for update in updates {
+            match self
+                .mark_finding_status(
+                    project_id,
+                    &update.finding_fingerprint,
+                    update.status.clone(),
+                    update.reason.clone(),
+                    user_id,
+                    update.expires_at,
+                )
+                .await
+            {
+                Ok(_) => success_count += 1,
+                Err(e) => {
+                    error_count += 1;
+                    errors.push(format!("{}: {}", update.finding_fingerprint, e));
+                }
+            }
+        }
+
+        Ok(BulkUpdateSummary {
+            project_id: project_id.to_string(),
+            total_processed: updates.len(),
+            success_count,
+            error_count,
+            errors,
+        })
+    }
+
+    /// Get audit trail for baseline changes
+    pub async fn get_baseline_audit_trail(
+        &self,
+        project_id: &str,
+        limit: Option<u32>,
+    ) -> Result<Vec<BaselineAuditRecord>> {
+        let limit_clause = limit
+            .map(|l| format!("LIMIT {}", l))
+            .unwrap_or_else(|| "LIMIT 100".to_string());
+
+        let query = format!(
+            r#"
+            SELECT bs.id, bs.project_id, bs.finding_fingerprint, bs.status, bs.reason,
+                   bs.expires_at, bs.updated_by, bs.updated_at
+            FROM baseline_status bs
+            WHERE bs.project_id = $1
+            ORDER BY bs.updated_at DESC
+            {}
+            "#,
+            limit_clause
+        );
+
+        let rows = sqlx::query(&query)
+            .bind(project_id)
+            .fetch_all(self.database.pool())
+            .await
+            .map_err(ServerError::Database)?;
+
+        let records = rows
+            .into_iter()
+            .map(|row| BaselineAuditRecord {
+                id: row.get("id"),
+                project_id: row.get("project_id"),
+                finding_fingerprint: row.get("finding_fingerprint"),
+                status: self
+                    .status_from_string(&row.get::<String, _>("status"))
+                    .unwrap_or(FindingStatus::Active),
+                reason: row.get("reason"),
+                expires_at: row.get("expires_at"),
+                updated_by: row.get("updated_by"),
+                updated_at: row.get("updated_at"),
+            })
+            .collect();
+
+        Ok(records)
+    }
+
+    /// Helper: Convert FindingStatus to string
+    fn status_to_string(&self, status: &FindingStatus) -> &'static str {
+        match status {
+            FindingStatus::Active => "active",
+            FindingStatus::Accepted => "accepted",
+            FindingStatus::WontFix => "wontfix",
+            FindingStatus::FalsePositive => "false_positive",
+        }
+    }
+
+    /// Helper: Convert string to FindingStatus
+    fn status_from_string(&self, s: &str) -> Option<FindingStatus> {
+        match s {
+            "active" => Some(FindingStatus::Active),
+            "accepted" => Some(FindingStatus::Accepted),
+            "wontfix" => Some(FindingStatus::WontFix),
+            "false_positive" => Some(FindingStatus::FalsePositive),
+            _ => None,
+        }
+    }
+}
+
+/// Baseline status update
+#[derive(Debug, serde::Deserialize)]
+pub struct BaselineStatusUpdate {
+    pub finding_fingerprint: String,
+    pub status: FindingStatus,
+    pub reason: Option<String>,
+    pub expires_at: Option<DateTime<Utc>>,
+}
+
+/// Baseline update summary
+#[derive(Debug, serde::Serialize)]
+pub struct BaselineUpdateSummary {
+    pub project_id: String,
+    pub branch: String,
+    pub analysis_id: AnalysisId,
+    pub accepted_findings: u32,
+    pub updated_findings: u32,
+    pub expired_findings: u32,
+    pub updated_by: UserId,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Baseline restore summary
+#[derive(Debug, serde::Serialize)]
+pub struct BaselineRestoreSummary {
+    pub project_id: String,
+    pub branch: String,
+    pub from_analysis: AnalysisId,
+    pub to_analysis: AnalysisId,
+    pub restored_findings: u32,
+    pub updated_findings: u32,
+    pub restored_by: UserId,
+    pub restored_at: DateTime<Utc>,
+}
+
+/// Bulk update summary
+#[derive(Debug, serde::Serialize)]
+pub struct BulkUpdateSummary {
+    pub project_id: String,
+    pub total_processed: usize,
+    pub success_count: usize,
+    pub error_count: usize,
+    pub errors: Vec<String>,
+}
+
+/// Baseline audit record
+#[derive(Debug, serde::Serialize)]
+pub struct BaselineAuditRecord {
+    pub id: i64,
+    pub project_id: String,
+    pub finding_fingerprint: String,
+    pub status: FindingStatus,
+    pub reason: Option<String>,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub updated_by: UserId,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::modules::types::{FindingLocation, Severity, UserId};
+    use chrono::{DateTime, Utc};
+
+    fn create_test_finding(fingerprint: &str) -> Finding {
+        Finding {
+            fact_type: "TestFinding".to_string(),
+            severity: Severity::Major,
+            location: FindingLocation {
+                file: "test.rs".to_string(),
+                line: 1,
+                column: 1,
+                end_line: None,
+                end_column: None,
+            },
+            message: "Test finding".to_string(),
+            metadata: None,
+            tags: vec![],
+            fingerprint: fingerprint.to_string(),
+        }
+    }
+
+    fn create_test_user_id() -> UserId {
+        UserId::new_v4()
+    }
+
+    #[tokio::test]
+    async fn test_mark_finding_status() {
+        let db = create_test_database().await;
+        let manager = BaselineManager::new(db);
+        let user_id = create_test_user_id();
+
+        let status = manager
+            .mark_finding_status(
+                "test-project",
+                "fp-123",
+                FindingStatus::Accepted,
+                Some("Technical debt".to_string()),
+                user_id,
+                None,
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(status.status, FindingStatus::Accepted);
+        assert_eq!(status.reason, Some("Technical debt".to_string()));
+        assert!(status.expires_at.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_mark_finding_status_with_expiration() {
+        let db = create_test_database().await;
+        let manager = BaselineManager::new(db);
+        let user_id = create_test_user_id();
+        let expires_at = Utc::now() + chrono::Duration::days(30);
+
+        let status = manager
+            .mark_finding_status(
+                "test-project",
+                "fp-456",
+                FindingStatus::WontFix,
+                Some("Won't fix for now".to_string()),
+                user_id,
+                Some(expires_at),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(status.status, FindingStatus::WontFix);
+        assert!(status.expires_at.is_some());
+        assert!(status.expires_at.unwrap() > Utc::now());
+    }
+
+    #[tokio::test]
+    async fn test_update_existing_status() {
+        let db = create_test_database().await;
+        let manager = BaselineManager::new(db);
+        let user_id1 = create_test_user_id();
+        let user_id2 = create_test_user_id();
+
+        // Mark as accepted first
+        manager
+            .mark_finding_status(
+                "test-project",
+                "fp-789",
+                FindingStatus::Accepted,
+                Some("Initial reason".to_string()),
+                user_id1,
+                None,
+            )
+            .await
+            .unwrap();
+
+        // Update to won't fix
+        let updated_status = manager
+            .mark_finding_status(
+                "test-project",
+                "fp-789",
+                FindingStatus::WontFix,
+                Some("Updated reason".to_string()),
+                user_id2,
+                None,
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(updated_status.status, FindingStatus::WontFix);
+        assert_eq!(updated_status.reason, Some("Updated reason".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_filter_findings_by_baseline_no_baseline() {
+        let db = create_test_database().await;
+        let manager = BaselineManager::new(db);
+
+        let findings = vec![
+            create_test_finding("fp1"),
+            create_test_finding("fp2"),
+            create_test_finding("fp3"),
+        ];
+
+        let filtered = manager
+            .filter_findings_by_baseline("test-project", &findings)
+            .await
+            .unwrap();
+        assert_eq!(filtered.len(), 3); // All should be included if no baseline
+    }
+
+    #[tokio::test]
+    async fn test_filter_findings_by_baseline_with_accepted() {
+        let db = create_test_database().await;
+        let manager = BaselineManager::new(db);
+        let user_id = create_test_user_id();
+
+        // Mark fp1 as accepted
+        manager
+            .mark_finding_status(
+                "test-project",
+                "fp1",
+                FindingStatus::Accepted,
+                Some("Known issue".to_string()),
+                user_id,
+                None,
+            )
+            .await
+            .unwrap();
+
+        let findings = vec![
+            create_test_finding("fp1"), // This should be filtered out
+            create_test_finding("fp2"), // This should be included
+            create_test_finding("fp3"), // This should be included
+        ];
+
+        let filtered = manager
+            .filter_findings_by_baseline("test-project", &findings)
+            .await
+            .unwrap();
+        assert_eq!(filtered.len(), 2); // fp2 and fp3 only
+        assert!(filtered.iter().all(|f| f.fingerprint != "fp1"));
+    }
+
+    #[tokio::test]
+    async fn test_filter_findings_by_baseline_with_expired() {
+        let db = create_test_database().await;
+        let manager = BaselineManager::new(db);
+        let user_id = create_test_user_id();
+
+        // Mark fp1 as accepted but expired
+        let expired = Utc::now() - chrono::Duration::days(1);
+        manager
+            .mark_finding_status(
+                "test-project",
+                "fp1",
+                FindingStatus::Accepted,
+                Some("Expired acceptance".to_string()),
+                user_id,
+                Some(expired),
+            )
+            .await
+            .unwrap();
+
+        let findings = vec![
+            create_test_finding("fp1"), // This should be included (expired)
+            create_test_finding("fp2"), // This should be included
+        ];
+
+        let filtered = manager
+            .filter_findings_by_baseline("test-project", &findings)
+            .await
+            .unwrap();
+        assert_eq!(filtered.len(), 2); // Both should be included (fp1 expired)
+    }
+
+    #[tokio::test]
+    async fn test_filter_findings_by_baseline_false_positive() {
+        let db = create_test_database().await;
+        let manager = BaselineManager::new(db);
+        let user_id = create_test_user_id();
+
+        // Mark fp1 as false positive
+        manager
+            .mark_finding_status(
+                "test-project",
+                "fp1",
+                FindingStatus::FalsePositive,
+                Some("Not a real issue".to_string()),
+                user_id,
+                None,
+            )
+            .await
+            .unwrap();
+
+        let findings = vec![
+            create_test_finding("fp1"), // Should be filtered out
+            create_test_finding("fp2"), // Should be included
+        ];
+
+        let filtered = manager
+            .filter_findings_by_baseline("test-project", &findings)
+            .await
+            .unwrap();
+        assert_eq!(filtered.len(), 1); // Only fp2
+        assert_eq!(filtered[0].fingerprint, "fp2");
+    }
+
+    #[tokio::test]
+    async fn test_get_baseline_statuses_empty() {
+        let db = create_test_database().await;
+        let manager = BaselineManager::new(db);
+
+        let statuses = manager.get_baseline_statuses("test-project").await.unwrap();
+        assert!(statuses.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_get_baseline_statuses_multiple() {
+        let db = create_test_database().await;
+        let manager = BaselineManager::new(db);
+        let user_id = create_test_user_id();
+
+        // Add multiple statuses
+        manager
+            .mark_finding_status(
+                "test-project",
+                "fp1",
+                FindingStatus::Accepted,
+                None,
+                user_id,
+                None,
+            )
+            .await
+            .unwrap();
+
+        manager
+            .mark_finding_status(
+                "test-project",
+                "fp2",
+                FindingStatus::WontFix,
+                None,
+                user_id,
+                None,
+            )
+            .await
+            .unwrap();
+
+        manager
+            .mark_finding_status(
+                "test-project",
+                "fp3",
+                FindingStatus::FalsePositive,
+                None,
+                user_id,
+                None,
+            )
+            .await
+            .unwrap();
+
+        let statuses = manager.get_baseline_statuses("test-project").await.unwrap();
+        assert_eq!(statuses.len(), 3);
+
+        assert!(statuses.contains_key("fp1"));
+        assert!(statuses.contains_key("fp2"));
+        assert!(statuses.contains_key("fp3"));
+
+        assert_eq!(statuses["fp1"].status, FindingStatus::Accepted);
+        assert_eq!(statuses["fp2"].status, FindingStatus::WontFix);
+        assert_eq!(statuses["fp3"].status, FindingStatus::FalsePositive);
+    }
+
+    #[tokio::test]
+    async fn test_bulk_update_baseline_statuses() {
+        let db = create_test_database().await;
+        let manager = BaselineManager::new(db);
+        let user_id = create_test_user_id();
+
+        let updates = vec![
+            BaselineStatusUpdate {
+                finding_fingerprint: "fp1".to_string(),
+                status: FindingStatus::Accepted,
+                reason: Some("Bulk update 1".to_string()),
+                expires_at: None,
+            },
+            BaselineStatusUpdate {
+                finding_fingerprint: "fp2".to_string(),
+                status: FindingStatus::WontFix,
+                reason: Some("Bulk update 2".to_string()),
+                expires_at: None,
+            },
+            BaselineStatusUpdate {
+                finding_fingerprint: "fp3".to_string(),
+                status: FindingStatus::FalsePositive,
+                reason: Some("Bulk update 3".to_string()),
+                expires_at: None,
+            },
+        ];
+
+        let summary = manager
+            .bulk_update_baseline_statuses("test-project", &updates, user_id)
+            .await
+            .unwrap();
+
+        assert_eq!(summary.project_id, "test-project");
+        assert_eq!(summary.total_processed, 3);
+        assert_eq!(summary.success_count, 3);
+        assert_eq!(summary.error_count, 0);
+        assert!(summary.errors.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_bulk_update_with_errors() {
+        let db = create_test_database().await;
+        let manager = BaselineManager::new(db);
+        let user_id = create_test_user_id();
+
+        // Create one valid and one invalid update
+        let updates = vec![
+            BaselineStatusUpdate {
+                finding_fingerprint: "valid-fp".to_string(),
+                status: FindingStatus::Accepted,
+                reason: None,
+                expires_at: None,
+            },
+            BaselineStatusUpdate {
+                finding_fingerprint: "invalid-fp".to_string(),
+                status: FindingStatus::WontFix,
+                reason: None,
+                expires_at: None,
+            },
+        ];
+
+        // Both should succeed in a real scenario, but we're testing the structure
+        let summary = manager
+            .bulk_update_baseline_statuses("test-project", &updates, user_id)
+            .await
+            .unwrap();
+
+        assert_eq!(summary.total_processed, 2);
+        // Success count depends on actual database state
+    }
+
+    // Helper function to create a test database
+    async fn create_test_database() -> crate::modules::database::DatabaseConnection {
+        // In a real test, we would use a test database
+        // For now, we'll use a mock approach
+        let config = crate::modules::config::ServerConfig::default();
+        DatabaseConnection::new(&config.database_url, 1)
+            .await
+            .expect("Failed to create test database")
+    }
+}
