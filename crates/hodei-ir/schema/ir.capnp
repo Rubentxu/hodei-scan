@@ -1,4 +1,4 @@
-# Cap'n Proto schema for hodei-scan IR v3.2
+# Cap'n Proto schema for hodei-scan IR v3.3
 # Unique schema ID: 0xf0a1b2c3d4e5f601
 
 @0xf0a1b2c3d4e5f601;
@@ -59,8 +59,31 @@ enum Ecosystem {
   composer @8;
 }
 
+enum FactValueType {
+  string @0;
+  number @1;
+  boolean @2;
+  array @3;
+  object @4;
+}
+
+struct FactValue {
+  union {
+    string @0 :Text;
+    number @1 :Float64;
+    boolean @2 :Bool;
+    array @3 :List(FactValue);
+    object @4 :List(KeyValuePair);
+  }
+}
+
+struct KeyValuePair {
+  key @0 :Text;
+  value @1 :FactValue;
+}
+
 # ═══════════════════════════════════════════════════════════════════
-# FactType (Union with 17 atomic variants only)
+# FactType (Union with 17 atomic variants + Custom)
 # ═══════════════════════════════════════════════════════════════════
 
 struct FactType {
@@ -72,22 +95,25 @@ struct FactType {
     unsafeCall @3 :UnsafeCallData;
     cryptographicOperation @4 :CryptographicOperationData;
     vulnerability @5 :VulnerabilityData;
-    
+
     # Quality (4 variants)
     function @6 :FunctionData;
     variable @7 :VariableData;
     codeSmell @8 :CodeSmellData;
     complexityViolation @9 :ComplexityViolationData;
-    
+
     # SCA (3 variants)
     dependency @10 :DependencyData;
     dependencyVulnerability @11 :DependencyVulnerabilityData;
     license @12 :LicenseData;
-    
+
     # Coverage (4 variants)
     uncoveredLine @13 :UncoveredLineData;
     lowTestCoverage @14 :LowTestCoverageData;
     coverageStats @15 :CoverageStatsData;
+
+    # Custom (for plugin-defined types)
+    custom @16 :CustomFactType;
   }
 }
 
@@ -199,6 +225,12 @@ struct CoverageStatsData {
   path @1 :ProjectPath;
   lineCoverage @2 :Float32;
   branchCoverage @3 :Float32;
+}
+
+# Custom Data Type (for plugin-defined types)
+struct CustomFactType {
+  discriminant @0 :Text;  # Unique plugin identifier
+  data @1 :List(KeyValuePair);  # Dynamic key-value pairs
 }
 
 # ═══════════════════════════════════════════════════════════════════

@@ -2,6 +2,7 @@
 
 #![warn(missing_docs)]
 
+pub mod capnp_serialization;
 pub mod custom_fact_tests;
 pub mod fact_type_index;
 pub mod interning;
@@ -11,6 +12,7 @@ pub mod types;
 pub mod validator;
 pub mod zero_copy;
 
+pub use capnp_serialization::*;
 pub use fact_type_index::*;
 pub use migration::*;
 pub use plugin_schema_registry::*;
