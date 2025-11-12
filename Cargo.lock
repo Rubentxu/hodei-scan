@@ -1587,6 +1587,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "hodei-declarative-extractors"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "glob",
+ "hodei-ir",
+ "once_cell",
+ "regex",
+ "serde",
+ "serde_yaml",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+]
+
+[[package]]
 name = "hodei-dsl"
 version = "0.1.0"
 dependencies = [

@@ -21,7 +21,7 @@ members = [
     "crates/hodei-server",
     "crates/hodei-dsl-lsp",
     "crates/hodei-test",
-    "crates/ir-dump",
+    "crates/ir-dump", "crates/hodei-declarative-extractors",
 ]
 resolver = "2"
 
