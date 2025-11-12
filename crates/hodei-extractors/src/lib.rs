@@ -61,6 +61,7 @@ pub mod sarif;
 #[cfg(test)]
 mod tests {
     mod orchestrator;
+    mod sarif;
 }
 
 // Re-export commonly used types
