@@ -25,6 +25,7 @@ mod query_planner_tests {
                     source_type: "http_request".to_string(),
                     confidence: Confidence::new(0.9).unwrap(),
                 },
+                message: format!("Taint source at line {}", 10 + i),
                 location: SourceLocation {
                     file: ProjectPath::new(PathBuf::from("src/main.rs")),
                     start_line: LineNumber::new(10 + i as u32).unwrap(),
@@ -52,6 +53,7 @@ mod query_planner_tests {
                     category: "SQL_INJECTION".to_string(),
                     severity: Severity::Critical,
                 },
+                message: format!("Taint sink at line {}", 100 + i),
                 location: SourceLocation {
                     file: ProjectPath::new(PathBuf::from("src/main.rs")),
                     start_line: LineNumber::new(100 + i as u32).unwrap(),
@@ -81,6 +83,7 @@ mod query_planner_tests {
                     description: format!("Cross-site scripting vulnerability {}", i),
                     confidence: Confidence::new(0.9).unwrap(),
                 },
+                message: format!("Vulnerability CWE-79 at line {}", 50 + i),
                 location: SourceLocation {
                     file: ProjectPath::new(PathBuf::from("src/vuln.rs")),
                     start_line: LineNumber::new(50 + i as u32).unwrap(),
@@ -107,6 +110,7 @@ mod query_planner_tests {
                     complexity: 5 + i as u32,
                     lines_of_code: 20 + i as u32,
                 },
+                message: format!("Function function_{} at line {}", i, 200 + i),
                 location: SourceLocation {
                     file: ProjectPath::new(PathBuf::from("src/main.rs")),
                     start_line: LineNumber::new(200 + i as u32).unwrap(),

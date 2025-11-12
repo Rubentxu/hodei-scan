@@ -1,10 +1,11 @@
 /// Diff Analysis Engine - US-13.03
 /// Compares analyses to identify changes (new findings, resolved, severity changes)
-use crate::modules::error::{Result, ServerError};
-use crate::modules::types::{AnalysisDiff, Finding, ProjectId, Severity, StoredAnalysis};
+use crate::modules::error::Result;
+use crate::modules::types::{AnalysisDiff, Finding, Severity};
 use std::collections::{HashMap, HashSet};
 
 /// Diff calculation engine
+#[derive(Clone)]
 pub struct DiffEngine {
     /// Enable parallel diff calculation for large datasets
     enable_parallel: bool,
@@ -64,7 +65,7 @@ impl DiffEngine {
     fn find_new_findings(
         &self,
         current: &[Finding],
-        current_fingerprints: &HashSet<&str>,
+        _current_fingerprints: &HashSet<&str>,
         baseline_fingerprints: &HashSet<&str>,
     ) -> Vec<Finding> {
         current
@@ -79,7 +80,7 @@ impl DiffEngine {
         &self,
         baseline: &[Finding],
         current_fingerprints: &HashSet<&str>,
-        baseline_fingerprints: &HashSet<&str>,
+        _baseline_fingerprints: &HashSet<&str>,
     ) -> Vec<Finding> {
         baseline
             .iter()
@@ -104,9 +105,8 @@ impl DiffEngine {
         let mut severity_decreased = vec![];
 
         for finding in current {
-            if let Some(&baseline_severity) = baseline_severities.get(finding.fingerprint.as_str())
-            {
-                if finding.severity != baseline_severity {
+            if let Some(baseline_severity) = baseline_severities.get(finding.fingerprint.as_str()) {
+                if finding.severity != *baseline_severity {
                     let severity_increase =
                         finding.severity.to_level() > baseline_severity.to_level();
 
@@ -141,32 +141,33 @@ impl DiffEngine {
             .await?;
 
         // If either analysis is missing, return empty diff
-        let (base_findings, head_findings) = match (base_analysis, head_analysis) {
-            (Some(base), Some(head)) => {
-                let base_findings = database.get_findings_by_analysis(&base.id).await?;
-                let head_findings = database.get_findings_by_analysis(&head.id).await?;
-                (base_findings, head_findings)
-            }
-            _ => {
-                // No analyses found, return empty diff
-                return Ok(AnalysisDiff {
-                    base_analysis: None,
-                    head_analysis: None,
-                    new_findings: vec![],
-                    resolved_findings: vec![],
-                    severity_increased: vec![],
-                    severity_decreased: vec![],
-                    wont_fix_changed: vec![],
-                });
-            }
-        };
+        let (base_findings, base_analysis_clone, head_findings, head_analysis_clone) =
+            match (base_analysis, head_analysis) {
+                (Some(base), Some(head)) => {
+                    let base_findings = database.get_findings_by_analysis(&base.id).await?;
+                    let head_findings = database.get_findings_by_analysis(&head.id).await?;
+                    (base_findings, base.clone(), head_findings, head.clone())
+                }
+                _ => {
+                    // No analyses found, return empty diff
+                    return Ok(AnalysisDiff {
+                        base_analysis: None,
+                        head_analysis: None,
+                        new_findings: vec![],
+                        resolved_findings: vec![],
+                        severity_increased: vec![],
+                        severity_decreased: vec![],
+                        wont_fix_changed: vec![],
+                    });
+                }
+            };
 
         // Calculate diff
         let mut diff = self.calculate_diff(&head_findings, &base_findings)?;
 
         // Populate analysis references
-        diff.base_analysis = base_analysis;
-        diff.head_analysis = head_analysis;
+        diff.base_analysis = Some(base_analysis_clone);
+        diff.head_analysis = Some(head_analysis_clone);
 
         Ok(diff)
     }
@@ -255,9 +256,9 @@ impl DiffEngine {
                         finding.severity.to_level() > baseline_finding.severity.to_level();
 
                     if severity_increase {
-                        severity_increased.push(finding.clone());
+                        severity_increased.push((*finding).clone());
                     } else {
-                        severity_decreased.push(finding.clone());
+                        severity_decreased.push((*finding).clone());
                     }
                 }
             }
@@ -316,7 +317,7 @@ impl DiffEngine {
 }
 
 /// Diff summary statistics
-#[derive(Debug)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DiffSummary {
     pub total_changes: usize,
     pub new_findings_count: usize,

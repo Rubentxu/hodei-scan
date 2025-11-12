@@ -1,36 +1,30 @@
 /// Core hodei-server implementation with REST API
 use crate::modules::auth::AuthService;
-use crate::modules::baseline::{BaselineManager, BaselineStatusUpdate, BulkUpdateSummary};
+use crate::modules::baseline::{BaselineManager, BaselineStatusUpdate};
 use crate::modules::config::ServerConfig;
 use crate::modules::database::DatabaseConnection;
-use crate::modules::diff::{DiffEngine, DiffSummary};
+use crate::modules::diff::DiffEngine;
 use crate::modules::error::{Result, ServerError};
 use crate::modules::policies::{
-    create_analysis_summary, CleanupTask, RateLimiter, RetentionManager,
+    CleanupTask, RateLimiter, RetentionManager, create_analysis_summary,
 };
 use crate::modules::types::{
-    AnalysisDiff, AnalysisId, AnalysisMetadata, AuthToken, Finding, HealthCheckStatus,
-    HealthStatus, ProjectId, PublishRequest, PublishResponse, Severity, StoredAnalysis,
-    TrendDirection, TrendMetrics, UserId,
+    AnalysisId, AuthToken, HealthCheckStatus, HealthStatus, ProjectId, PublishRequest,
+    TrendMetrics, UserId,
 };
 use crate::modules::validation::{
-    validate_project_exists, validate_publish_request, ValidationConfig,
+    ValidationConfig, validate_project_exists, validate_publish_request,
 };
 use crate::modules::websocket::{DashboardEvent, WebSocketManager};
 use axum::{
+    Json, Router,
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
-    Json, Router,
 };
-use chrono::{DateTime, Utc};
-use std::{
-    collections::HashMap,
-    net::SocketAddr,
-    sync::Arc,
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
+use chrono::Utc;
+use std::{collections::HashMap, net::SocketAddr, time::SystemTime};
 use tokio::sync::broadcast;
 use tower_http::{
     cors::{Any, CorsLayer},
@@ -150,7 +144,7 @@ impl HodeiServer {
             .allow_methods(Any)
             .allow_headers(Any);
 
-        Router::new()
+        Ok(Router::new()
             // Health check endpoint (no auth required)
             .route("/health", get(health_check))
 
@@ -222,7 +216,7 @@ impl HodeiServer {
                 diff_engine: diff_engine.clone(),
                 websocket_manager: websocket_manager.clone(),
                 baseline_manager: baseline_manager.clone(),
-            })
+            }))
     }
 
     /// Start the server (REST API only)
@@ -246,21 +240,28 @@ impl HodeiServer {
 
         // Setup graceful shutdown
         let server_handle = tokio::spawn(async move {
-            let rest_server = axum::serve(
-                tokio::net::TcpListener::bind(addr).await.map_err(|e| {
-                    ServerError::Internal(format!("Failed to bind to {}: {}", addr, e))
-                })?,
-                self.rest_app,
-            )
-            .with_graceful_shutdown(async {
-                let _ = shutdown_server.await;
-            });
+            let result: Result<()> = async {
+                let rest_server = axum::serve(
+                    tokio::net::TcpListener::bind(addr).await.map_err(|e| {
+                        ServerError::Internal(format!("Failed to bind to {}: {}", addr, e))
+                    })?,
+                    self.rest_app,
+                )
+                .with_graceful_shutdown(async {
+                    let _ = shutdown_server.await;
+                });
 
-            // Start REST server
-            info!("REST API listening on {}", addr);
-            if let Err(e) = rest_server.await {
-                tracing::error!("REST server error: {}", e);
+                // Start REST server
+                info!("REST API listening on {}", addr);
+                if let Err(e) = rest_server.await {
+                    tracing::error!("REST server error: {}", e);
+                }
+
+                Ok(())
             }
+            .await;
+
+            result
         });
 
         // Wait for shutdown signal
@@ -326,7 +327,7 @@ struct WebSocketQueryParams {
 /// Health check handler
 async fn health_check(State(state): State<AppState>) -> Result<impl IntoResponse> {
     // Check database health
-    let db_healthy = state.database.health_check().await.unwrap_or(false);
+    let db_healthy = state.database.health_check().await?;
 
     let status = if db_healthy {
         HealthCheckStatus::Healthy
@@ -350,6 +351,7 @@ async fn health_check(State(state): State<AppState>) -> Result<impl IntoResponse
 }
 
 /// WebSocket dashboard handler - US-13.04
+#[axum::debug_handler]
 async fn websocket_dashboard(
     ws: axum::extract::ws::WebSocketUpgrade,
     State(state): State<AppState>,
@@ -360,11 +362,11 @@ async fn websocket_dashboard(
         params.project_id
     );
 
-    ws.on_upgrade(|socket| {
-        state
-            .websocket_manager
-            .handle_connection(socket, state, params.project_id)
-    })
+    std::sync::Arc::new(state.websocket_manager.clone()).handle_connection(
+        ws,
+        State(state),
+        params.project_id,
+    )
 }
 
 /// Login handler (placeholder)
@@ -379,12 +381,14 @@ async fn login() -> Result<impl IntoResponse> {
 }
 
 /// Refresh token handler (placeholder)
-async fn refresh_token() -> Result<impl IntoResponse> {
+#[axum::debug_handler]
+async fn refresh_token() -> impl IntoResponse {
     // TODO: Implement token refresh
-    Ok(StatusCode::NOT_IMPLEMENTED)
+    StatusCode::NOT_IMPLEMENTED
 }
 
 /// Publish analysis handler with full validation and rate limiting
+#[axum::debug_handler]
 async fn publish_analysis(
     Path(project_id): Path<ProjectId>,
     State(state): State<AppState>,
@@ -479,15 +483,17 @@ async fn publish_analysis(
 }
 
 /// Get analysis handler
+#[axum::debug_handler]
 async fn get_analysis(
-    Path((project_id, analysis_id)): Path<(ProjectId, AnalysisId)>,
-    State(state): State<AppState>,
-) -> Result<impl IntoResponse> {
+    Path((_project_id, _analysis_id)): Path<(ProjectId, AnalysisId)>,
+    State(_state): State<AppState>,
+) -> impl IntoResponse {
     // TODO: Implement actual analysis retrieval
-    Ok((StatusCode::OK, Json(serde_json::json!({}))))
+    (StatusCode::OK, Json(serde_json::json!({})))
 }
 
 /// Get diff analysis handler - US-13.03 implementation
+#[axum::debug_handler]
 async fn get_diff_analysis(
     Path(project_id): Path<ProjectId>,
     Query(params): Query<DiffQueryParams>,
@@ -507,6 +513,10 @@ async fn get_diff_analysis(
             "Must provide either 'head' (branch) or 'commit_head' parameter".to_string(),
         ));
     }
+
+    // Save branches for later use in broadcast
+    let base_branch = params.base.clone();
+    let head_branch = params.head.clone();
 
     let diff = if let (Some(base), Some(head)) = (params.base, params.head) {
         // Branch-based diff
@@ -536,12 +546,12 @@ async fn get_diff_analysis(
     let summary = state.diff_engine.calculate_diff_summary(&diff);
 
     // Broadcast diff calculated event
-    if let (Some(base), Some(head)) = (params.base, params.head) {
+    if let (Some(base), Some(head)) = (base_branch, head_branch) {
         let event = DashboardEvent::DiffCalculated {
             project_id: project_id.clone(),
             base_branch: base,
             head_branch: head,
-            summary: summary.into(),
+            summary: summary.clone(),
         };
 
         if let Err(e) = state
@@ -559,6 +569,7 @@ async fn get_diff_analysis(
 }
 
 /// Get trends handler
+#[axum::debug_handler]
 async fn get_trends(
     Path(project_id): Path<ProjectId>,
     State(state): State<AppState>,
@@ -587,18 +598,21 @@ async fn get_trends(
 }
 
 /// List projects handler
-async fn list_projects() -> Result<impl IntoResponse> {
+#[axum::debug_handler]
+async fn list_projects() -> impl IntoResponse {
     // TODO: Implement project listing
-    Ok((StatusCode::OK, Json(vec![])))
+    (StatusCode::OK, Json::<Vec<String>>(vec![]))
 }
 
 /// Get project handler
-async fn get_project(Path(project_id): Path<ProjectId>) -> Result<impl IntoResponse> {
+#[axum::debug_handler]
+async fn get_project(Path(_project_id): Path<ProjectId>) -> impl IntoResponse {
     // TODO: Implement project retrieval
-    Ok((StatusCode::OK, Json(serde_json::json!({}))))
+    (StatusCode::OK, Json(serde_json::json!({})))
 }
 
 /// Get baseline handler - returns current baseline analysis for a branch
+#[axum::debug_handler]
 async fn get_baseline(
     Path((project_id, branch)): Path<(ProjectId, String)>,
     State(state): State<AppState>,
@@ -640,6 +654,7 @@ struct BaselineUpdateRequest {
 }
 
 /// Update baseline handler - update baseline from an analysis
+#[axum::debug_handler]
 async fn update_baseline(
     Path((project_id, branch)): Path<(ProjectId, String)>,
     State(state): State<AppState>,
@@ -692,6 +707,7 @@ struct BaselineRestoreRequest {
 }
 
 /// Restore baseline handler - restore baseline from a previous analysis
+#[axum::debug_handler]
 async fn restore_baseline(
     Path((project_id, branch)): Path<(ProjectId, String)>,
     State(state): State<AppState>,
@@ -744,6 +760,7 @@ struct BulkBaselineUpdateRequest {
 }
 
 /// Bulk update baseline statuses handler
+#[axum::debug_handler]
 async fn bulk_update_baseline_statuses(
     Path(project_id): Path<ProjectId>,
     State(state): State<AppState>,
@@ -782,6 +799,7 @@ struct AuditTrailQueryParams {
 }
 
 /// Get baseline audit trail handler
+#[axum::debug_handler]
 async fn get_baseline_audit_trail(
     Path(project_id): Path<ProjectId>,
     Query(params): Query<AuditTrailQueryParams>,

@@ -8,11 +8,11 @@ use tempfile;
 mod e2e_full_workflow {
     use super::*;
 
-    fn setup_test_project(name: &str) -> tempfile::TempDir {
+    fn setup_test_project(name: &str) -> (tempfile::TempDir, PathBuf) {
         let temp_dir = tempfile::tempdir().unwrap();
         let project_dir = temp_dir.path().join(name);
         std::fs::create_dir_all(&project_dir).unwrap();
-        project_dir
+        (temp_dir, project_dir)
     }
 
     #[test]

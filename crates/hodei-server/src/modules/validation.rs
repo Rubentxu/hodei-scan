@@ -1,8 +1,9 @@
 /// Data validation module for API requests
 use crate::modules::error::{Result, ServerError};
-use crate::modules::types::{AnalysisMetadata, Finding, PublishRequest};
+use crate::modules::types::{Finding, PublishRequest};
 
 /// Validation rules for publish analysis request
+#[derive(Clone)]
 pub struct ValidationConfig {
     pub max_findings_per_request: usize,
     pub max_metadata_size: usize,
@@ -41,7 +42,7 @@ pub fn validate_publish_request(
     project_id: &str,
     request: &PublishRequest,
     config: &ValidationConfig,
-) -> Result<(), ServerError> {
+) -> Result<()> {
     // Validate project_id
     if project_id.trim().is_empty() {
         return Err(ServerError::Validation(
@@ -99,23 +100,21 @@ pub fn validate_publish_request(
     }
 
     // Validate metadata size
-    if let Some(metadata) = &request.metadata {
-        let metadata_str = serde_json::to_string(metadata)
-            .map_err(|e| ServerError::Validation(format!("Invalid metadata: {}", e)))?;
+    let metadata_str = serde_json::to_string(&request.metadata)
+        .map_err(|e| ServerError::Validation(format!("Invalid metadata: {}", e)))?;
 
-        if metadata_str.len() > config.max_metadata_size {
-            return Err(ServerError::Validation(format!(
-                "Metadata exceeds maximum size of {} bytes",
-                config.max_metadata_size
-            )));
-        }
+    if metadata_str.len() > config.max_metadata_size {
+        return Err(ServerError::Validation(format!(
+            "Metadata exceeds maximum size of {} bytes",
+            config.max_metadata_size
+        )));
     }
 
     Ok(())
 }
 
 /// Validate individual finding
-fn validate_finding(finding: &Finding, config: &ValidationConfig) -> Result<(), ServerError> {
+fn validate_finding(finding: &Finding, config: &ValidationConfig) -> Result<()> {
     // Validate fact_type
     if finding.fact_type.trim().is_empty() {
         return Err(ServerError::Validation(
@@ -170,9 +169,9 @@ fn validate_finding(finding: &Finding, config: &ValidationConfig) -> Result<(), 
 
 /// Project validation
 pub async fn validate_project_exists(
-    project_id: &str,
-    database: &crate::modules::database::DatabaseConnection,
-) -> Result<bool, ServerError> {
+    _project_id: &str,
+    _database: &crate::modules::database::DatabaseConnection,
+) -> Result<bool> {
     // TODO: Implement actual database check
     // For now, allow any project_id
     Ok(true)
@@ -187,15 +186,15 @@ pub fn calculate_summary(findings: &[Finding]) -> crate::modules::types::Publish
         .iter()
         .filter(|f| matches!(f.severity, Severity::Critical))
         .count() as u32;
-    let major_count = findings
+    let _major_count = findings
         .iter()
         .filter(|f| matches!(f.severity, Severity::Major))
         .count() as u32;
-    let minor_count = findings
+    let _minor_count = findings
         .iter()
         .filter(|f| matches!(f.severity, Severity::Minor))
         .count() as u32;
-    let info_count = findings
+    let _info_count = findings
         .iter()
         .filter(|f| matches!(f.severity, Severity::Info))
         .count() as u32;

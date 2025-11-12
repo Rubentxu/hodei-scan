@@ -1,7 +1,7 @@
 [package]
 name = "hodei-pattern-engine"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "Declarative Pattern Engine using Tree-sitter and YAML Rules"
 authors = ["hodei-scan Team"]
 license = "MIT"

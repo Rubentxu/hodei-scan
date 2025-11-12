@@ -37,52 +37,64 @@ impl HodeiSemanticAnalyzer {
 impl SemanticAnalyzer for HodeiSemanticAnalyzer {
     async fn analyze(&self, ast: &RuleFile) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
-        
+
         // Validate rules in the AST
         for rule in &ast.rules {
-            // Check if fact type exists
-            if !self.fact_types.contains(&rule.fact_type) {
-                diagnostics.push(Diagnostic {
-                    range: crate::domain::models::Range {
-                        start: crate::domain::models::CursorPosition {
-                            line: 0,
-                            column: 0,
-                        },
-                        end: crate::domain::models::CursorPosition {
-                            line: 0,
-                            column: 10,
-                        },
-                    },
-                    severity: crate::domain::models::DiagnosticSeverity::Error,
-                    message: format!("Unknown fact type: {}", rule.fact_type),
-                    source: "hodei-dsl".to_string(),
-                });
-            }
-            
-            // Validate patterns if present
-            if let Some(pattern) = &rule.pattern {
-                // Check for valid function calls
-                // This is a simplified check - a full implementation would parse the pattern
-                if pattern.contains("unknown_function(") {
+            // Check patterns in the match block
+            for pattern in &rule.match_block.patterns {
+                // Check if fact type exists
+                if !self.fact_types.contains(&pattern.fact_type) {
                     diagnostics.push(Diagnostic {
                         range: crate::domain::models::Range {
-                            start: crate::domain::models::CursorPosition {
+                            start: crate::domain::models::CursorPosition { line: 0, column: 0 },
+                            end: crate::domain::models::CursorPosition {
                                 line: 0,
-                                column: 0,
+                                column: 10,
                             },
+                        },
+                        severity: crate::domain::models::DiagnosticSeverity::Error,
+                        message: format!("Unknown fact type: {}", pattern.fact_type),
+                        source: "hodei-dsl".to_string(),
+                    });
+                }
+            }
+
+            // Validate expressions in where clause if present
+            if let Some(where_clause) = &rule.match_block.where_clause {
+                self.validate_expression(where_clause, &mut diagnostics);
+            }
+        }
+
+        diagnostics
+    }
+}
+
+impl HodeiSemanticAnalyzer {
+    fn validate_expression(&self, expr: &hodei_dsl::ast::Expr, diagnostics: &mut Vec<Diagnostic>) {
+        match expr {
+            hodei_dsl::ast::Expr::FunctionCall { name, .. } => {
+                if !self.function_names.contains(name) {
+                    diagnostics.push(Diagnostic {
+                        range: crate::domain::models::Range {
+                            start: crate::domain::models::CursorPosition { line: 0, column: 0 },
                             end: crate::domain::models::CursorPosition {
                                 line: 0,
                                 column: 20,
                             },
                         },
                         severity: crate::domain::models::DiagnosticSeverity::Warning,
-                        message: "Unknown function called in pattern".to_string(),
+                        message: format!("Unknown function: {}", name),
                         source: "hodei-dsl".to_string(),
                     });
                 }
             }
+            hodei_dsl::ast::Expr::Binary { left, right, .. } => {
+                self.validate_expression(left, diagnostics);
+                self.validate_expression(right, diagnostics);
+            }
+            _ => {
+                // Other expression types don't need special validation
+            }
         }
-        
-        diagnostics
     }
 }

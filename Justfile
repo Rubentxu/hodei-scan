@@ -18,14 +18,18 @@ set shell := ["bash", "-c"]
 # Run working unit tests (recommended default)
 @test:
     #!/usr/bin/env bash
+    set -e  # Exit on first error
     echo "🔬 Running UNIT tests (working crates only)..."
     echo ""
-    cargo test -p hodei-ir --lib --all-features && \
-    cargo test -p hodei-dsl --lib --all-features && \
-    cargo test -p hodei-engine --lib --all-features && \
-    cargo test -p hodei-test --lib --all-features && \
+    cargo test -p hodei-ir --lib --all-features
+    cargo test -p hodei-dsl --lib --all-features
+    cargo test -p hodei-engine --lib --all-features
+    cargo test -p hodei-test --lib --all-features
+    cargo test -p hodei-extractors --lib --all-features
+    cargo test -p ir-dump --lib --all-features
+    cargo test -p hodei-server --lib --all-features
     echo ""
-    echo "✅ Unit tests completed! (~192 tests passed)"
+    echo "✅ Unit tests completed!"
     echo ""
     echo "💡 Tip: Use 'just test-crates' to see status of all crates"
 
@@ -40,7 +44,7 @@ set shell := ["bash", "-c"]
     #!/usr/bin/env bash
     echo "🔍 Checking crate compilation status..."
     echo ""
-    for crate in hodei-ir hodei-dsl hodei-engine hodei-extractors hodei-dsl-lsp hodei-test ir-dump hodei-server; do
+    for crate in hodei-ir hodei-dsl hodei-engine hodei-extractors hodei-test ir-dump hodei-server hodei-dsl-lsp; do
         echo "Checking $crate..."
         if cargo check -p $crate 2>&1 | grep -q "error\[E"; then
             echo "  ❌ Has compilation errors"
@@ -51,8 +55,8 @@ set shell := ["bash", "-c"]
     echo ""
     echo "✅ Crate compilation check completed!"
     echo ""
-    echo "💡 Working crates: hodei-ir, hodei-dsl, hodei-engine, hodei-test (~192 tests passing)"
-    echo "💡 Broken crates: hodei-extractors, hodei-dsl-lsp, ir-dump, hodei-server"
+    echo "💡 Working crates: hodei-ir, hodei-dsl, hodei-engine, hodei-extractors, hodei-test, ir-dump, hodei-server"
+    echo "💡 Broken crates: hodei-dsl-lsp"
 
 # Show detailed summary of test infrastructure
 @test-summary:
@@ -61,18 +65,18 @@ set shell := ["bash", "-c"]
     echo "=============================="
     echo ""
     echo "Working Crates:"
-    echo "  ✅ hodei-ir     - 64 tests passing"
-    echo "  ✅ hodei-dsl    - 41 tests passing"
-    echo "  ✅ hodei-engine - 66 tests passing"
-    echo "  ✅ hodei-test   - 1+ test passing"
+    echo "  ✅ hodei-ir          - Unit tests passing"
+    echo "  ✅ hodei-dsl         - Unit tests passing"
+    echo "  ✅ hodei-engine      - Unit tests passing"
+    echo "  ✅ hodei-extractors  - Unit tests passing"
+    echo "  ✅ hodei-test        - Unit tests passing"
+    echo "  ✅ ir-dump           - Unit tests passing"
+    echo "  ✅ hodei-server      - Integration tests passing"
     echo "  ---------------------------"
-    echo "  Total: ~192 tests passing"
+    echo "  Total: All working crates tested"
     echo ""
     echo "Broken Crates:"
-    echo "  ❌ hodei-extractors - Module errors"
-    echo "  ❌ hodei-dsl-lsp    - LSP version conflicts (25+ errors)"
-    echo "  ❌ ir-dump          - Missing exports (10+ errors)"
-    echo "  ❌ hodei-server     - Unrelated errors (54 errors)"
+    echo "  ❌ hodei-dsl-lsp     - Missing adapter implementations"
     echo ""
     echo "Test Files Created:"
     echo "  📁 Unit tests:     30+ files"
@@ -82,7 +86,7 @@ set shell := ["bash", "-c"]
     echo "  📁 Utilities:      15+ files"
     echo ""
     echo "Commands Available:"
-    echo "  just test              - Run working tests"
+    echo "  just test              - Run working tests (all crates)"
     echo "  just test-crates       - Check compilation status"
     echo "  just test-stats        - Show test statistics"
     echo "  just test-fmt          - Format code"
@@ -118,10 +122,10 @@ set shell := ["bash", "-c"]
     find ./tests/utils -name "*.rs" 2>/dev/null | wc -l | xargs echo "      -"
     echo ""
     echo "Current Status:"
-    echo "  ✅ Tests passing: 171 (hodei-ir: 64, hodei-dsl: 41, hodei-engine: 66)"
-    echo "  ❌ Tests broken:  0 (tests not running due to compilation errors)"
+    echo "  ✅ Tests passing: All working crates"
+    echo "  ❌ Tests broken:  hodei-dsl-lsp (compilation errors)"
     echo ""
-    echo "Coverage: N/A (requires fixing broken crates first)"
+    echo "Coverage: N/A (requires fixing hodei-dsl-lsp first)"
     echo ""
 
 # Clean test artifacts
@@ -181,7 +185,7 @@ set shell := ["bash", "-c"]
     echo "📊 STATUS: 11/11 commands working (100% success rate)"
     echo ""
     echo "MAIN COMMANDS:"
-    echo "  just test           Run working unit tests (171 tests)"
+    echo "  just test           Run working unit tests (all crates)"
     echo ""
     echo "ANALYSIS & REPORTING:"
     echo "  just test-crates    Check compilation status of all crates"
@@ -201,11 +205,12 @@ set shell := ["bash", "-c"]
     echo "  just help           Show this help"
     echo ""
     echo "CURRENT STATUS:"
-    echo "  ✅ Working: hodei-ir (64 tests), hodei-dsl (41), hodei-engine (66)"
-    echo "  ❌ Broken:  hodei-extractors, hodei-dsl-lsp, hodei-test, ir-dump, hodei-server"
+    echo "  ✅ Working: hodei-ir, hodei-dsl, hodei-engine, hodei-extractors,"
+    echo "             hodei-test, ir-dump, hodei-server"
+    echo "  ❌ Broken:  hodei-dsl-lsp"
     echo ""
     echo "EXAMPLES:"
-    echo "  just test                    # Run 171 passing tests"
+    echo "  just test                    # Run all working tests"
     echo "  just test-crates             # See status of all crates"
     echo "  just test-summary            # Detailed status report"
     echo "  just test-fmt && just test   # Format then test"

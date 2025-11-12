@@ -22,7 +22,7 @@ mod hodei_ir_tests {
 
         // Create a minimal fact to verify compilation
         let location = SourceLocation::new(
-            ProjectPath::new(PathBuf::from("test.rs")).unwrap(),
+            ProjectPath::new(PathBuf::from("test.rs")),
             LineNumber::new(1).unwrap(),
             Some(ColumnNumber::new(1).unwrap()),
             LineNumber::new(1).unwrap(),
@@ -51,7 +51,7 @@ mod hodei_ir_tests {
         let metadata = ProjectMetadata::new(
             "test-project".to_string(),
             "1.0.0".to_string(),
-            ProjectPath::new(PathBuf::from("/tmp/test")).unwrap(),
+            ProjectPath::new(PathBuf::from("/tmp/test")),
         );
 
         let _ir = IntermediateRepresentation::new(metadata);

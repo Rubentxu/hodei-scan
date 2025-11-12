@@ -17,15 +17,17 @@
 /// - BaselineStatus: Tracks status, reason, expiration, and audit trail
 /// - Integration with publish_analysis endpoint for automatic filtering
 /// - REST API endpoints for external management
+use crate::modules::database::DatabaseConnection;
 use crate::modules::error::{Result, ServerError};
 use crate::modules::types::{
-    AnalysisId, BaselineStatus, Finding, FindingStatus, ProjectId, StoredAnalysis, UserId,
+    AnalysisId, BaselineStatus, Finding, FindingStatus, StoredAnalysis, UserId,
 };
 use chrono::{DateTime, Utc};
-use sqlx::{Postgres, QueryBuilder};
+use sqlx::Row;
 use std::collections::HashMap;
 
 /// Baseline & Debt Manager
+#[derive(Clone)]
 pub struct BaselineManager {
     database: crate::modules::database::DatabaseConnection,
 }
@@ -47,7 +49,7 @@ impl BaselineManager {
         expires_at: Option<DateTime<Utc>>,
     ) -> Result<BaselineStatus> {
         // Insert or update baseline status
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO baseline_status (project_id, finding_fingerprint, status, reason, expires_at, updated_by, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, NOW())
@@ -60,23 +62,23 @@ impl BaselineManager {
                 updated_at = NOW()
             RETURNING id, project_id, finding_fingerprint, status, reason, expires_at, updated_by, updated_at
             "#,
-            project_id,
-            finding_fingerprint,
-            self.status_to_string(&status),
-            reason,
-            expires_at,
-            user_id,
         )
+        .bind(project_id)
+        .bind(finding_fingerprint)
+        .bind(self.status_to_string(&status))
+        .bind(reason)
+        .bind(expires_at)
+        .bind(user_id)
         .fetch_one(self.database.pool())
         .await
         .map_err(ServerError::Database)
         .map(|row| BaselineStatus {
-            finding_id: row.id.into(),
-            status: self.status_from_string(&row.status).unwrap_or(FindingStatus::Active),
-            reason: row.reason,
-            expires_at: row.expires_at,
-            updated_by: row.updated_by,
-            updated_at: row.updated_at,
+            finding_id: row.get::<i32, _>("id").into(),
+            status: self.status_from_string(&row.get::<String, _>("status")).unwrap_or(FindingStatus::Active),
+            reason: row.get("reason"),
+            expires_at: row.get("expires_at"),
+            updated_by: row.get("updated_by"),
+            updated_at: row.get("updated_at"),
         })
     }
 
@@ -138,16 +140,16 @@ impl BaselineManager {
         }
 
         // Record this as a baseline update event
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO baseline_updates (project_id, branch, analysis_id, updated_by, updated_at)
             VALUES ($1, $2, $3, $4, NOW())
             "#,
-            project_id,
-            branch,
-            analysis_id,
-            user_id,
         )
+        .bind(project_id)
+        .bind(branch)
+        .bind(analysis_id)
+        .bind(user_id)
         .execute(self.database.pool())
         .await
         .map_err(ServerError::Database)?;
@@ -169,14 +171,14 @@ impl BaselineManager {
         &self,
         project_id: &str,
     ) -> Result<HashMap<String, BaselineStatus>> {
-        let rows = sqlx::query!(
+        let rows = sqlx::query(
             r#"
             SELECT id, project_id, finding_fingerprint, status, reason, expires_at, updated_by, updated_at
             FROM baseline_status
             WHERE project_id = $1
             "#,
-            project_id,
         )
+        .bind(project_id)
         .fetch_all(self.database.pool())
         .await
         .map_err(ServerError::Database)?;
@@ -184,16 +186,16 @@ impl BaselineManager {
         let mut statuses = HashMap::new();
         for row in rows {
             let status = BaselineStatus {
-                finding_id: row.id.into(),
+                finding_id: row.get::<i32, _>("id").into(),
                 status: self
-                    .status_from_string(&row.status)
+                    .status_from_string(&row.get::<String, _>("status"))
                     .unwrap_or(FindingStatus::Active),
-                reason: row.reason,
-                expires_at: row.expires_at,
-                updated_by: row.updated_by,
-                updated_at: row.updated_at,
+                reason: row.get("reason"),
+                expires_at: row.get("expires_at"),
+                updated_by: row.get("updated_by"),
+                updated_at: row.get("updated_at"),
             };
-            statuses.insert(row.finding_fingerprint, status);
+            statuses.insert(row.get::<String, _>("finding_fingerprint"), status);
         }
 
         Ok(statuses)
@@ -262,6 +264,12 @@ impl BaselineManager {
             .get_findings_by_analysis(&to_analysis_id)
             .await?;
 
+        // Create fingerprints set from source findings
+        let source_fingerprints: std::collections::HashSet<String> = source_findings
+            .iter()
+            .map(|f| f.fingerprint.clone())
+            .collect();
+
         // Create baseline statuses from source analysis
         let mut restored_count = 0;
         let mut updated_count = 0;
@@ -281,22 +289,18 @@ impl BaselineManager {
         }
 
         // Remove baseline statuses that are in target but not in source (these are new)
-        let source_fingerprints: std::collections::HashSet<&str> = source_findings
-            .iter()
-            .map(|f| f.fingerprint.as_str())
-            .collect();
 
         for finding in target_findings {
-            if !source_fingerprints.contains(finding.fingerprint.as_str()) {
+            if !source_fingerprints.contains(&finding.fingerprint) {
                 // This is a new finding in target, remove any baseline status
-                sqlx::query!(
+                sqlx::query(
                     r#"
                     DELETE FROM baseline_status
                     WHERE project_id = $1 AND finding_fingerprint = $2
                     "#,
-                    project_id,
-                    finding.fingerprint,
                 )
+                .bind(project_id)
+                .bind(finding.fingerprint.as_str())
                 .execute(self.database.pool())
                 .await
                 .map_err(ServerError::Database)?;
@@ -378,13 +382,13 @@ impl BaselineManager {
             limit_clause
         );
 
-        let rows = sqlx::query(&query)
+        let row_records = sqlx::query(&query)
             .bind(project_id)
             .fetch_all(self.database.pool())
             .await
             .map_err(ServerError::Database)?;
 
-        let records = rows
+        let records: Vec<BaselineAuditRecord> = row_records
             .into_iter()
             .map(|row| BaselineAuditRecord {
                 id: row.get("id"),
@@ -472,6 +476,7 @@ pub struct BulkUpdateSummary {
 
 /// Baseline audit record
 #[derive(Debug, serde::Serialize)]
+/// Audit record for baseline changes
 pub struct BaselineAuditRecord {
     pub id: i64,
     pub project_id: String,
@@ -483,11 +488,24 @@ pub struct BaselineAuditRecord {
     pub updated_at: DateTime<Utc>,
 }
 
+/// Database row representation for sqlx query_as
+#[derive(Debug, sqlx::FromRow)]
+struct BaselineAuditRow {
+    pub id: i64,
+    pub project_id: String,
+    pub finding_fingerprint: String,
+    pub status: String, // DB stores as text
+    pub reason: Option<String>,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub updated_by: UserId,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::modules::types::{FindingLocation, Severity, UserId};
-    use chrono::{DateTime, Utc};
+    use chrono::Utc;
 
     fn create_test_finding(fingerprint: &str) -> Finding {
         Finding {
@@ -845,13 +863,74 @@ mod tests {
         // Success count depends on actual database state
     }
 
-    // Helper function to create a test database
+    // Helper function to create a test database using testcontainers
+    // TODO: Fix testcontainers API compatibility
     async fn create_test_database() -> crate::modules::database::DatabaseConnection {
-        // In a real test, we would use a test database
-        // For now, we'll use a mock approach
-        let config = crate::modules::config::ServerConfig::default();
-        DatabaseConnection::new(&config.database_url, 1)
-            .await
-            .expect("Failed to create test database")
+        unimplemented!("Test database creation requires testcontainers setup")
     }
+
+    // async fn run_migrations(database_url: &str) {
+    //     // Simple schema creation for testing
+    //     let pool = sqlx::postgres::PgPool::connect(database_url)
+    //         .await
+    //         .expect("Failed to connect to test database");
+
+    //     // Create tables if they don't exist
+    //     sqlx::query(
+    //         r#"
+    //         CREATE TABLE IF NOT EXISTS baseline_status (
+    //             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    //             project_id TEXT NOT NULL,
+    //             branch TEXT NOT NULL,
+    //             finding_fingerprint TEXT NOT NULL,
+    //             status TEXT NOT NULL,
+    //             reason TEXT,
+    //             expires_at TIMESTAMPTZ,
+    //             created_at TIMESTAMPTZ DEFAULT NOW(),
+    //             updated_at TIMESTAMPTZ DEFAULT NOW(),
+    //             created_by UUID,
+    //             updated_by UUID,
+    //             UNIQUE(project_id, branch, finding_fingerprint)
+    //         )
+    //     "#,
+    //     )
+    //     .execute(&pool)
+    //     .await
+    //     .expect("Failed to create baseline_status table");
+
+    //     sqlx::query(
+    //         r#"
+    //         CREATE TABLE IF NOT EXISTS analyses (
+    //             id UUID PRIMARY KEY,
+    //             project_id TEXT NOT NULL,
+    //             branch TEXT NOT NULL,
+    //             commit_hash TEXT NOT NULL,
+    //             findings_count INTEGER NOT NULL,
+    //             metadata JSONB,
+    //             created_at TIMESTAMPTZ DEFAULT NOW()
+    //         )
+    //     "#,
+    //     )
+    //     .execute(&pool)
+    //     .await
+    //     .expect("Failed to create analyses table");
+
+    //     sqlx::query(
+    //         r#"
+    //         CREATE TABLE IF NOT EXISTS findings (
+    //             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    //             analysis_id UUID REFERENCES analyses(id),
+    //             fact_type TEXT NOT NULL,
+    //             severity TEXT NOT NULL,
+    //             fingerprint TEXT NOT NULL,
+    //             location JSONB,
+    //             metadata JSONB,
+    //             created_at TIMESTAMPTZ DEFAULT NOW()
+    //         )
+    //     "#,
+    //     )
+    //     .execute(&pool)
+    //     .await
+    //     .expect("Failed to create findings table");
+    // }
 }

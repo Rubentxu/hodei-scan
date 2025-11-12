@@ -469,11 +469,10 @@ mod tests {
             None,
         );
 
-        Fact::new_with_message(
+        Fact::new(
             FactType::CodeSmell {
                 smell_type: "TODO".to_string(),
                 severity: Severity::Minor,
-                message: "Test".to_string(),
             },
             location,
             provenance,

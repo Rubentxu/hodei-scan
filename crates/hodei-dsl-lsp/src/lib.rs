@@ -12,8 +12,13 @@ pub mod application;
 pub mod domain;
 pub mod infrastructure;
 
-/// LSP Server entry point
-pub use infrastructure::{
+// Export main types
+pub use infrastructure::adapters::{
     HodeiCompletionProvider, HodeiHoverProvider, HodeiSemanticAnalyzer, InMemoryDocumentRepository,
-    server::HodeiDslServer,
 };
+
+/// Start the LSP server using stdio transport
+/// This is the standard entry point for LSP servers
+pub async fn run() {
+    infrastructure::server::start_stdio().await;
+}

@@ -1,12 +1,11 @@
 /// Database connection and operations
 use crate::modules::error::{Result, ServerError};
 use crate::modules::types::{
-    AnalysisId, AnalysisMetadata, Finding, FindingLocation, FindingStatus, ProjectId, Severity,
-    StoredAnalysis, User, UserId,
+    AnalysisId, AnalysisMetadata, Finding, FindingLocation, Severity, StoredAnalysis,
 };
 use chrono::{DateTime, Utc};
 use serde_json::Value;
-use sqlx::{postgres::PgPoolOptions, Executor, PgPool, Row};
+use sqlx::{Executor, PgPool, Row, postgres::PgPoolOptions};
 use std::collections::HashMap;
 
 /// Database connection pool
@@ -226,18 +225,18 @@ impl DatabaseConnection {
         let mut tx = self.pool.begin().await.map_err(ServerError::Database)?;
 
         // Insert the analysis
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO analyses (id, project_id, branch, commit_hash, findings_count, metadata)
             VALUES ($1, $2, $3, $4, $5, $6)
             "#,
-            analysis_id,
-            project_id,
-            branch,
-            commit,
-            findings.len() as i32,
-            serde_json::to_value(metadata).unwrap_or_default(),
         )
+        .bind(analysis_id)
+        .bind(project_id)
+        .bind(branch)
+        .bind(commit)
+        .bind(findings.len() as i32)
+        .bind(serde_json::to_value(metadata).unwrap_or_default())
         .execute(&mut *tx)
         .await
         .map_err(ServerError::Database)?;
@@ -245,25 +244,25 @@ impl DatabaseConnection {
         // Insert findings in batches for performance
         for chunk in findings.chunks(1000) {
             for finding in chunk {
-                sqlx::query!(
+                sqlx::query(
                     r#"
                     INSERT INTO findings (analysis_id, fact_type, severity, file_path, line_number,
                                          column_number, end_line, end_column, message, metadata, tags, fingerprint)
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                     "#,
-                    analysis_id,
-                    finding.fact_type,
-                    finding.severity.to_string().to_lowercase(),
-                    finding.location.file,
-                    finding.location.line as i32,
-                    finding.location.column as i32,
-                    finding.location.end_line.map(|x| x as i32),
-                    finding.location.end_column.map(|x| x as i32),
-                    finding.message,
-                    finding.metadata.as_ref().unwrap_or(&Value::Null),
-                    &finding.tags,
-                    finding.fingerprint,
                 )
+                .bind(analysis_id)
+                .bind(finding.fact_type.clone())
+                .bind(finding.severity.to_string().to_lowercase())
+                .bind(finding.location.file.clone())
+                .bind(finding.location.line as i32)
+                .bind(finding.location.column as i32)
+                .bind(finding.location.end_line.map(|x| x as i32))
+                .bind(finding.location.end_column.map(|x| x as i32))
+                .bind(finding.message.clone())
+                .bind(finding.metadata.as_ref().unwrap_or(&Value::Null))
+                .bind(&finding.tags)
+                .bind(finding.fingerprint.clone())
                 .execute(&mut *tx)
                 .await
                 .map_err(ServerError::Database)?;
@@ -282,7 +281,7 @@ impl DatabaseConnection {
         project_id: &str,
         branch: &str,
     ) -> Result<Option<StoredAnalysis>> {
-        let row = sqlx::query!(
+        let row = sqlx::query(
             r#"
             SELECT id, project_id, branch, commit_hash, timestamp, findings_count, metadata, created_at
             FROM analyses
@@ -290,23 +289,23 @@ impl DatabaseConnection {
             ORDER BY timestamp DESC
             LIMIT 1
             "#,
-            project_id,
-            branch,
         )
+        .bind(project_id)
+        .bind(branch)
         .fetch_optional(self.pool())
         .await
         .map_err(ServerError::Database)?;
 
         match row {
             Some(row) => Ok(Some(StoredAnalysis {
-                id: row.id,
-                project_id: row.project_id,
-                branch: row.branch,
-                commit: row.commit_hash,
-                timestamp: row.timestamp,
-                findings_count: row.findings_count as u32,
-                metadata: serde_json::from_value(row.metadata).unwrap_or_default(),
-                created_at: row.created_at,
+                id: row.get("id"),
+                project_id: row.get("project_id"),
+                branch: row.get("branch"),
+                commit: row.get("commit_hash"),
+                timestamp: row.get("timestamp"),
+                findings_count: row.get::<i32, _>("findings_count") as u32,
+                metadata: serde_json::from_value(row.get("metadata")).unwrap_or_default(),
+                created_at: row.get("created_at"),
             })),
             None => Ok(None),
         }
@@ -314,7 +313,7 @@ impl DatabaseConnection {
 
     /// Get all findings for an analysis
     pub async fn get_findings_by_analysis(&self, analysis_id: &AnalysisId) -> Result<Vec<Finding>> {
-        let rows = sqlx::query!(
+        let rows = sqlx::query(
             r#"
             SELECT fact_type, severity, file_path, line_number, column_number,
                    end_line, end_column, message, metadata, tags, fingerprint
@@ -322,8 +321,8 @@ impl DatabaseConnection {
             WHERE analysis_id = $1
             ORDER BY line_number, column_number
             "#,
-            analysis_id,
         )
+        .bind(analysis_id)
         .fetch_all(self.pool())
         .await
         .map_err(ServerError::Database)?;
@@ -331,24 +330,26 @@ impl DatabaseConnection {
         let findings = rows
             .into_iter()
             .map(|row| Finding {
-                fact_type: row.fact_type,
-                severity: match row.severity.as_str() {
+                fact_type: row.get("fact_type"),
+                severity: match row.get::<String, _>("severity").as_str() {
                     "critical" => Severity::Critical,
                     "major" => Severity::Major,
                     "minor" => Severity::Minor,
                     _ => Severity::Info,
                 },
                 location: FindingLocation {
-                    file: row.file_path,
-                    line: row.line_number as u32,
-                    column: row.column_number as u32,
-                    end_line: row.end_line.map(|x| x as u32),
-                    end_column: row.end_column.map(|x| x as u32),
+                    file: row.get("file_path"),
+                    line: row.get::<i32, _>("line_number") as u32,
+                    column: row.get::<i32, _>("column_number") as u32,
+                    end_line: row.get::<Option<i32>, _>("end_line").map(|x| x as u32),
+                    end_column: row.get::<Option<i32>, _>("end_column").map(|x| x as u32),
                 },
-                message: row.message,
-                metadata: Some(row.metadata),
-                tags: row.tags.unwrap_or_default(),
-                fingerprint: row.fingerprint,
+                message: row.get("message"),
+                metadata: Some(row.get("metadata")),
+                tags: row
+                    .get::<Option<Vec<String>>, _>("tags")
+                    .unwrap_or_default(),
+                fingerprint: row.get("fingerprint"),
             })
             .collect();
 
@@ -362,7 +363,7 @@ impl DatabaseConnection {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<HashMap<String, u64>> {
-        let row = sqlx::query!(
+        let row = sqlx::query(
             r#"
             SELECT
                 COUNT(*) as total_findings,
@@ -374,30 +375,42 @@ impl DatabaseConnection {
             JOIN analyses a ON a.id = f.analysis_id
             WHERE a.project_id = $1 AND a.timestamp BETWEEN $2 AND $3
             "#,
-            project_id,
-            start,
-            end,
         )
+        .bind(project_id)
+        .bind(start)
+        .bind(end)
         .fetch_one(self.pool())
         .await
         .map_err(ServerError::Database)?;
 
         let mut metrics = HashMap::new();
-        metrics.insert("total_findings".to_string(), row.total_findings as u64);
+        metrics.insert(
+            "total_findings".to_string(),
+            row.get::<i64, _>("total_findings") as u64,
+        );
         metrics.insert(
             "critical_findings".to_string(),
-            row.critical_findings as u64,
+            row.get::<i64, _>("critical_findings") as u64,
         );
-        metrics.insert("major_findings".to_string(), row.major_findings as u64);
-        metrics.insert("minor_findings".to_string(), row.minor_findings as u64);
-        metrics.insert("info_findings".to_string(), row.info_findings as u64);
+        metrics.insert(
+            "major_findings".to_string(),
+            row.get::<i64, _>("major_findings") as u64,
+        );
+        metrics.insert(
+            "minor_findings".to_string(),
+            row.get::<i64, _>("minor_findings") as u64,
+        );
+        metrics.insert(
+            "info_findings".to_string(),
+            row.get::<i64, _>("info_findings") as u64,
+        );
 
         Ok(metrics)
     }
 
     /// Check database health
     pub async fn health_check(&self) -> Result<bool> {
-        sqlx::query!("SELECT 1 as health_check")
+        sqlx::query("SELECT 1 as health_check")
             .fetch_one(self.pool())
             .await
             .map(|_| true)

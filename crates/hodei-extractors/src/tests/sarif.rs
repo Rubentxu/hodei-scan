@@ -31,7 +31,7 @@ mod sarif_tests {
 
         let extractor = SarifExtractor::new(config);
         let extractor_config = ExtractorConfig {
-            project_path: PathBuf::from("/tmp"),
+            project_path: fixture_path("").parent().unwrap().to_path_buf(),
             config: serde_json::json!({}),
             file_filters: Default::default(),
         };
@@ -65,7 +65,7 @@ mod sarif_tests {
 
         let extractor = SarifExtractor::new(config);
         let extractor_config = ExtractorConfig {
-            project_path: PathBuf::from("/tmp"),
+            project_path: fixture_path("").parent().unwrap().to_path_buf(),
             config: serde_json::json!({}),
             file_filters: Default::default(),
         };
@@ -88,7 +88,8 @@ mod sarif_tests {
 
         // Check location mapping
         let fact = &ir.facts[0];
-        assert!(fact.location.file.path.exists());
+        // Verify the path matches what's in the SARIF file (not that it exists on disk)
+        assert_eq!(fact.location.file.path.to_string_lossy(), "src/utils.js");
         assert_eq!(fact.location.start_line.get(), 12);
         assert_eq!(fact.location.start_column.unwrap().get(), 2);
     }
@@ -105,7 +106,7 @@ mod sarif_tests {
 
         let extractor = SarifExtractor::new(config);
         let extractor_config = ExtractorConfig {
-            project_path: PathBuf::from("/tmp"),
+            project_path: fixture_path("").parent().unwrap().to_path_buf(),
             config: serde_json::json!({}),
             file_filters: Default::default(),
         };
@@ -154,7 +155,7 @@ mod sarif_tests {
 
         let extractor = SarifExtractor::new(config);
         let extractor_config = ExtractorConfig {
-            project_path: PathBuf::from("/tmp"),
+            project_path: fixture_path("").parent().unwrap().to_path_buf(),
             config: serde_json::json!({}),
             file_filters: Default::default(),
         };
@@ -206,7 +207,7 @@ mod sarif_tests {
 
         let extractor = SarifExtractor::new(config);
         let extractor_config = ExtractorConfig {
-            project_path: PathBuf::from("/tmp"),
+            project_path: fixture_path("").parent().unwrap().to_path_buf(),
             config: serde_json::json!({}),
             file_filters: Default::default(),
         };
@@ -234,7 +235,7 @@ mod sarif_tests {
 
         let extractor = SarifExtractor::new(config);
         let extractor_config = ExtractorConfig {
-            project_path: PathBuf::from("/tmp"),
+            project_path: fixture_path("").parent().unwrap().to_path_buf(),
             config: serde_json::json!({}),
             file_filters: Default::default(),
         };
@@ -264,7 +265,7 @@ mod sarif_tests {
 
         let extractor = SarifExtractor::new(config);
         let extractor_config = ExtractorConfig {
-            project_path: PathBuf::from("/tmp"),
+            project_path: fixture_path("").parent().unwrap().to_path_buf(),
             config: serde_json::json!({}),
             file_filters: Default::default(),
         };
@@ -288,7 +289,7 @@ mod sarif_tests {
 
         let extractor = SarifExtractor::new(config);
         let extractor_config = ExtractorConfig {
-            project_path: PathBuf::from("/tmp"),
+            project_path: fixture_path("").parent().unwrap().to_path_buf(),
             config: serde_json::json!({}),
             file_filters: Default::default(),
         };
@@ -314,7 +315,7 @@ mod sarif_tests {
 
         let extractor = SarifExtractor::new(config);
         let extractor_config = ExtractorConfig {
-            project_path: PathBuf::from("/tmp"),
+            project_path: fixture_path("").parent().unwrap().to_path_buf(),
             config: serde_json::json!({}),
             file_filters: Default::default(),
         };

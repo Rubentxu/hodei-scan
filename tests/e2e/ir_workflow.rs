@@ -1,8 +1,18 @@
 //! End-to-End tests for IR dump workflow
 
-use crate::fixtures::SAMPLE_JSON;
 use ir_dump::{Format, IRFormatter, IRReader};
 use tempfile::TempDir;
+
+// Simple sample IR JSON for testing
+const SAMPLE_JSON: &str = r#"{
+  "schema_version": "3.3.0",
+  "metadata": {
+    "name": "Test Project",
+    "version": "1.0.0",
+    "root_path": "/test"
+  },
+  "facts": []
+}"#;
 
 #[tokio::test]
 async fn test_complete_ir_inspection_workflow() {

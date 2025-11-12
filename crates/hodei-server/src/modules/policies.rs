@@ -6,6 +6,7 @@ use tokio::sync::RwLock;
 use tracing::{info, warn};
 
 /// Rate limiter using token bucket algorithm
+#[derive(Clone)]
 pub struct RateLimiter {
     /// Request count per minute per key
     requests_per_minute: u64,
@@ -89,6 +90,7 @@ impl RateLimitError {
 }
 
 /// Data retention policy manager
+#[derive(Clone)]
 pub struct RetentionManager {
     /// Default retention period in days
     default_retention_days: u64,
@@ -134,7 +136,7 @@ impl RetentionManager {
     /// Set custom retention policy for a project
     pub async fn set_policy(&self, project_id: &str, policy: RetentionPolicy) {
         let mut policies = self.project_policies.write().await;
-        policies.insert(project_id.to_string(), policy);
+        policies.insert(project_id.to_string(), policy.clone());
         info!(
             "Set retention policy for project {}: {} days",
             project_id, policy.retention_days
@@ -144,14 +146,14 @@ impl RetentionManager {
     /// Get analyses older than retention period
     pub async fn get_expired_analyses(
         &self,
-        database: &crate::modules::database::DatabaseConnection,
+        _database: &crate::modules::database::DatabaseConnection,
     ) -> Result<Vec<String>, crate::modules::error::ServerError> {
         // TODO: Implement actual database query
         // This would query analyses older than retention period
 
         let policy = self.get_policy("default").await;
         let cutoff = SystemTime::now() - Duration::from_secs(policy.retention_days * 24 * 60 * 60);
-        let cutoff_unix = cutoff.duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let _cutoff_unix = cutoff.duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         warn!(
             "Retention: Would delete analyses older than {} days",
@@ -175,7 +177,7 @@ impl RetentionManager {
         let mut deleted_findings = 0;
 
         // TODO: Implement actual deletion from database
-        for analysis_id in &expired_analysis_ids {
+        for _analysis_id in &expired_analysis_ids {
             // Find all findings for this analysis
             // Delete findings
             // Delete analysis record
@@ -264,7 +266,7 @@ pub fn create_analysis_summary(
     new_findings: u32,
     resolved_findings: u32,
 ) -> crate::modules::types::PublishResponse {
-    use crate::modules::types::{PublishResponse, Severity, TrendDirection};
+    use crate::modules::types::{PublishResponse, TrendDirection};
 
     let total_findings = findings_count;
     let trend = if new_findings > resolved_findings {

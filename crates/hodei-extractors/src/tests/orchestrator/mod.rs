@@ -12,6 +12,14 @@ mod tests {
         format!("bash {}", script_path.to_string_lossy())
     }
 
+    /// Helper to create a test directory with necessary files
+    fn create_test_dir() -> PathBuf {
+        let temp_dir = std::env::temp_dir().join("hodei-test");
+        std::fs::create_dir_all(&temp_dir).unwrap();
+        std::fs::write(temp_dir.join("test.py"), "// test file\n").unwrap();
+        temp_dir
+    }
+
     /// Test CA-1.1 & CA-1.3: Read extractor configuration from hodei.toml
     #[tokio::test]
     async fn test_configuration_loading() {
@@ -37,6 +45,9 @@ mod tests {
 
         assert!(fixture_path.exists(), "Mock extractor fixture not found");
 
+        // Create a test directory with a test file
+        let temp_dir = create_test_dir();
+
         let extractor = ExtractorOrchestrator::new(
             OrchestratorConfig {
                 parallel_execution: false,
@@ -52,7 +63,7 @@ mod tests {
             }],
         );
 
-        let result = extractor.run_all(std::path::Path::new("/tmp")).await;
+        let result = extractor.run_all(&temp_dir).await;
 
         assert!(
             result.is_ok(),
@@ -61,6 +72,9 @@ mod tests {
         );
         let aggregated_ir = result.unwrap();
         assert_eq!(aggregated_ir.facts.len(), 2);
+
+        // Cleanup
+        std::fs::remove_dir_all(&temp_dir).ok();
     }
 
     /// Test CA-1.2: Parallel execution of multiple extractors
@@ -70,6 +84,9 @@ mod tests {
             .join("tests")
             .join("fixtures")
             .join("mock_extractor.sh");
+
+        // Create a test directory with a test file
+        let temp_dir = create_test_dir();
 
         let extractors = vec![
             ExtractorDefinition {
@@ -104,7 +121,7 @@ mod tests {
             extractors,
         );
 
-        let results = orchestrator.run_all(std::path::Path::new("/tmp")).await;
+        let results = orchestrator.run_all(&temp_dir).await;
 
         assert!(
             results.is_ok(),
@@ -148,6 +165,9 @@ mod tests {
             },
         ];
 
+        // Create a test directory
+        let temp_dir = create_test_dir();
+
         let orchestrator = ExtractorOrchestrator::new(
             OrchestratorConfig {
                 parallel_execution: false,
@@ -157,7 +177,7 @@ mod tests {
             extractors,
         );
 
-        let results = orchestrator.run_all(std::path::Path::new("/tmp")).await;
+        let results = orchestrator.run_all(&temp_dir).await;
 
         assert!(results.is_ok(), "Should handle partial failures");
         let aggregated_ir = results.unwrap();
@@ -201,7 +221,7 @@ echo '{}'
             }],
         );
 
-        let result = extractor.run_all(std::path::Path::new("/tmp")).await;
+        let result = extractor.run_all(&temp_dir).await;
 
         assert!(result.is_err(), "Should timeout");
         let error = result.unwrap_err();
@@ -242,7 +262,7 @@ echo 'invalid json {'
             }],
         );
 
-        let result = extractor.run_all(std::path::Path::new("/tmp")).await;
+        let result = extractor.run_all(&temp_dir).await;
 
         assert!(result.is_err(), "Should reject invalid IR");
         let error = result.unwrap_err();
@@ -276,6 +296,9 @@ echo 'invalid json {'
             },
         ];
 
+        // Create a test directory
+        let temp_dir = create_test_dir();
+
         let orchestrator = ExtractorOrchestrator::new(
             OrchestratorConfig {
                 parallel_execution: false,
@@ -285,7 +308,7 @@ echo 'invalid json {'
             extractors,
         );
 
-        let results = orchestrator.run_all(std::path::Path::new("/tmp")).await;
+        let results = orchestrator.run_all(&temp_dir).await;
         assert!(results.is_ok());
 
         let aggregated_ir = results.unwrap();
@@ -326,6 +349,9 @@ echo 'invalid json {'
             },
         ];
 
+        // Create a test directory
+        let temp_dir = create_test_dir();
+
         let orchestrator = ExtractorOrchestrator::new(
             OrchestratorConfig {
                 parallel_execution: true,
@@ -335,7 +361,7 @@ echo 'invalid json {'
             extractors,
         );
 
-        let results = orchestrator.run_all(std::path::Path::new("/tmp")).await;
+        let results = orchestrator.run_all(&temp_dir).await;
 
         assert!(results.is_ok(), "Full integration test should succeed");
         let aggregated_ir = results.unwrap();

@@ -74,12 +74,7 @@ fn test_end_to_end_custom_fact_workflow() {
         Confidence::HIGH,
     );
 
-    let fact = Fact::new(
-        custom_fact.clone(),
-        "Insecure S3 bucket detected".to_string(),
-        location,
-        provenance,
-    );
+    let fact = Fact::new(custom_fact.clone(), location, provenance);
 
     let metadata = ProjectMetadata::new(
         "terraform-project".to_string(),

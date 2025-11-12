@@ -3,16 +3,15 @@
 //! Application use cases that orchestrate domain services
 
 use crate::domain::models::{
-    CompletionContext, CompletionItem, CursorPosition, Diagnostic, Document, HoverInfo
+    CompletionContext, CompletionItem, CursorPosition, Diagnostic, Document, HoverInfo,
 };
 use crate::domain::ports::{
-    CompletionProvider as CompletionProviderPort, 
+    CompletionProvider as CompletionProviderPort, DocumentRepository,
     HoverProvider as HoverProviderPort,
-    DocumentRepository,
 };
-use tokio::sync::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 
 /// Use case: Get autocompletion suggestions
 pub struct GetCompletionsUseCase {
@@ -30,7 +29,7 @@ impl GetCompletionsUseCase {
             document_repository,
         }
     }
-    
+
     pub async fn execute(
         &self,
         uri: &str,
@@ -38,9 +37,10 @@ impl GetCompletionsUseCase {
         trigger_character: Option<char>,
     ) -> Result<Vec<CompletionItem>, String> {
         let document_repo = self.document_repository.read().await;
-        let document = document_repo.get(uri)
+        let document = document_repo
+            .get(uri)
             .ok_or_else(|| format!("Document not found: {}", uri))?;
-        
+
         let context = CompletionContext {
             position,
             trigger_character,
@@ -50,8 +50,10 @@ impl GetCompletionsUseCase {
                 crate::domain::models::CompletionTriggerKind::Invoked
             },
         };
-        
-        self.completion_provider.provide_completions(&document, &context).await
+
+        self.completion_provider
+            .provide_completions(&document, &context)
+            .await
     }
 }
 
@@ -71,42 +73,53 @@ impl GetHoverInfoUseCase {
             document_repository,
         }
     }
-    
+
     pub async fn execute(
         &self,
         uri: &str,
         position: CursorPosition,
     ) -> Result<Option<HoverInfo>, String> {
         let document_repo = self.document_repository.read().await;
-        let document = document_repo.get(uri)
+        let document = document_repo
+            .get(uri)
             .ok_or_else(|| format!("Document not found: {}", uri))?;
-        
+
         self.hover_provider.provide_hover(&document, position).await
     }
 }
 
 /// Use case: Validate document
-pub struct ValidateDocumentUseCase<SemanticValidator> {
-    validator: Arc<SemanticValidator>,
+pub struct ValidateDocumentUseCase<SemanticAnalyzer> {
+    analyzer: Arc<SemanticAnalyzer>,
     document_repository: Arc<RwLock<HashMap<String, Document>>>,
 }
 
-impl<SemanticValidator> ValidateDocumentUseCase<SemanticValidator> {
+impl<SemanticAnalyzer: crate::domain::ports::SemanticAnalyzer>
+    ValidateDocumentUseCase<SemanticAnalyzer>
+{
     pub fn new(
-        validator: Arc<SemanticValidator>,
+        analyzer: Arc<SemanticAnalyzer>,
         document_repository: Arc<RwLock<HashMap<String, Document>>>,
     ) -> Self {
         Self {
-            validator,
+            analyzer,
             document_repository,
         }
     }
-    
+
     pub async fn execute(&self, uri: &str) -> Result<Vec<Diagnostic>, String> {
         let document_repo = self.document_repository.read().await;
-        let document = document_repo.get(uri)
+        let document = document_repo
+            .get(uri)
             .ok_or_else(|| format!("Document not found: {}", uri))?;
-        
-        Ok(self.validator.validate_document(&document).await)
+
+        // Parse the document first
+        let ast = match hodei_dsl::parser::parse_file(&document.content) {
+            Ok(ast) => ast,
+            Err(e) => return Err(format!("Parse error: {:?}", e)),
+        };
+
+        // Then analyze it
+        Ok(self.analyzer.analyze(&ast).await)
     }
 }

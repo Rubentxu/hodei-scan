@@ -27,7 +27,7 @@ pub struct PublishRequest {
 }
 
 /// Analysis metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AnalysisMetadata {
     pub build_url: Option<String>,
     pub author: Option<String>,
@@ -75,6 +75,17 @@ impl Severity {
             Severity::Major => 3,
             Severity::Minor => 2,
             Severity::Info => 1,
+        }
+    }
+}
+
+impl std::fmt::Display for Severity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Severity::Critical => write!(f, "critical"),
+            Severity::Major => write!(f, "major"),
+            Severity::Minor => write!(f, "minor"),
+            Severity::Info => write!(f, "info"),
         }
     }
 }
@@ -184,7 +195,7 @@ pub struct Project {
 /// Baseline status for a finding
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BaselineStatus {
-    pub finding_id: FindingId,
+    pub finding_id: i32,
     pub status: FindingStatus,
     pub reason: Option<String>,
     pub expires_at: Option<DateTime<Utc>>,
@@ -193,7 +204,7 @@ pub struct BaselineStatus {
 }
 
 /// Finding status in baseline
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum FindingStatus {
     Active,
     Accepted,

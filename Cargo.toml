@@ -35,27 +35,27 @@ thiserror = "1.0"
 anyhow = "1.0"
 
 # UUID and identifiers
-uuid = { version = "1.0", features = ["v4", "serde"] }
+uuid = { version = "1.18", features = ["v4", "serde"] }
 
 # Date and time
 chrono = { version = "0.4", features = ["serde"] }
 
 # Hash maps and concurrent data structures
 ahash = "0.8"
-smallvec = { version = "1.0", features = ["serde"] }
+smallvec = { version = "1.10", features = ["serde"] }
 
 # Async runtime
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1.40", features = ["full"] }
 
 # Parallelism
-rayon = "1.0"
+rayon = "1.10"
 
 # Testing
-proptest = "1.0"
+proptest = "1.4"
 criterion = { version = "0.5", features = ["html_reports"] }
 
 # CLI
-clap = { version = "4.0", features = ["derive", "cargo"] }
+clap = { version = "4.5", features = ["derive", "cargo"] }
 
 # Logging
 tracing = "0.1"
@@ -64,7 +64,7 @@ tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 # Parser
 pest = "2.7"
 pest_derive = "2.7"
-regex = "1.0"
+regex = "1.10"
 
 # Concurrency and timeouts
 crossbeam = "0.8"
@@ -75,7 +75,7 @@ capnp-futures = "0.23"
 
 # String interning and optimizations
 string-interner = "0.3"
-enum-map = "2.0"
+enum-map = "2.7"
 
 # Zero-copy serialization
 rkyv = "0.7"
@@ -105,9 +105,9 @@ hodei-ir = { path = "crates/hodei-ir" }
 hodei-extractors = { path = "crates/hodei-extractors" }
 hodei-engine = { path = "crates/hodei-engine" }
 hodei-dsl = { path = "crates/hodei-dsl" }
-uuid = { version = "1.0", features = ["v4"] }
-tokio = { version = "1.48", features = ["full"] }
-tempfile = "3.0"
+uuid = { version = "1.18", features = ["v4"] }
+tokio = { version = "1.40", features = ["full"] }
+tempfile = "3.10"
 
 [[test]]
 name = "integration"

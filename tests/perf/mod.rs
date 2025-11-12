@@ -11,7 +11,6 @@ mod performance_tests {
             let _fact = FactType::CodeSmell {
                 smell_type: format!("smell-{}", i),
                 severity: Severity::Minor,
-                message: format!("Message {}", i),
             };
         }
         assert!(true);
@@ -85,7 +84,6 @@ mod performance_tests {
             let _v6 = FactType::CodeSmell {
                 smell_type: "todo".to_string(),
                 severity: Severity::Minor,
-                message: "todo".to_string(),
             };
         }
         assert!(true);

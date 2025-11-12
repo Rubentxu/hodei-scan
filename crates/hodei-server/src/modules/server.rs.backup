@@ -1,0 +1,814 @@
+/// Core hodei-server implementation with REST API
+use crate::modules::auth::AuthService;
+use crate::modules::baseline::{BaselineManager, BaselineStatusUpdate, BulkUpdateSummary};
+use crate::modules::config::ServerConfig;
+use crate::modules::database::DatabaseConnection;
+use crate::modules::diff::{DiffEngine, DiffSummary};
+use crate::modules::error::{Result, ServerError};
+use crate::modules::policies::{
+    CleanupTask, RateLimiter, RetentionManager, create_analysis_summary,
+};
+use crate::modules::types::{
+    AnalysisDiff, AnalysisId, AnalysisMetadata, AuthToken, Finding, HealthCheckStatus,
+    HealthStatus, ProjectId, PublishRequest, PublishResponse, Severity, StoredAnalysis,
+    TrendDirection, TrendMetrics, UserId,
+};
+use crate::modules::validation::{
+    ValidationConfig, validate_project_exists, validate_publish_request,
+};
+use crate::modules::websocket::{DashboardEvent, WebSocketManager};
+use axum::{
+    Json, Router,
+    extract::{Path, Query, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::{get, post},
+};
+use chrono::{DateTime, Utc};
+use std::{
+    collections::HashMap,
+    net::SocketAddr,
+    sync::Arc,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
+use tokio::sync::broadcast;
+use tower_http::{
+    cors::{Any, CorsLayer},
+    trace::TraceLayer,
+};
+use tracing::{info, warn};
+
+/// Main hodei-server instance
+pub struct HodeiServer {
+    config: ServerConfig,
+    database: DatabaseConnection,
+    auth_service: AuthService,
+    rest_app: Router,
+    start_time: SystemTime,
+    shutdown_sender: broadcast::Sender<()>,
+    rate_limiter: RateLimiter,
+    retention_manager: RetentionManager,
+    validation_config: ValidationConfig,
+    diff_engine: DiffEngine,
+    websocket_manager: WebSocketManager,
+    baseline_manager: BaselineManager,
+}
+
+impl HodeiServer {
+    /// Create a new hodei-server instance
+    pub async fn new(config: ServerConfig) -> Result<Self> {
+        info!("Initializing hodei-server...");
+
+        // Validate configuration
+        config
+            .validate()
+            .map_err(|e| ServerError::Config(format!("Configuration validation failed: {}", e)))?;
+
+        // Initialize database connection
+        info!("Connecting to database...");
+        let database = DatabaseConnection::new(&config.database_url, config.db_pool_size)
+            .await
+            .map_err(|e| ServerError::Config(format!("Database connection failed: {}", e)))?;
+
+        // Initialize database schema
+        info!("Initializing database schema...");
+        database.initialize_schema().await.map_err(|e| {
+            ServerError::Config(format!("Database schema initialization failed: {}", e))
+        })?;
+
+        // Initialize authentication service
+        let auth_service = AuthService::new(config.jwt_secret.clone(), config.jwt_expiration_hours);
+
+        // Initialize rate limiter
+        let rate_limiter = RateLimiter::new(config.rate_limit_rpm);
+
+        // Initialize retention manager
+        let retention_manager = RetentionManager::new(365); // 1 year default
+
+        // Initialize validation config
+        let validation_config = ValidationConfig::default();
+
+        // Initialize diff engine
+        let diff_engine = DiffEngine::new();
+
+        // Initialize WebSocket manager
+        let websocket_manager = WebSocketManager::new(database.clone());
+
+        // Initialize baseline manager
+        let baseline_manager = BaselineManager::new(database.clone());
+
+        // Create the REST router
+        let rest_app = Self::create_rest_router(
+            &config,
+            &database,
+            &auth_service,
+            &rate_limiter,
+            &retention_manager,
+            &diff_engine,
+            &websocket_manager,
+            &baseline_manager,
+        )
+        .await?;
+
+        let start_time = SystemTime::now();
+        let (shutdown_sender, _) = broadcast::channel(1);
+
+        info!(
+            "hodei-server initialized successfully on {}",
+            config.bind_address
+        );
+
+        Ok(Self {
+            config,
+            database,
+            auth_service,
+            rest_app,
+            start_time,
+            shutdown_sender,
+            rate_limiter,
+            retention_manager,
+            validation_config,
+            diff_engine,
+            websocket_manager,
+            baseline_manager,
+        })
+    }
+
+    /// Create the REST router
+    async fn create_rest_router(
+        config: &ServerConfig,
+        database: &DatabaseConnection,
+        auth_service: &AuthService,
+        rate_limiter: &RateLimiter,
+        retention_manager: &RetentionManager,
+        diff_engine: &DiffEngine,
+        websocket_manager: &WebSocketManager,
+        baseline_manager: &BaselineManager,
+    ) -> Result<Router> {
+        let cors = CorsLayer::new()
+            .allow_origin(Any)
+            .allow_methods(Any)
+            .allow_headers(Any);
+
+        Router::new()
+            // Health check endpoint (no auth required)
+            .route("/health", get(health_check))
+
+            // Authentication endpoints
+            .route("/api/v1/auth/login", post(login))
+            .route("/api/v1/auth/refresh", post(refresh_token))
+
+            // WebSocket endpoint for real-time dashboard updates
+            .route("/ws/dashboard", get(websocket_dashboard))
+
+            // Analysis endpoints (auth required with rate limiting)
+            .route(
+                "/api/v1/projects/:project_id/analyses",
+                post(publish_analysis),
+            )
+            .route(
+                "/api/v1/projects/:project_id/analyses/:analysis_id",
+                get(get_analysis),
+            )
+
+            // Diff analysis endpoint - supports both branch and commit comparison
+            .route(
+                "/api/v1/projects/:project_id/diff",
+                get(get_diff_analysis),
+            )
+
+            // Trend analysis endpoint
+            .route(
+                "/api/v1/projects/:project_id/trends",
+                get(get_trends),
+            )
+
+            // Project endpoints
+            .route("/api/v1/projects", get(list_projects))
+            .route("/api/v1/projects/:project_id", get(get_project))
+
+            // Baseline endpoints
+            .route(
+                "/api/v1/projects/:project_id/baselines/:branch",
+                get(get_baseline),
+            )
+            .route(
+                "/api/v1/projects/:project_id/baselines/:branch",
+                post(update_baseline),
+            )
+            .route(
+                "/api/v1/projects/:project_id/baselines/:branch/restore",
+                post(restore_baseline),
+            )
+            .route(
+                "/api/v1/projects/:project_id/baselines/bulk",
+                post(bulk_update_baseline_statuses),
+            )
+            .route(
+                "/api/v1/projects/:project_id/baselines/audit",
+                get(get_baseline_audit_trail),
+            )
+
+            // Apply middleware
+            .layer(TraceLayer::new_for_http())
+            .layer(cors)
+            .with_state(AppState {
+                database: database.clone(),
+                auth_service: auth_service.clone(),
+                config: config.clone(),
+                rate_limiter: rate_limiter.clone(),
+                retention_manager: retention_manager.clone(),
+                validation_config: ValidationConfig::default(),
+                diff_engine: diff_engine.clone(),
+                websocket_manager: websocket_manager.clone(),
+                baseline_manager: baseline_manager.clone(),
+            })
+    }
+
+    /// Start the server (REST API only)
+    pub async fn run(self) -> Result<()> {
+        let addr = self.config.bind_address;
+        info!("Starting hodei-server on {}", addr);
+
+        // Start background tasks
+        let cleanup_task = CleanupTask::new(
+            self.retention_manager,
+            self.database.clone(),
+            24, // Run cleanup every 24 hours
+        );
+
+        tokio::spawn(async move {
+            cleanup_task.run().await;
+        });
+
+        let (shutdown_recv, shutdown_server) = tokio::sync::oneshot::channel::<()>();
+        let shutdown_sender = self.shutdown_sender.clone();
+
+        // Setup graceful shutdown
+        let server_handle = tokio::spawn(async move {
+            let rest_server = axum::serve(
+                tokio::net::TcpListener::bind(addr).await.map_err(|e| {
+                    ServerError::Internal(format!("Failed to bind to {}: {}", addr, e))
+                })?,
+                self.rest_app,
+            )
+            .with_graceful_shutdown(async {
+                let _ = shutdown_server.await;
+            });
+
+            // Start REST server
+            info!("REST API listening on {}", addr);
+            if let Err(e) = rest_server.await {
+                tracing::error!("REST server error: {}", e);
+            }
+        });
+
+        // Wait for shutdown signal
+        tokio::signal::ctrl_c().await.unwrap();
+        info!("Received Ctrl+C, shutting down...");
+
+        // Send shutdown signal
+        let _ = shutdown_sender.send(());
+        let _ = shutdown_recv.send(());
+
+        server_handle
+            .await
+            .map_err(|e| ServerError::Internal(format!("Server task error: {}", e)))?;
+
+        Ok(())
+    }
+
+    /// Get the server address
+    pub fn address(&self) -> SocketAddr {
+        self.config.bind_address
+    }
+
+    /// Get database connection
+    pub fn database(&self) -> &DatabaseConnection {
+        &self.database
+    }
+
+    /// Get WebSocket manager for broadcasting events
+    pub fn websocket_manager(&self) -> &WebSocketManager {
+        &self.websocket_manager
+    }
+}
+
+/// Application state shared across handlers
+#[derive(Clone)]
+pub struct AppState {
+    database: DatabaseConnection,
+    auth_service: AuthService,
+    config: ServerConfig,
+    rate_limiter: RateLimiter,
+    retention_manager: RetentionManager,
+    validation_config: ValidationConfig,
+    diff_engine: DiffEngine,
+    websocket_manager: WebSocketManager,
+    baseline_manager: BaselineManager,
+}
+
+/// Diff analysis query parameters
+#[derive(Debug, serde::Deserialize)]
+struct DiffQueryParams {
+    base: Option<String>,
+    head: Option<String>,
+    commit_base: Option<String>,
+    commit_head: Option<String>,
+}
+
+/// WebSocket query parameters
+#[derive(Debug, serde::Deserialize)]
+struct WebSocketQueryParams {
+    project_id: Option<String>,
+}
+
+/// Health check handler
+#[axum::debug_handler]
+async fn health_check(State(state): State<AppState>) -> impl IntoResponse {
+    // Check database health
+    let db_healthy = state.database.health_check().await.unwrap_or(false);
+
+    let status = if db_healthy {
+        HealthCheckStatus::Healthy
+    } else {
+        HealthCheckStatus::Unhealthy
+    };
+
+    let health = HealthStatus {
+        status,
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        database: if db_healthy {
+            HealthCheckStatus::Healthy
+        } else {
+            HealthCheckStatus::Unhealthy
+        },
+        timestamp: Utc::now(),
+        uptime_seconds: 0, // TODO: Calculate actual uptime
+    };
+
+    (StatusCode::OK, Json(health))
+}
+
+/// WebSocket dashboard handler - US-13.04
+#[axum::debug_handler]
+async fn websocket_dashboard(
+    ws: axum::extract::ws::WebSocketUpgrade,
+    State(state): State<AppState>,
+    Query(params): Query<WebSocketQueryParams>,
+) -> impl IntoResponse {
+    info!(
+        "WebSocket dashboard connection request: project_id={:?}",
+        params.project_id
+    );
+
+    ws.on_upgrade(|socket| {
+        state
+            .websocket_manager
+            .handle_socket(socket, params.project_id, state)
+    })
+}
+
+/// Login handler (placeholder)
+async fn login() -> Result<impl IntoResponse> {
+    // TODO: Implement actual login with username/password
+    let response = AuthToken {
+        token: "mock-jwt-token".to_string(),
+        user_id: UserId::new_v4(),
+        expires_at: Utc::now() + chrono::Duration::hours(24),
+    };
+    Ok((StatusCode::OK, Json(response)))
+}
+
+/// Refresh token handler (placeholder)
+async fn refresh_token() -> Result<impl IntoResponse> {
+    // TODO: Implement token refresh
+    Ok(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Publish analysis handler with full validation and rate limiting
+async fn publish_analysis(
+    Path(project_id): Path<ProjectId>,
+    State(state): State<AppState>,
+    Json(request): Json<PublishRequest>,
+) -> Result<impl IntoResponse> {
+    info!("Publishing analysis for project: {}", project_id);
+
+    // 1. Rate limiting check
+    let rate_limit_key = format!("{}-analysis", project_id);
+    if let Err(rate_err) = state.rate_limiter.check_limit(&rate_limit_key).await {
+        warn!("Rate limit exceeded for project: {}", project_id);
+        return Err(ServerError::RateLimit(rate_err.to_string()));
+    }
+
+    // 2. Validate project exists
+    if !validate_project_exists(&project_id, &state.database).await? {
+        return Err(ServerError::NotFound(format!(
+            "Project not found: {}",
+            project_id
+        )));
+    }
+
+    // 3. Validate request payload
+    validate_publish_request(&project_id, &request, &state.validation_config).map_err(|e| {
+        warn!("Validation failed for project {}: {}", project_id, e);
+        e
+    })?;
+
+    // 4. Filter findings based on baseline (exclude accepted/won't fix findings)
+    let filtered_findings = state
+        .baseline_manager
+        .filter_findings_by_baseline(&project_id, &request.findings)
+        .await?;
+
+    let baseline_excluded_count = request.findings.len() - filtered_findings.len();
+
+    if baseline_excluded_count > 0 {
+        info!(
+            "Baseline filtering: excluded {} findings from baseline for project {}",
+            baseline_excluded_count, project_id
+        );
+    }
+
+    // 5. Store the analysis with filtered findings
+    let analysis_id = state
+        .database
+        .store_analysis(
+            &project_id,
+            &request.branch,
+            &request.commit,
+            &filtered_findings,
+            &request.metadata,
+        )
+        .await
+        .map_err(|e| {
+            warn!("Failed to store analysis for project {}: {}", project_id, e);
+            e
+        })?;
+
+    // 6. Calculate summary metrics
+    let summary = create_analysis_summary(
+        analysis_id,
+        filtered_findings.len() as u32,
+        filtered_findings.len() as u32, // All are new in this case
+        baseline_excluded_count as u32, // Findings excluded by baseline
+    );
+
+    // 7. Broadcast to WebSocket subscribers
+    let event = DashboardEvent::AnalysisPublished {
+        project_id: project_id.clone(),
+        analysis_id: analysis_id.to_string(),
+        findings_count: filtered_findings.len() as u32,
+        timestamp: Utc::now().to_rfc3339(),
+    };
+
+    if let Err(e) = state
+        .websocket_manager
+        .broadcast_to_project(&project_id, &event)
+        .await
+    {
+        warn!("Failed to broadcast analysis published event: {}", e);
+    }
+
+    info!(
+        "Analysis published successfully for project {}: analysis_id={}, findings={}",
+        project_id,
+        analysis_id,
+        request.findings.len()
+    );
+
+    Ok((StatusCode::CREATED, Json(summary)))
+}
+
+/// Get analysis handler
+#[axum::debug_handler]
+async fn get_analysis(
+    Path((project_id, analysis_id)): Path<(ProjectId, AnalysisId)>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    // TODO: Implement actual analysis retrieval
+    (StatusCode::OK, Json(serde_json::json!({})))
+}
+
+/// Get diff analysis handler - US-13.03 implementation
+async fn get_diff_analysis(
+    Path(project_id): Path<ProjectId>,
+    Query(params): Query<DiffQueryParams>,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse> {
+    info!("Calculating diff for project: {}", project_id);
+
+    // Validate that we have either branch or commit parameters
+    if params.base.is_none() && params.commit_base.is_none() {
+        return Err(ServerError::Validation(
+            "Must provide either 'base' (branch) or 'commit_base' parameter".to_string(),
+        ));
+    }
+
+    if params.head.is_none() && params.commit_head.is_none() {
+        return Err(ServerError::Validation(
+            "Must provide either 'head' (branch) or 'commit_head' parameter".to_string(),
+        ));
+    }
+
+    // Save branches for later use in broadcast
+    let base_branch = params.base.clone();
+    let head_branch = params.head.clone();
+
+    let diff = if let (Some(base), Some(head)) = (params.base, params.head) {
+        // Branch-based diff
+        info!("Calculating branch diff: {} -> {}", base, head);
+        state
+            .diff_engine
+            .calculate_branch_diff(&project_id, &base, &head, &state.database)
+            .await?
+    } else if let (Some(commit_base), Some(commit_head)) = (params.commit_base, params.commit_head)
+    {
+        // Commit-based diff
+        info!(
+            "Calculating commit diff: {} -> {}",
+            commit_base, commit_head
+        );
+        state
+            .diff_engine
+            .calculate_commit_diff(&project_id, &commit_base, &commit_head, &state.database)
+            .await?
+    } else {
+        return Err(ServerError::Validation(
+            "Invalid combination of parameters".to_string(),
+        ));
+    };
+
+    // Calculate diff summary for performance monitoring
+    let summary = state.diff_engine.calculate_diff_summary(&diff);
+
+    // Broadcast diff calculated event
+    if let (Some(base), Some(head)) = (base_branch, head_branch) {
+        let event = DashboardEvent::DiffCalculated {
+            project_id: project_id.clone(),
+            base_branch: base,
+            head_branch: head,
+            summary: summary.into(),
+        };
+
+        if let Err(e) = state
+            .websocket_manager
+            .broadcast_to_project(&project_id, &event)
+            .await
+        {
+            warn!("Failed to broadcast diff calculated event: {}", e);
+        }
+    }
+
+    info!("Diff calculated successfully: {}", summary.to_summary());
+
+    Ok((StatusCode::OK, Json(diff)))
+}
+
+/// Get trends handler
+async fn get_trends(
+    Path(project_id): Path<ProjectId>,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse> {
+    let end = Utc::now();
+    let start = end - chrono::Duration::days(30);
+
+    let metrics = state
+        .database
+        .get_trend_metrics(&project_id, start, end)
+        .await?;
+
+    let trend = TrendMetrics {
+        period: crate::modules::types::TimePeriod { start, end },
+        total_findings: *metrics.get("total_findings").unwrap_or(&0),
+        critical_findings: *metrics.get("critical_findings").unwrap_or(&0),
+        major_findings: *metrics.get("major_findings").unwrap_or(&0),
+        minor_findings: *metrics.get("minor_findings").unwrap_or(&0),
+        info_findings: *metrics.get("info_findings").unwrap_or(&0),
+        trend_percentage: 0.0, // TODO: Calculate
+        by_severity: metrics.clone(),
+        by_fact_type: HashMap::new(),
+    };
+
+    Ok((StatusCode::OK, Json(trend)))
+}
+
+/// List projects handler
+async fn list_projects() -> Result<impl IntoResponse> {
+    // TODO: Implement project listing
+    Ok((StatusCode::OK, Json(vec![])))
+}
+
+/// Get project handler
+async fn get_project(Path(project_id): Path<ProjectId>) -> Result<impl IntoResponse> {
+    // TODO: Implement project retrieval
+    Ok((StatusCode::OK, Json(serde_json::json!({}))))
+}
+
+/// Get baseline handler - returns current baseline analysis for a branch
+async fn get_baseline(
+    Path((project_id, branch)): Path<(ProjectId, String)>,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse> {
+    info!(
+        "Getting baseline for project {} branch {}",
+        project_id, branch
+    );
+
+    // Get current baseline analysis
+    let baseline = state
+        .baseline_manager
+        .get_current_baseline(&project_id, &branch)
+        .await?;
+
+    // Get baseline statuses for the project
+    let baseline_statuses = state
+        .baseline_manager
+        .get_baseline_statuses(&project_id)
+        .await?;
+
+    // Create response with baseline analysis and status summary
+    let response = serde_json::json!({
+        "baseline": baseline,
+        "baseline_statuses_count": baseline_statuses.len(),
+        "accepted_findings": baseline_statuses.values().filter(|s| matches!(s.status, crate::modules::types::FindingStatus::Accepted)).count(),
+        "wont_fix_findings": baseline_statuses.values().filter(|s| matches!(s.status, crate::modules::types::FindingStatus::WontFix)).count(),
+        "false_positive_findings": baseline_statuses.values().filter(|s| matches!(s.status, crate::modules::types::FindingStatus::FalsePositive)).count(),
+    });
+
+    Ok((StatusCode::OK, Json(response)))
+}
+
+/// Baseline update request
+#[derive(Debug, serde::Deserialize)]
+struct BaselineUpdateRequest {
+    analysis_id: AnalysisId,
+    user_id: UserId,
+}
+
+/// Update baseline handler - update baseline from an analysis
+async fn update_baseline(
+    Path((project_id, branch)): Path<(ProjectId, String)>,
+    State(state): State<AppState>,
+    Json(request): Json<BaselineUpdateRequest>,
+) -> Result<impl IntoResponse> {
+    info!(
+        "Updating baseline for project {} branch {} from analysis {}",
+        project_id, branch, request.analysis_id
+    );
+
+    // Update baseline from the analysis
+    let summary = state
+        .baseline_manager
+        .update_baseline_from_analysis(&project_id, &branch, request.analysis_id, request.user_id)
+        .await?;
+
+    // Broadcast baseline updated event
+    let event = DashboardEvent::BaselineUpdated {
+        project_id: project_id.clone(),
+        branch: branch.clone(),
+        analysis_id: summary.analysis_id.to_string(),
+    };
+
+    if let Err(e) = state
+        .websocket_manager
+        .broadcast_to_project(&project_id, &event)
+        .await
+    {
+        warn!("Failed to broadcast baseline updated event: {}", e);
+    }
+
+    info!(
+        "Baseline updated successfully: project={}, branch={}, accepted={}, updated={}, expired={}",
+        project_id,
+        branch,
+        summary.accepted_findings,
+        summary.updated_findings,
+        summary.expired_findings
+    );
+
+    Ok((StatusCode::OK, Json(summary)))
+}
+
+/// Baseline restore request
+#[derive(Debug, serde::Deserialize)]
+struct BaselineRestoreRequest {
+    from_analysis_id: AnalysisId,
+    to_analysis_id: AnalysisId,
+    user_id: UserId,
+}
+
+/// Restore baseline handler - restore baseline from a previous analysis
+async fn restore_baseline(
+    Path((project_id, branch)): Path<(ProjectId, String)>,
+    State(state): State<AppState>,
+    Json(request): Json<BaselineRestoreRequest>,
+) -> Result<impl IntoResponse> {
+    info!(
+        "Restoring baseline for project {} branch {} from analysis {} to {}",
+        project_id, branch, request.from_analysis_id, request.to_analysis_id
+    );
+
+    let summary = state
+        .baseline_manager
+        .restore_baseline_from_analysis(
+            &project_id,
+            &branch,
+            request.from_analysis_id,
+            request.to_analysis_id,
+            request.user_id,
+        )
+        .await?;
+
+    // Broadcast baseline restored event
+    let event = DashboardEvent::BaselineUpdated {
+        project_id: project_id.clone(),
+        branch: branch.clone(),
+        analysis_id: summary.to_analysis.to_string(),
+    };
+
+    if let Err(e) = state
+        .websocket_manager
+        .broadcast_to_project(&project_id, &event)
+        .await
+    {
+        warn!("Failed to broadcast baseline restored event: {}", e);
+    }
+
+    info!(
+        "Baseline restored successfully: project={}, branch={}, restored={}, updated={}",
+        project_id, branch, summary.restored_findings, summary.updated_findings
+    );
+
+    Ok((StatusCode::OK, Json(summary)))
+}
+
+/// Bulk baseline update request
+#[derive(Debug, serde::Deserialize)]
+struct BulkBaselineUpdateRequest {
+    updates: Vec<BaselineStatusUpdate>,
+    user_id: UserId,
+}
+
+/// Bulk update baseline statuses handler
+async fn bulk_update_baseline_statuses(
+    Path(project_id): Path<ProjectId>,
+    State(state): State<AppState>,
+    Json(request): Json<BulkBaselineUpdateRequest>,
+) -> Result<impl IntoResponse> {
+    info!(
+        "Bulk updating {} baseline statuses for project {}",
+        request.updates.len(),
+        project_id
+    );
+
+    let summary = state
+        .baseline_manager
+        .bulk_update_baseline_statuses(&project_id, &request.updates, request.user_id)
+        .await?;
+
+    if summary.error_count > 0 {
+        warn!(
+            "Bulk baseline update completed with {} errors for project {}",
+            summary.error_count, project_id
+        );
+    } else {
+        info!(
+            "Bulk baseline update completed successfully for project {}",
+            project_id
+        );
+    }
+
+    Ok((StatusCode::OK, Json(summary)))
+}
+
+/// Baseline audit trail query parameters
+#[derive(Debug, serde::Deserialize)]
+struct AuditTrailQueryParams {
+    limit: Option<u32>,
+}
+
+/// Get baseline audit trail handler
+async fn get_baseline_audit_trail(
+    Path(project_id): Path<ProjectId>,
+    Query(params): Query<AuditTrailQueryParams>,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse> {
+    info!(
+        "Getting baseline audit trail for project {} (limit: {:?})",
+        project_id, params.limit
+    );
+
+    let audit_records = state
+        .baseline_manager
+        .get_baseline_audit_trail(&project_id, params.limit)
+        .await?;
+
+    let response = serde_json::json!({
+        "project_id": project_id,
+        "total_records": audit_records.len(),
+        "audit_trail": audit_records,
+    });
+
+    Ok((StatusCode::OK, Json(response)))
+}

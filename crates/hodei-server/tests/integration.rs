@@ -1,17 +1,15 @@
 //! Integration tests for hodei-server
-use hodei_server::load_config;
+use hodei_server::modules::HodeiServer;
 use hodei_server::modules::types::{
     AnalysisMetadata, Finding, FindingLocation, PublishRequest, Severity,
 };
-use hodei_server::HodeiServer;
 use std::net::SocketAddr;
-use tempfile::TempDir;
 use uuid::Uuid;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::time::{sleep, Duration};
+    use tokio::time::{Duration, sleep};
 
     /// Test server startup - TDD Red
     #[tokio::test]
@@ -74,7 +72,7 @@ mod tests {
 
     /// Test finding serialization
     #[tokio::test]
-    fn test_finding_serialization() {
+    async fn test_finding_serialization() {
         let finding = Finding {
             fact_type: "Vulnerability".to_string(),
             severity: Severity::Critical,
@@ -102,7 +100,7 @@ mod tests {
 
     /// Test publish request creation
     #[tokio::test]
-    fn test_publish_request_creation() {
+    async fn test_publish_request_creation() {
         let findings = vec![Finding {
             fact_type: "CodeSmell".to_string(),
             severity: Severity::Major,
@@ -140,7 +138,7 @@ mod tests {
 
     /// Test server address
     #[tokio::test]
-    fn test_server_address_default() {
+    async fn test_server_address_default() {
         let config = hodei_server::modules::config::ServerConfig::default();
         let addr: SocketAddr = "0.0.0.0:8080".parse().unwrap();
         assert_eq!(config.bind_address, addr);
@@ -150,15 +148,17 @@ mod tests {
     #[tokio::test]
     async fn test_config_from_env() {
         // Set environment variables
-        std::env::set_var(
-            "HODEI_DATABASE_URL",
-            "postgresql://test:test@localhost:5432/test",
-        );
-        std::env::set_var(
-            "HODEI_JWT_SECRET",
-            "test-secret-key-for-environment-testing",
-        );
-        std::env::set_var("HODEI_DB_POOL_SIZE", "20");
+        unsafe {
+            std::env::set_var(
+                "HODEI_DATABASE_URL",
+                "postgresql://test:test@localhost:5432/test",
+            );
+            std::env::set_var(
+                "HODEI_JWT_SECRET",
+                "test-secret-key-for-environment-testing",
+            );
+            std::env::set_var("HODEI_DB_POOL_SIZE", "20");
+        }
 
         let config = hodei_server::modules::config::ServerConfig::from_env();
 
@@ -167,14 +167,16 @@ mod tests {
         assert_eq!(config.db_pool_size, 20);
 
         // Cleanup
-        std::env::remove_var("HODEI_DATABASE_URL");
-        std::env::remove_var("HODEI_JWT_SECRET");
-        std::env::remove_var("HODEI_DB_POOL_SIZE");
+        unsafe {
+            std::env::remove_var("HODEI_DATABASE_URL");
+            std::env::remove_var("HODEI_JWT_SECRET");
+            std::env::remove_var("HODEI_DB_POOL_SIZE");
+        }
     }
 
     /// Test trend direction comparison
     #[tokio::test]
-    fn test_severity_levels() {
+    async fn test_severity_levels() {
         assert!(Severity::Critical.to_level() > Severity::Major.to_level());
         assert!(Severity::Major.to_level() > Severity::Minor.to_level());
         assert!(Severity::Minor.to_level() > Severity::Info.to_level());
@@ -184,7 +186,7 @@ mod tests {
 
     /// Test analysis metadata creation
     #[tokio::test]
-    fn test_analysis_metadata_optional_fields() {
+    async fn test_analysis_metadata_optional_fields() {
         let metadata_with_all = AnalysisMetadata {
             build_url: Some("url".to_string()),
             author: Some("author".to_string()),

@@ -44,11 +44,13 @@ impl Default for ServerConfig {
 impl ServerConfig {
     /// Load configuration from environment variables
     pub fn from_env() -> Self {
+        let bind_addr_str =
+            std::env::var("HODEI_BIND_ADDRESS").unwrap_or_else(|_| "0.0.0.0:8080".to_string());
+
         Self {
-            bind_address: std::env::var("HODEI_BIND_ADDRESS")
-                .unwrap_or_else(|_| "0.0.0.0:8080".to_string())
+            bind_address: bind_addr_str
                 .parse()
-                .unwrap_or_default(),
+                .unwrap_or_else(|_| "0.0.0.0:8080".parse().unwrap()),
             database_url: std::env::var("HODEI_DATABASE_URL").unwrap_or_else(|_| {
                 "postgres://hodei:password@localhost:5432/hodei_db".to_string()
             }),

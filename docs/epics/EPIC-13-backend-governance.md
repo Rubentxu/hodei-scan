@@ -656,3 +656,150 @@ POST /api/v1/projects/{id}/findings/{finding_id}/status
 - ClickHouse: https://clickhouse.com/
 - Axum (Rust web framework): https://github.com/tokio-rs/axum
 - Recharts (React charts): https://recharts.org/
+
+
+---
+
+## Historias de usuario de Actualización
+
+¡Excelente! Este documento de Épica es extremadamente sólido, detallado y sigue las mejores prácticas de desarrollo ágil (TDD, Conventional Commits, etc.). Es un plano perfecto para que un equipo de desarrollo empiece a trabajar.
+
+Ahora, mi trabajo como Arquitecto de Soluciones es tomar este excelente documento y refinarlo con las discusiones que hemos tenido, asegurando que se alinee perfectamente con la visión estratégica completa. Las mejoras que propongo no son cambios radicales, sino **refinamientos y adiciones** que harán que la plataforma sea aún más potente y coherente.
+
+Aquí está la versión **redefinida y mejorada** de tu Épica.
+
+---
+
+# **ÉPICA-13 (v2.0): Plataforma de Gobernanza Híbrida - hodei-server**
+
+**Estado**: ✅ **Ready for Development**
+**Versión**: 2.0 (Refinada)
+**Épica padre**: `hodei-scan`
+**Dependencias**: `EPIC-10` (ExtractorOrchestrator), `EPIC-11` (IR Schema Evolution)
+**Owner**: Platform Team
+**Prioridad**: **Critical Path**
+
+---
+
+## 1. Resumen Ejecutivo (Visión Refinada)
+
+Esta épica detalla la implementación de **`hodei-server`**, un backend stateful que evoluciona `hodei-scan` de una herramienta CLI de clase mundial a una **plataforma de inteligencia de ingeniería sin parangón**. El `hodei-server` actuará como el **"Archivo Central"** y el **"Centro Estratégico"** de nuestra agencia de inteligencia, habilitando capacidades que son imposibles en un modelo puramente stateless.
+
+### Objetivo de Negocio (Revisado)
+Convertir `hodei-scan` en la **plataforma de gobernanza de software de nueva generación**, unificando el análisis estático de alto rendimiento, la gestión centralizada de políticas y el **intercambio de inteligencia (caché) a nivel de toda la organización**.
+
+### Métricas de Éxito (Revisadas y Cuantificadas)
+-   **Rendimiento de CI/CD**: Reducir el tiempo de análisis en `warm runs` (pipelines con caché) en un >90% (de minutos a segundos).
+-   **Adopción de Desarrolladores**: El primer análisis de un nuevo desarrollador en un repositorio clonado debe completarse en < 60 segundos (vs. >10 minutos sin caché).
+-   **Gobernanza Centralizada**: El 100% de las políticas de la organización se gestionan y distribuyen desde `hodei-server` en el primer trimestre.
+-   **Inteligencia Histórica**: El 80% de los equipos de desarrollo utilizan activamente la funcionalidad de `diff` y `baselining` para gestionar la deuda técnica.
+
+---
+
+## 2. Contexto Técnico (Arquitectura Híbrida Detallada)
+
+La solución es una **arquitectura híbrida** donde el trabajo pesado se mantiene en el cliente (CLI) y el trabajo de estado y coordinación se centraliza.
+
+```mermaid
+graph TD
+    subgraph "Entorno del Desarrollador / CI"
+        CLI[hodei-scan CLI<br/><i>(Stateless, Rápido)</i>]
+        L_CACHE[(Caché Local<br/>RocksDB)]
+    end
+
+    subgraph "Backend Centralizado (hodei-server)"
+        API{API Gateway<br/>(REST/gRPC)}
+        P_MGR[Gestor de Políticas]
+        C_MGR[Gestor de Caché Central]
+        H_DB[Almacén Histórico<br/>(Findings, Trends)]
+        WEB[Servidor Web<br/>(Dashboard)]
+    end
+
+    subgraph "Infraestructura del Backend"
+        TSDB[(TimescaleDB<br/><i>Para Históricos</i>)]
+        S3[(Almacén de Blobs (S3/MinIO)<br/><i>Para Caché de IRs</i>)]
+    end
+
+    CLI -- 1. Sincroniza Políticas --> API -- Cachea en L_CACHE --> P_MGR
+    CLI -- 2. Consulta Caché --> API -- Consulta --> C_MGR -- Lee de --> S3
+    CLI -- 3. Sube nuevos IRs Parciales --> API -- Guarda en --> C_MGR -- Escribe en --> S3
+    CLI -- 4. Publica Resultados (Findings) --> API -- Guarda en --> H_DB -- Escribe en --> TSDB
+    WEB -- Sirve UI --> Browser
+    Browser -- Pide datos --> API -- Consulta --> H_DB
+```
+
+---
+
+## 3. Historias de Usuario (Redefinidas y Agrupadas por Valor)
+
+### **Funcionalidad Clave 1: Gobernanza Centralizada (Fuente de la Verdad)**
+
+*   **HU-13.01 (Core): API para la Gestión de Políticas y Reglas.**
+    > **Como** Ingeniero de Seguridad, **quiero** una API central para gestionar conjuntos de reglas (Policy Packs) y reglas declarativas (YAMLs), **para que** pueda definir y actualizar las políticas de gobernanza de toda la organización desde un único lugar.
+    *   *Detalles:* Incluye endpoints para CRUD de `PolicyPacks`, y para subir/gestionar reglas YAML individuales.
+
+*   **HU-13.02 (CLI): Sincronización de Políticas en el Cliente.**
+    > **Como** Desarrollador, **quiero** que mi CLI `hodei-scan` descargue y cachee automáticamente las políticas relevantes de `hodei-server`, **para que** mis análisis locales y los del CI siempre usen el "Libro de Leyes" oficial y actualizado.
+
+### **Funcionalidad Clave 2: Aceleración del Equipo (Inteligencia Compartida)**
+
+*   **HU-13.03 (Core): API para el Caché Central de IRs Parciales.**
+    > **Como** desarrollador del backend, **quiero** implementar una API robusta y un sistema de almacenamiento (S3/MinIO) para guardar y servir IRs Parciales (la evidencia de un solo fichero), **para que** el trabajo de análisis no se repita innecesariamente en la organización.
+    *   *Detalles:* API `check`, `download`, `upload`. El almacenamiento debe ser eficiente en costes y rápido.
+
+*   **HU-13.04 (CLI): Implementación del Caché Híbrido.**
+    > **Como** Desarrollador, **quiero** que mi CLI `hodei-scan` sea lo suficientemente inteligente como para buscar resultados de análisis primero en mi máquina (caché local), luego en el servidor (caché central), y solo ejecute los extractores como último recurso, **para que** mis análisis sean casi instantáneos.
+
+### **Funcionalidad Clave 3: Inteligencia Histórica (El Archivo de la Agencia)**
+
+*   **HU-13.05 (Core): Almacenamiento Persistente de Resultados.**
+    > **Como** desarrollador del backend, **quiero** un endpoint para recibir los resultados completos de un análisis (metadatos del commit y `Findings`) y almacenarlos en una base de datos de series temporales (TimescaleDB), **para que** podamos construir un historial de la salud del software.
+    *   *Detalles:* `POST /api/v1/analyses`. El `fingerprint` de cada `Finding` es crucial para su seguimiento a lo largo del tiempo.
+
+*   **HU-13.06 (CLI): Comando `publish`.**
+    > **Como** Ingeniero de DevOps, **quiero** que mi pipeline de CI, tras un análisis exitoso, ejecute `hodei-scan publish` para enviar los resultados al `hodei-server`, **para que** cada ejecución en la rama principal enriquezca nuestro archivo histórico.
+
+### **Funcionalidad Clave 4: Gestión de Deuda Técnica (Inteligencia Contextual)**
+
+*   **HU-13.07 (Core): API para el Análisis Diferencial (`diff`).**
+    > **Como** desarrollador del backend, **quiero** una API que, dados dos commits o ramas, pueda comparar sus `Findings` y devolver solo los `nuevos`, `resueltos` y `reintroducidos`, **para que** los desarrolladores puedan enfocarse en el impacto de sus cambios.
+
+*   **HU-13.08 (CLI): Modo "Solo Nuevos Hallazgos" para Pull Requests.**
+    > **Como** Desarrollador, **quiero** poder ejecutar `hodei-scan analyze --fail-on-new-findings` en mi Pull Request, **para que** el build solo falle por los problemas que yo he introducido, ignorando la deuda técnica existente.
+    *   *Detalles:* El CLI llama a la API de `diff` del backend para determinar qué hallazgos son nuevos.
+
+*   **HU-13.09 (Core): Sistema de "Baselining" y Gestión de Estado.**
+    > **Como** Líder de Equipo, **quiero** poder marcar un `Finding` como "Aceptado" o "Falso Positivo" a través de una API, **para que** estos hallazgos dejen de aparecer como "nuevos" en los análisis diferenciales y podamos gestionar nuestra deuda técnica de forma explícita.
+    *   *Detalles:* `POST /api/v1/findings/{fingerprint}/status`. El backend debe tener una tabla persistente para el estado de cada `Finding` único.
+
+### **Funcionalidad Clave 5: Visualización de Inteligencia (La Sala de Situación)**
+
+*   **HU-13.10 (Dashboard): Dashboard de Tendencias Históricas.**
+    > **Como** Manager de Ingeniería, **quiero** un dashboard web que muestre gráficos de la evolución de los hallazgos (críticos, totales, etc.) a lo largo del tiempo en la rama principal, **para que** pueda medir el impacto de nuestras iniciativas de calidad y seguridad.
+
+*   **HU-13.11 (Dashboard): Vista de "Diff" para Pull Requests.**
+    > **Como** Desarrollador que revisa un Pull Request, **quiero** ver una vista en el dashboard (o un comentario en el PR) que resuma claramente los hallazgos nuevos y resueltos, **para que** la revisión de código sea más eficiente y centrada en el riesgo.
+
+---
+
+## 4. Plan de Implementación por Fases (Revisado)
+
+**Fase 1: La Fundación de la Gobernanza (MVP del Backend)**
+*   **Historias:** `HU-13.01`, `HU-13.02`, `HU-13.05`, `HU-13.06`.
+*   **Resultado:** Un backend que puede almacenar resultados y servir políticas. El CLI ya puede conectarse, sincronizar reglas y publicar sus análisis. **Valor Inmediato:** consistencia en toda la organización.
+
+**Fase 2: La Aceleración del Equipo (Caché Central)**
+*   **Historias:** `HU-13.03`, `HU-13.04`.
+*   **Resultado:** El caché central está operativo. Los tiempos de análisis en CI y para nuevos desarrolladores se desploman. **Valor Inmediato:** experiencia de desarrollador radicalmente mejorada y pipelines más rápidos.
+
+**Fase 3: La Inteligencia Contextual (Gestión de Deuda)**
+*   **Historias:** `HU-13.07`, `HU-13.08`, `HU-13.09`.
+*   **Resultado:** `hodei-scan` puede ser adoptado en proyectos legacy sin frustración. Los desarrolladores se enfocan solo en los problemas nuevos. **Valor Inmediato:** reducción masiva de ruido y fricción.
+
+**Fase 4: La Visualización Estratégica (Dashboards)**
+*   **Historias:** `HU-13.10`, `HU-13.11`.
+*   **Resultado:** El valor de los datos históricos se hace visible para el liderazgo, permitiendo la toma de decisiones estratégicas. **Valor Inmediato:** `hodei-scan` se convierte en una herramienta de inteligencia de negocio.
+
+---
+
+Esta versión redefinida de la Épica no solo detalla el "qué", sino que también estructura el "porqué" y el "cuándo", alineando cada pieza del backend con un beneficio claro y tangible para un tipo de usuario específico. Es un plan de batalla completo.
