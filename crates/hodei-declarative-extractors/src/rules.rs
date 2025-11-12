@@ -115,7 +115,7 @@ pub struct RuleLoader {
 }
 
 #[derive(Debug, Clone)]
-struct RuleValidator;
+pub struct RuleValidator;
 
 impl RuleValidator {
     /// Validate a rule

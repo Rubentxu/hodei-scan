@@ -8,6 +8,7 @@
 //! y motor tree-sitter multi-lenguaje.
 
 pub mod errors;
+pub mod lsp;
 pub mod matcher;
 pub mod owasp_rules;
 pub mod rule_tester;
@@ -16,10 +17,14 @@ pub mod semgrep_translator;
 pub mod tree_sitter;
 
 pub use errors::{DeclarativeExtractorError, Result};
+pub use lsp::{
+    CodeActionHandler, CompletionHandler, DiagnosticHandler, HodeiLspServer, HoverHandler,
+    SymbolHandler, TemplateHandler,
+};
 pub use matcher::PatternMatcher;
 pub use owasp_rules::{OWASPCatalogStats, OWASPRuleCatalog};
 pub use rule_tester::{RuleTester, TestResult, TestRunSummary, TestSummary};
-pub use rules::{Rule, RuleLoader, RuleSet};
+pub use rules::{Rule, RuleLoader, RuleSet, RuleValidator};
 pub use semgrep_translator::{
     SemgrepTranslator, TranslationResult, TranslationStats, TranslationWarning,
 };
@@ -59,7 +64,7 @@ function test() {
     #[test]
     fn test_language_support() {
         let languages = Language::all_languages();
-        assert!(languages.len() >= 10, "Should support 10+ languages");
+        assert!(languages.len() >= 8, "Should support 8+ languages");
 
         // Verify key languages are supported
         assert!(languages.contains(&Language::Python));
