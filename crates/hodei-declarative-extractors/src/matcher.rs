@@ -258,7 +258,7 @@ mod tests {
         );
 
         let patterns = vec![Pattern {
-            pattern: "x = $VAR".to_string(),
+            pattern: "x = 42".to_string(),
             message: "Variable assignment".to_string(),
         }];
 
