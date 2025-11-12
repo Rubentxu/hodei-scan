@@ -57,7 +57,7 @@ pub struct Rule {
     pub metadata: Option<RuleMetadata>,
     pub languages: Vec<String>,
     pub patterns: Vec<Pattern>,
-    pub where_clause: Option<WhereClause>,
+    pub where_clause: Option<Vec<WhereClause>>,
     pub fix: Option<Fix>,
     pub tests: Option<Vec<TestCase>>,
 }
@@ -283,5 +283,125 @@ patterns: []
         let python_rules = rule_set.rules_for_language(Language::Python);
         assert_eq!(python_rules.len(), 1);
         assert_eq!(python_rules[0].id, "RULE-1");
+    }
+
+    #[test]
+    fn test_complete_rule_yaml() {
+        let loader = RuleLoader::new();
+
+        let yaml = r#"
+id: HODEI-SEC-001
+metadata:
+  name: "SQL Injection Detection"
+  description: "Detects potential SQL injection vulnerabilities"
+  severity: critical
+  confidence: high
+  category: security
+  cwe: ["89"]
+  owasp: ["A03:2021"]
+languages:
+  - python
+  - javascript
+patterns:
+  - pattern: |
+      $DB.execute(f"... {$VAR} ...")
+    message: "SQL query with f-string formatting"
+  - pattern: |
+      $SQL = "... %s ..."
+      $DB.execute($SQL % $VAR)
+    message: "SQL query with % formatting"
+fix:
+  template: |
+    $DB.execute("... WHERE id = ?", ($VAR,))
+  message: "Use parameterized queries"
+tests:
+  - name: "Detects f-string SQL"
+    code: "db.execute(f'SELECT * FROM users WHERE id = {user_id}')"
+    should_match: true
+  - name: "No false positive for params"
+    code: "db.execute('SELECT * FROM users WHERE id = ?', (user_id,))"
+    should_match: false
+"#;
+
+        let result = loader.load_rule_from_yaml(yaml);
+        assert!(result.is_ok(), "Should parse complete YAML rule");
+
+        let rule = result.unwrap();
+        assert_eq!(rule.id, "HODEI-SEC-001");
+        assert_eq!(rule.languages.len(), 2);
+        assert_eq!(rule.patterns.len(), 2);
+        assert!(rule.metadata.is_some());
+        assert!(rule.fix.is_some());
+        assert!(rule.tests.is_some());
+
+        let metadata = rule.metadata.unwrap();
+        assert_eq!(metadata.name, "SQL Injection Detection");
+        assert_eq!(metadata.severity, "critical");
+        assert_eq!(metadata.confidence, "high");
+    }
+
+    #[test]
+    fn test_minimal_rule_yaml() {
+        let loader = RuleLoader::new();
+
+        let yaml = r#"
+id: TEST-001
+languages:
+  - python
+patterns:
+  - pattern: "x = $VAR"
+    message: "Test pattern"
+"#;
+
+        let result = loader.load_rule_from_yaml(yaml);
+        assert!(result.is_ok(), "Should parse minimal YAML rule");
+    }
+
+    #[test]
+    fn test_validate_rule_no_languages() {
+        let loader = RuleLoader::new();
+
+        let yaml = r#"
+id: TEST-001
+languages: []
+patterns:
+  - pattern: "x = $VAR"
+    message: "Test"
+"#;
+
+        let result = loader.load_rule_from_yaml(yaml);
+        assert!(result.is_err(), "Should reject rule with no languages");
+    }
+
+    #[test]
+    fn test_rule_get_by_id() {
+        let mut rule_set = RuleSet::new();
+
+        let rule1 = Rule {
+            id: "RULE-1".to_string(),
+            metadata: None,
+            languages: vec!["python".to_string()],
+            patterns: vec![],
+            where_clause: None,
+            fix: None,
+            tests: None,
+        };
+
+        let rule2 = Rule {
+            id: "RULE-2".to_string(),
+            metadata: None,
+            languages: vec!["javascript".to_string()],
+            patterns: vec![],
+            where_clause: None,
+            fix: None,
+            tests: None,
+        };
+
+        rule_set.add_rule(rule1.clone());
+        rule_set.add_rule(rule2.clone());
+
+        assert_eq!(rule_set.get_rule("RULE-1").unwrap().id, "RULE-1");
+        assert_eq!(rule_set.get_rule("RULE-2").unwrap().id, "RULE-2");
+        assert!(rule_set.get_rule("NONEXISTENT").is_none());
     }
 }
