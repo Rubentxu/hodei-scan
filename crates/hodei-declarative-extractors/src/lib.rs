@@ -10,11 +10,13 @@
 pub mod errors;
 pub mod matcher;
 pub mod rules;
+pub mod semgrep_translator;
 pub mod tree_sitter;
 
 pub use errors::{DeclarativeExtractorError, Result};
 pub use matcher::PatternMatcher;
 pub use rules::{Rule, RuleLoader, RuleSet};
+pub use semgrep_translator::{SemgrepTranslator, TranslationResult, TranslationStats, TranslationWarning};
 pub use tree_sitter::{Language, MultiLanguageParser, ParseError};
 
 pub use hodei_ir::Fact;
