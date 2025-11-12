@@ -232,13 +232,8 @@ impl FactDeduplicator {
 
     /// Extract message text from a fact (if available)
     fn extract_message(&self, fact: &Fact) -> Option<String> {
-        // This depends on the FactType structure
-        // For now, we'll extract from common fact types
-        match &fact.fact_type {
-            hodei_ir::FactType::CodeSmell { smell_type, .. } => Some(smell_type.clone()),
-            hodei_ir::FactType::Vulnerability { description, .. } => Some(description.clone()),
-            _ => None,
-        }
+        // The Fact struct has a message field at the top level
+        Some(fact.message.clone())
     }
 }
 
@@ -388,5 +383,292 @@ mod tests {
         // Should keep all facts when disabled
         assert_eq!(deduplicated.len(), 2);
         assert_eq!(stats.duplicates_removed, 0);
+    }
+
+    #[test]
+    fn test_path_normalization() {
+        let config = DeduplicationConfig {
+            normalize_paths: true,
+            ..Default::default()
+        };
+        let deduplicator = FactDeduplicator::with_config(config);
+
+        let facts = vec![
+            create_test_fact_with_path(10, Some(5), "Error", "Test.rs"),
+            create_test_fact_with_path(10, Some(5), "Error", "test.rs"),
+            create_test_fact_with_path(10, Some(5), "Error", "TEST.RS"),
+        ];
+
+        let (deduplicated, stats) = deduplicator.deduplicate(facts);
+
+        // Should deduplicate because paths are normalized
+        assert_eq!(deduplicated.len(), 1);
+        assert_eq!(stats.duplicates_removed, 2);
+    }
+
+    #[test]
+    fn test_different_fact_types() {
+        let deduplicator = FactDeduplicator::new();
+
+        let facts = vec![
+            create_vulnerability_fact(10, Some(5), "SQL injection"),
+            create_code_smell_fact(10, Some(5), "Long method"),
+        ];
+
+        let (deduplicated, stats) = deduplicator.deduplicate(facts);
+
+        // Should not deduplicate different fact types
+        assert_eq!(deduplicated.len(), 2);
+        assert_eq!(stats.duplicates_removed, 0);
+    }
+
+    #[test]
+    fn test_same_location_different_fact_types() {
+        let deduplicator = FactDeduplicator::new();
+
+        let facts = vec![
+            create_vulnerability_fact(10, Some(5), "Error"),
+            create_vulnerability_fact(10, Some(5), "Error"),
+            create_code_smell_fact(10, Some(5), "Error"),
+            create_code_smell_fact(10, Some(5), "Error"),
+        ];
+
+        let (deduplicated, stats) = deduplicator.deduplicate(facts);
+
+        // Should keep both fact types (2 unique)
+        assert_eq!(deduplicated.len(), 2);
+        assert_eq!(stats.duplicates_removed, 2);
+    }
+
+    #[test]
+    fn test_empty_message() {
+        let deduplicator = FactDeduplicator::new();
+
+        let facts = vec![
+            create_test_fact(10, Some(5), ""),
+            create_test_fact(10, Some(5), ""),
+        ];
+
+        let (deduplicated, stats) = deduplicator.deduplicate(facts);
+
+        // Should deduplicate even with empty messages
+        assert_eq!(deduplicated.len(), 1);
+        assert_eq!(stats.duplicates_removed, 1);
+    }
+
+    #[test]
+    fn test_multi_tool_deduplication() {
+        let deduplicator = FactDeduplicator::new();
+
+        // Simulate same finding from CodeQL, ESLint, and Semgrep
+        let facts = vec![
+            create_test_fact_with_extractor(
+                10,
+                Some(5),
+                "SQL injection vulnerability",
+                ExtractorId::SarifAdapter,
+                "CodeQL",
+            ),
+            create_test_fact_with_extractor(
+                10,
+                Some(5),
+                "SQL injection vulnerability",
+                ExtractorId::SarifAdapter,
+                "Semgrep",
+            ),
+            create_test_fact_with_extractor(
+                10,
+                Some(5),
+                "SQL injection vulnerability",
+                ExtractorId::SarifAdapter,
+                "ESLint",
+            ),
+            create_test_fact_with_extractor(
+                20,
+                Some(10),
+                "XSS vulnerability",
+                ExtractorId::SarifAdapter,
+                "CodeQL",
+            ),
+        ];
+
+        let (deduplicated, stats) = deduplicator.deduplicate(facts);
+
+        // Should keep only 2 unique findings (SQL injection + XSS)
+        assert_eq!(deduplicated.len(), 2);
+        assert_eq!(stats.duplicates_removed, 2);
+        assert_eq!(stats.deduplication_ratio, 0.5);
+    }
+
+    #[test]
+    fn test_whitespace_handling() {
+        let config = DeduplicationConfig {
+            normalize_messages: true,
+            ..Default::default()
+        };
+        let deduplicator = FactDeduplicator::with_config(config);
+
+        let facts = vec![
+            create_test_fact(10, Some(5), "\t\n  Error Message  \n\t"),
+            create_test_fact(10, Some(5), "Error Message"),
+            create_test_fact(10, Some(5), "  error message  "),
+        ];
+
+        let (deduplicated, stats) = deduplicator.deduplicate(facts);
+
+        // Should deduplicate all with normalization
+        assert_eq!(deduplicated.len(), 1);
+        assert_eq!(stats.duplicates_removed, 2);
+    }
+
+    #[test]
+    fn test_statistics_accuracy() {
+        let deduplicator = FactDeduplicator::new();
+
+        let facts = vec![
+            create_test_fact(10, Some(5), "Error A"),
+            create_test_fact(10, Some(5), "Error A"),
+            create_test_fact(20, Some(10), "Error B"),
+            create_test_fact(30, Some(15), "Error C"),
+            create_test_fact(30, Some(15), "Error C"),
+            create_test_fact(30, Some(15), "Error C"),
+        ];
+
+        let (_deduplicated, stats) = deduplicator.deduplicate(facts);
+
+        assert_eq!(stats.total_before, 6);
+        assert_eq!(stats.total_after, 3);
+        assert_eq!(stats.duplicates_removed, 3);
+        assert_eq!(stats.deduplication_ratio, 0.5);
+        assert_eq!(stats.facts_by_fingerprint.len(), 3); // 3 unique fingerprints
+    }
+
+    // Helper functions for creating test facts with different configurations
+
+    fn create_test_fact_with_path(
+        line: u32,
+        column: Option<u32>,
+        message: &str,
+        path: &str,
+    ) -> Fact {
+        let location = SourceLocation::new(
+            ProjectPath::new(std::path::PathBuf::from(path)),
+            LineNumber::new(line).unwrap(),
+            column.map(|c| ColumnNumber::new(c).unwrap()),
+            LineNumber::new(line).unwrap(),
+            column.map(|c| ColumnNumber::new(c).unwrap()),
+        );
+
+        let provenance = Provenance::new(
+            ExtractorId::Custom,
+            "1.0.0".to_string(),
+            Confidence::new(0.9).unwrap(),
+        );
+
+        Fact {
+            id: hodei_ir::FactId::new(),
+            message: message.to_string(),
+            fact_type: FactType::CodeSmell {
+                smell_type: "test".to_string(),
+                severity: Severity::Minor,
+            },
+            location,
+            provenance,
+        }
+    }
+
+    fn create_vulnerability_fact(line: u32, column: Option<u32>, description: &str) -> Fact {
+        let location = SourceLocation::new(
+            ProjectPath::new(std::path::PathBuf::from("test.rs")),
+            LineNumber::new(line).unwrap(),
+            column.map(|c| ColumnNumber::new(c).unwrap()),
+            LineNumber::new(line).unwrap(),
+            column.map(|c| ColumnNumber::new(c).unwrap()),
+        );
+
+        let provenance = Provenance::new(
+            ExtractorId::Custom,
+            "1.0.0".to_string(),
+            Confidence::new(0.9).unwrap(),
+        );
+
+        Fact {
+            id: hodei_ir::FactId::new(),
+            message: description.to_string(),
+            fact_type: FactType::Vulnerability {
+                cwe_id: Some("CWE-89".to_string()),
+                owasp_category: Some("A03:2021".to_string()),
+                severity: Severity::Major,
+                cvss_score: Some(8.1),
+                description: description.to_string(),
+                confidence: Confidence::new(0.9).unwrap(),
+            },
+            location,
+            provenance,
+        }
+    }
+
+    fn create_code_smell_fact(line: u32, column: Option<u32>, smell_type: &str) -> Fact {
+        let location = SourceLocation::new(
+            ProjectPath::new(std::path::PathBuf::from("test.rs")),
+            LineNumber::new(line).unwrap(),
+            column.map(|c| ColumnNumber::new(c).unwrap()),
+            LineNumber::new(line).unwrap(),
+            column.map(|c| ColumnNumber::new(c).unwrap()),
+        );
+
+        let provenance = Provenance::new(
+            ExtractorId::Custom,
+            "1.0.0".to_string(),
+            Confidence::new(0.9).unwrap(),
+        );
+
+        Fact {
+            id: hodei_ir::FactId::new(),
+            message: smell_type.to_string(),
+            fact_type: FactType::CodeSmell {
+                smell_type: smell_type.to_string(),
+                severity: Severity::Minor,
+            },
+            location,
+            provenance,
+        }
+    }
+
+    fn create_test_fact_with_extractor(
+        line: u32,
+        column: Option<u32>,
+        message: &str,
+        extractor: ExtractorId,
+        version: &str,
+    ) -> Fact {
+        let location = SourceLocation::new(
+            ProjectPath::new(std::path::PathBuf::from("test.rs")),
+            LineNumber::new(line).unwrap(),
+            column.map(|c| ColumnNumber::new(c).unwrap()),
+            LineNumber::new(line).unwrap(),
+            column.map(|c| ColumnNumber::new(c).unwrap()),
+        );
+
+        let provenance = Provenance::new(
+            extractor,
+            version.to_string(),
+            Confidence::new(0.9).unwrap(),
+        );
+
+        Fact {
+            id: hodei_ir::FactId::new(),
+            message: message.to_string(),
+            fact_type: FactType::Vulnerability {
+                cwe_id: Some("CWE-89".to_string()),
+                owasp_category: Some("A03:2021".to_string()),
+                severity: Severity::Major,
+                cvss_score: Some(8.1),
+                description: message.to_string(),
+                confidence: Confidence::new(0.9).unwrap(),
+            },
+            location,
+            provenance,
+        }
     }
 }
