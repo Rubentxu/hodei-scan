@@ -1,5 +1,5 @@
 //! Executive Dashboard API tests - US-13.04
-use hodei_server::modules::websocket::{WebSocketManager, DashboardEvent};
+use hodei_server::modules::websocket::{DashboardEvent, WebSocketManager};
 use uuid::Uuid;
 
 #[cfg(test)]
@@ -10,10 +10,10 @@ mod dashboard_tests {
     #[tokio::test]
     async fn test_websocket_connection() {
         let manager = WebSocketManager::new(mock_database());
-        
+
         let client_id = Uuid::new_v4();
         let project_id = "test-project".to_string();
-        
+
         // Test connection handling
         // TODO: Uncomment when WebSocket implementation is complete
         // let result = manager.handle_connection(
@@ -21,9 +21,9 @@ mod dashboard_tests {
         //     AppState::default(),
         //     Some(project_id.clone())
         // ).await;
-        
+
         // assert!(result.is_ok());
-        
+
         // Verify client is tracked
         // assert_eq!(manager.project_client_count(&project_id), 1);
     }
@@ -32,14 +32,14 @@ mod dashboard_tests {
     #[tokio::test]
     async fn test_event_broadcasting() {
         let manager = WebSocketManager::new(mock_database());
-        
+
         let event = DashboardEvent::AnalysisPublished {
             project_id: "test-project".to_string(),
             analysis_id: "analysis-123".to_string(),
             findings_count: 42,
             timestamp: "2025-01-15T10:30:00Z".to_string(),
         };
-        
+
         // TODO: Uncomment when broadcast implementation is complete
         // let result = manager.broadcast_to_project("test-project", &event).await;
         // assert!(result.is_ok());
@@ -49,7 +49,7 @@ mod dashboard_tests {
     #[tokio::test]
     async fn test_dashboard_trend_metrics() {
         let manager = WebSocketManager::new(mock_database());
-        
+
         // TODO: Implement actual test with real metrics
         // let metrics = manager.get_enhanced_metrics("test-project").await.unwrap();
         // assert!(metrics.total_findings >= 0);
@@ -60,9 +60,9 @@ mod dashboard_tests {
     #[tokio::test]
     async fn test_client_count_tracking() {
         let manager = WebSocketManager::new(mock_database());
-        
+
         assert_eq!(manager.client_count(), 0);
-        
+
         // TODO: Add test clients and verify counting
         // let client_id = Uuid::new_v4();
         // manager.add_client(client_id, "test-project");
@@ -77,7 +77,7 @@ mod dashboard_tests {
             status: "healthy".to_string(),
             uptime_seconds: 3600,
         };
-        
+
         // TODO: Test that health status events are properly formatted
         // let serialized = serde_json::to_string(&event).unwrap();
         // assert!(serialized.contains("healthy"));
@@ -87,7 +87,7 @@ mod dashboard_tests {
     #[tokio::test]
     async fn test_branch_comparison_metrics() {
         let manager = WebSocketManager::new(mock_database());
-        
+
         // TODO: Test branch comparison data generation
         // let comparison = manager.get_branch_comparison("test-project").await.unwrap();
         // assert!(comparison.len() > 0);
@@ -98,7 +98,7 @@ mod dashboard_tests {
     #[tokio::test]
     async fn test_top_finding_files() {
         let manager = WebSocketManager::new(mock_database());
-        
+
         // TODO: Test top files ranking
         // let top_files = manager.get_top_finding_files("test-project").await.unwrap();
         // assert!(top_files.len() > 0);
@@ -112,10 +112,10 @@ mod dashboard_tests {
     #[tokio::test]
     fn test_daily_breakdown_generation() {
         let manager = WebSocketManager::new(mock_database());
-        
+
         let start = chrono::Utc::now() - chrono::Duration::days(7);
         let end = chrono::Utc::now();
-        
+
         // TODO: Test daily breakdown generation
         // let breakdown = manager.generate_daily_breakdown(start, end);
         // assert_eq!(breakdown.len(), 7);
@@ -146,7 +146,7 @@ mod dashboard_event_tests {
             findings_count: 25,
             timestamp: "2025-01-15T10:30:00Z".to_string(),
         };
-        
+
         // TODO: Uncomment when event is properly implemented
         // let json = serde_json::to_string(&event).unwrap();
         // assert!(json.contains("event_type"));
@@ -158,11 +158,11 @@ mod dashboard_event_tests {
     #[test]
     fn test_trend_updated_event_serialization() {
         use std::collections::HashMap;
-        
+
         let mut by_severity = HashMap::new();
         by_severity.insert("critical".to_string(), 5);
         by_severity.insert("major".to_string(), 15);
-        
+
         let event = DashboardEvent::TrendUpdated {
             project_id: "my-app".to_string(),
             metrics: hodei_server::modules::websocket::DashboardTrendMetrics {
@@ -183,7 +183,7 @@ mod dashboard_event_tests {
                 top_files: vec![],
             },
         };
-        
+
         // TODO: Test serialization
         // let json = serde_json::to_string(&event).unwrap();
         // assert!(json.contains("TrendUpdated"));
@@ -202,14 +202,14 @@ mod dashboard_event_tests {
             severity_score: 3,
             trend: "degrading".to_string(),
         };
-        
+
         let event = DashboardEvent::DiffCalculated {
             project_id: "my-app".to_string(),
             base_branch: "main".to_string(),
             head_branch: "feature-login".to_string(),
             summary,
         };
-        
+
         // TODO: Test serialization
         // let json = serde_json::to_string(&event).unwrap();
         // assert!(json.contains("DiffCalculated"));

@@ -280,12 +280,12 @@ mod tests {
         // Verify fact count before adding
         assert_eq!(ir.fact_count(), 0);
 
-        ir.add_fact(Fact::new(
+        ir.add_fact(Fact::new_with_message(
             FactType::CodeSmell {
                 smell_type: "test".to_string(),
                 severity: Severity::Minor,
-                message: "test".to_string(),
             },
+            "Test code smell".to_string(),
             SourceLocation::default(),
             Provenance::new(ExtractorId::Custom, "1.0".to_string(), Confidence::MEDIUM),
         ));

@@ -1,0 +1,40 @@
+rule: "todo_detector.hodei"
+language: "hodei-dsl"
+
+cases:
+  - name: "Find TODO comment"
+    code: |
+      // TODO: Implement this feature
+      public void test() {
+      }
+    expected_findings:
+      - finding_type: "CodeSmell"
+        severity: "Minor"
+        message: "TODO comment found"
+
+  - name: "Find FIXME comment"
+    code: |
+      // FIXME: Fix this bug
+      public void test() {
+      }
+    expected_findings:
+      - finding_type: "Vulnerability"
+        severity: "Major"
+        message: "FIXME comment found"
+
+  - name: "Clean code"
+    code: |
+      public void test() {
+        // Implementation
+      }
+    expected_findings: []
+
+  - name: "Find System.out.println"
+    code: |
+      public void test() {
+        System.out.println("Debug");
+      }
+    expected_findings:
+      - finding_type: "CodeSmell"
+        severity: "Major"
+        message: "System.out.println should not be in production code"

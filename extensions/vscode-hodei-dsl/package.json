@@ -1,0 +1,165 @@
+{
+  "name": "hodei-scan-dsl-support",
+  "displayName": "hodei-scan DSL Support",
+  "description": "Language support for hodei-scan DSL - security rule authoring with intelligent features",
+  "version": "0.1.0",
+  "publisher": "hodei-scan",
+  "author": "hodei-scan team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hodei-scan/hodei-scan"
+  },
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Extension Packs",
+    "Other"
+  ],
+  "keywords": [
+    "security",
+    "static-analysis",
+    "dsl",
+    "rules"
+  ],
+  "activationEvents": [
+    "onLanguage:hodei-dsl",
+    "onCommand:hodei.testRule",
+    "onCommand:hodei.dumpIR"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "hodei-dsl",
+        "aliases": [
+          "hodei-scan DSL",
+          "hodei-dsl"
+        ],
+        "extensions": [
+          ".hodei"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "hodei-dsl",
+        "scopeName": "source.hodei-dsl",
+        "path": "./syntaxes/hodei-dsl.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "hodei.testRule",
+        "title": "hodei-scan: Test Rule",
+        "category": "hodei-scan",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "hodei.dumpIR",
+        "title": "hodei-scan: Dump IR",
+        "category": "hodei-scan",
+        "icon": "$(output)"
+      },
+      {
+        "command": "hodei.showRuleDocumentation",
+        "title": "hodei-scan: Show Documentation",
+        "category": "hodei-scan",
+        "icon": "$(book)"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "hodei.testRule",
+          "when": "resourceExtname == .hodei",
+          "group": "hodei-scan@1"
+        },
+        {
+          "command": "hodei.dumpIR",
+          "when": "resourceExtname == .hodei",
+          "group": "hodei-scan@2"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "hodei.testRule",
+          "when": "resourceExtname == .hodei",
+          "group": "hodei-scan"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "hodei.testRule",
+        "key": "ctrl+shift+t",
+        "mac": "cmd+shift+t",
+        "when": "editorTextFocus && editorLangId == hodei-dsl"
+      },
+      {
+        "command": "hodei.dumpIR",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d",
+        "when": "editorTextFocus && editorLangId == hodei-dsl"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "hodei-scan DSL",
+      "properties": {
+        "hodei.lsp.serverPath": {
+          "type": "string",
+          "default": "hodei-dsl-lsp",
+          "description": "Path to the hodei-dsl-lsp server executable"
+        },
+        "hodei.lsp.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Traces the communication between VS Code and the hodei-dsl language server."
+        },
+        "hodei.test.ruleCommand": {
+          "type": "string",
+          "default": "cargo test",
+          "description": "Command to run rule tests"
+        },
+        "hodei.dump.irCommand": {
+          "type": "string",
+          "default": "cargo run --bin ir-dump",
+          "description": "Command to dump IR"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "vsce package",
+    "publish": "vsce publish",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "typescript": "^5.0.0",
+    "webpack": "^5.75.0",
+    "webpack-cli": "^5.0.0",
+    "ts-loader": "^9.4.2",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "eslint": "^8.28.0",
+    "glob": "^8.0.3",
+    "mocha": "^10.1.0",
+    "@types/mocha": "^10.0.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.0"
+  }
+}

@@ -58,12 +58,9 @@ impl AuthService {
 
     /// Validate a JWT token and return user info
     pub fn validate_token(&self, token: &str) -> Result<UserId> {
-        let decoded = jsonwebtoken::decode::<Claims>(
-            token,
-            &self.decoding_key,
-            &Validation::default(),
-        )
-        .map_err(|e| ServerError::Jwt(e.to_string()))?;
+        let decoded =
+            jsonwebtoken::decode::<Claims>(token, &self.decoding_key, &Validation::default())
+                .map_err(|e| ServerError::Jwt(e.to_string()))?;
 
         Ok(decoded.claims.user_id)
     }

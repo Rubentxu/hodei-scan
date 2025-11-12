@@ -301,12 +301,13 @@ mod tests {
     #[test]
     fn test_finding_builder_template_interpolation() {
         // Create a test fact
-        let fact = hodei_ir::Fact::new(
+        let fact = hodei_ir::Fact::new_with_message(
             hodei_ir::FactType::Function {
                 name: hodei_ir::FunctionName("test_func".to_string()),
                 complexity: 5,
                 lines_of_code: 10,
             },
+            "Function check".to_string(),
             create_test_source_location(),
             hodei_ir::Provenance::new(
                 hodei_ir::ExtractorId::TreeSitter,
@@ -332,12 +333,13 @@ mod tests {
     #[test]
     fn test_finding_builder_template_interpolation_with_metadata() {
         // Create a test fact
-        let fact = hodei_ir::Fact::new(
+        let fact = hodei_ir::Fact::new_with_message(
             hodei_ir::FactType::Function {
                 name: hodei_ir::FunctionName("test_func".to_string()),
                 complexity: 5,
                 lines_of_code: 10,
             },
+            "Function with metadata".to_string(),
             create_test_source_location(),
             hodei_ir::Provenance::new(
                 hodei_ir::ExtractorId::TreeSitter,

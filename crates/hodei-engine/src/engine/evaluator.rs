@@ -441,8 +441,9 @@ mod tests {
             data,
         };
 
-        Fact::new(
+        Fact::new_with_message(
             fact_type,
+            "Test finding".to_string(),
             SourceLocation::default(),
             Provenance::new(
                 hodei_ir::ExtractorId::Custom,

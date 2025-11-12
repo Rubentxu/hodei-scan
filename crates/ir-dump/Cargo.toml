@@ -1,0 +1,28 @@
+[package]
+name = "ir-dump"
+version = "0.1.0"
+edition = "2024"
+description = "IR debug tool for hodei-scan"
+license = "MIT"
+repository = "https://github.com/hodei-scan/hodei-scan"
+
+[dependencies]
+hodei-ir = { path = "../hodei-ir" }
+
+# CLI framework
+clap = { version = "4.5", features = ["derive"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+serde_yml = "0.0.12"
+anyhow = "1.0"
+
+# Cap'n Proto
+capnp = { version = "0.20", optional = true }
+capnp-futures = { version = "0.23", optional = true }
+
+# Interactive REPL
+reedline = "0.30"
+crossterm = "0.27"
+
+# Async
+tokio = { workspace = true, features = ["full"] }

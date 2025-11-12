@@ -3,34 +3,20 @@
 //! This module provides serialization and deserialization capabilities for the IR
 //! using Cap'n Proto format, with specific support for Custom FactTypes.
 
-#[cfg(feature = "capnp")]
-pub mod capnp_impl;
+use crate::capnp_impl;
 
-#[cfg(not(feature = "capnp"))]
-pub mod capnp_stub {
-    /// Stub error type for when Cap'n Proto is not available
-    #[derive(thiserror::Error, Debug)]
-    pub enum CapnpError {
-        #[error("Cap'n Proto support not enabled. Build with --features capnp")]
-        NotEnabled,
-    }
+/// Error type from capnp_impl
+pub use capnp_impl::CapnpError;
 
-    /// Stub function that returns an error when Cap'n Proto is not enabled
-    pub fn serialize_ir_to_bytes<T>(_ir: &T) -> Result<Vec<u8>, CapnpError> {
-        Err(CapnpError::NotEnabled)
-    }
-
-    /// Stub function that returns an error when Cap'n Proto is not enabled
-    pub fn deserialize_ir_from_bytes<T>(_bytes: &[u8]) -> Result<T, CapnpError> {
-        Err(CapnpError::NotEnabled)
-    }
+/// Serialize IR to bytes
+pub fn serialize_ir_to_bytes<T>(ir: &T) -> Result<Vec<u8>, CapnpError> {
+    crate::capnp_impl::serialize_ir_to_bytes(ir)
 }
 
-#[cfg(feature = "capnp")]
-pub use capnp_impl::*;
-
-#[cfg(not(feature = "capnp"))]
-pub use capnp_stub::*;
+/// Deserialize IR from bytes
+pub fn deserialize_ir_from_bytes<T>(bytes: &[u8]) -> Result<T, CapnpError> {
+    crate::capnp_impl::deserialize_ir_from_bytes(bytes)
+}
 
 /// Feature check for Cap'n Proto support
 pub fn is_capnp_enabled() -> bool {
@@ -39,6 +25,8 @@ pub fn is_capnp_enabled() -> bool {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn test_capnp_feature_check() {
         #[cfg(feature = "capnp")]

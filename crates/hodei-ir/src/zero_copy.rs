@@ -169,7 +169,7 @@ mod tests {
         ));
 
         // Add a test fact
-        let fact = Fact::new(
+        let fact = Fact::new_with_message(
             FactType::Vulnerability {
                 cwe_id: Some("CWE-79".to_string()),
                 owasp_category: Some("A03:2021".to_string()),
@@ -178,6 +178,7 @@ mod tests {
                 description: "Cross-site scripting vulnerability".to_string(),
                 confidence: Confidence::HIGH,
             },
+            "XSS vulnerability found".to_string(),
             SourceLocation::new(
                 crate::ProjectPath::new(PathBuf::from("src/main.rs")),
                 LineNumber::new(42).unwrap(),
@@ -218,7 +219,7 @@ mod tests {
             ));
 
             // Add a fact
-            let fact = Fact::new(
+            let fact = Fact::new_with_message(
                 FactType::Vulnerability {
                     cwe_id: Some("CWE-79".to_string()),
                     owasp_category: Some("A03:2021".to_string()),
@@ -227,6 +228,7 @@ mod tests {
                     description: "Cross-site scripting vulnerability".to_string(),
                     confidence: Confidence::HIGH,
                 },
+                "Test vulnerability".to_string(),
                 SourceLocation::new(
                     crate::ProjectPath::new(PathBuf::from("src/main.rs")),
                     LineNumber::new(42).unwrap(),
@@ -303,12 +305,13 @@ mod tests {
 
             // Add 5 facts
             for i in 0..5 {
-                let fact = Fact::new(
+                let fact = Fact::new_with_message(
                     FactType::Variable {
                         name: crate::VariableName(format!("var{}", i)),
                         scope: "global".to_string(),
                         var_type: "int".to_string(),
                     },
+                    format!("Variable var{} declared", i),
                     SourceLocation::new(
                         crate::ProjectPath::new(PathBuf::from("src/main.rs")),
                         LineNumber::new(10).unwrap(),

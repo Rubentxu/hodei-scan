@@ -146,17 +146,23 @@ impl DatabaseConnection {
             .map_err(ServerError::Database)?;
 
         self.pool
-            .execute("CREATE INDEX IF NOT EXISTS idx_findings_analysis_id ON findings(analysis_id);")
+            .execute(
+                "CREATE INDEX IF NOT EXISTS idx_findings_analysis_id ON findings(analysis_id);",
+            )
             .await
             .map_err(ServerError::Database)?;
 
         self.pool
-            .execute("CREATE INDEX IF NOT EXISTS idx_findings_fingerprint ON findings(fingerprint);")
+            .execute(
+                "CREATE INDEX IF NOT EXISTS idx_findings_fingerprint ON findings(fingerprint);",
+            )
             .await
             .map_err(ServerError::Database)?;
 
         self.pool
-            .execute("CREATE INDEX IF NOT EXISTS idx_baseline_project ON baseline_status(project_id);")
+            .execute(
+                "CREATE INDEX IF NOT EXISTS idx_baseline_project ON baseline_status(project_id);",
+            )
             .await
             .map_err(ServerError::Database)?;
 
@@ -165,7 +171,7 @@ impl DatabaseConnection {
             .execute(
                 r#"
                 CREATE OR REPLACE VIEW findings_trend_daily AS
-                SELECT 
+                SELECT
                     DATE_TRUNC('day', a.timestamp) as day,
                     a.project_id,
                     a.branch,
@@ -184,7 +190,7 @@ impl DatabaseConnection {
             .execute(
                 r#"
                 CREATE OR REPLACE VIEW project_summary AS
-                SELECT 
+                SELECT
                     p.id as project_id,
                     p.name,
                     COUNT(DISTINCT a.id) as total_analyses,
@@ -241,7 +247,7 @@ impl DatabaseConnection {
             for finding in chunk {
                 sqlx::query!(
                     r#"
-                    INSERT INTO findings (analysis_id, fact_type, severity, file_path, line_number, 
+                    INSERT INTO findings (analysis_id, fact_type, severity, file_path, line_number,
                                          column_number, end_line, end_column, message, metadata, tags, fingerprint)
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                     "#,
@@ -358,7 +364,7 @@ impl DatabaseConnection {
     ) -> Result<HashMap<String, u64>> {
         let row = sqlx::query!(
             r#"
-            SELECT 
+            SELECT
                 COUNT(*) as total_findings,
                 COUNT(CASE WHEN severity = 'critical' THEN 1 END) as critical_findings,
                 COUNT(CASE WHEN severity = 'major' THEN 1 END) as major_findings,
@@ -378,7 +384,10 @@ impl DatabaseConnection {
 
         let mut metrics = HashMap::new();
         metrics.insert("total_findings".to_string(), row.total_findings as u64);
-        metrics.insert("critical_findings".to_string(), row.critical_findings as u64);
+        metrics.insert(
+            "critical_findings".to_string(),
+            row.critical_findings as u64,
+        );
         metrics.insert("major_findings".to_string(), row.major_findings as u64);
         metrics.insert("minor_findings".to_string(), row.minor_findings as u64);
         metrics.insert("info_findings".to_string(), row.info_findings as u64);
@@ -388,7 +397,7 @@ impl DatabaseConnection {
 
     /// Check database health
     pub async fn health_check(&self) -> Result<bool> {
-        sqlx::query!("SELECT 1")
+        sqlx::query!("SELECT 1 as health_check")
             .fetch_one(self.pool())
             .await
             .map(|_| true)

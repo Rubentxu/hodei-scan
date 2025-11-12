@@ -36,37 +36,44 @@ pub fn match_to_fact(
     let captures = extract_captures(query_match)?;
 
     // Create FactType based on rule category
-    let fact_type = match rule.category.as_str() {
-        "error-handling" => FactType::CodeSmell {
-            smell_type: "error-handling".to_string(),
-            severity: parse_severity(&rule.severity),
-            message: rule.message.clone(),
-        },
-        "security" | "vulnerability" => FactType::Vulnerability {
-            cwe_id: None,
-            owasp_category: None,
-            description: rule.message.clone(),
-            severity: parse_severity(&rule.severity),
-            cvss_score: None,
-            confidence: Confidence::new(0.9).unwrap(),
-        },
-        _ => FactType::CodeSmell {
-            smell_type: rule.category.clone(),
-            severity: parse_severity(&rule.severity),
-            message: rule.message.clone(),
-        },
+    let (fact_type, message) = match rule.category.as_str() {
+        "error-handling" => (
+            FactType::CodeSmell {
+                smell_type: "error-handling".to_string(),
+                severity: parse_severity(&rule.severity),
+            },
+            rule.message.clone(),
+        ),
+        "security" | "vulnerability" => (
+            FactType::Vulnerability {
+                cwe_id: None,
+                owasp_category: None,
+                description: rule.message.clone(),
+                severity: parse_severity(&rule.severity),
+                cvss_score: None,
+                confidence: Confidence::new(0.9).unwrap(),
+            },
+            rule.message.clone(),
+        ),
+        _ => (
+            FactType::CodeSmell {
+                smell_type: rule.category.clone(),
+                severity: parse_severity(&rule.severity),
+            },
+            rule.message.clone(),
+        ),
     };
 
-    Ok(Fact {
-        id: FactId::new(),
+    Ok(Fact::new_with_message(
         fact_type,
+        message,
         location,
-        provenance: Provenance::new(
+        Provenance::new(
             ExtractorId::Custom,
             "yaml-rule-engine".to_string(),
             Confidence::new(0.9).unwrap(),
         ),
-    })
+    ))
 }
 
 /// Create a SourceLocation from a QueryMatch

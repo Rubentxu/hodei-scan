@@ -2,6 +2,7 @@
 
 #![warn(missing_docs)]
 
+pub mod capnp_impl;
 pub mod capnp_serialization;
 pub mod custom_fact_tests;
 pub mod fact_type_index;
@@ -19,6 +20,13 @@ pub use plugin_schema_registry::*;
 pub use types::*;
 pub use validator::*;
 pub use zero_copy::*;
+
+/// Type alias for backward compatibility with tests
+/// A Finding is the same as a Fact in this codebase
+pub type Finding = Fact;
+
+/// A FindingSet is just a collection of findings (facts)
+pub type FindingSet = Vec<Fact>;
 
 /// The main FactType enum (17 atomic variants)
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -118,8 +126,6 @@ pub enum FactType {
         smell_type: String,
         /// Severity of the code smell
         severity: Severity,
-        /// Descriptive message
-        message: String,
     },
     /// Complexity violation
     ComplexityViolation {
@@ -203,6 +209,12 @@ pub enum FactType {
         /// Data fields for the custom fact
         data: std::collections::HashMap<String, FactValue>,
     },
+}
+
+impl std::fmt::Display for FactType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 impl std::hash::Hash for FactType {
@@ -304,11 +316,9 @@ impl std::hash::Hash for FactType {
             FactType::CodeSmell {
                 smell_type,
                 severity,
-                message,
             } => {
                 smell_type.hash(state);
                 severity.hash(state);
-                message.hash(state);
             }
             FactType::ComplexityViolation {
                 metric,
@@ -443,6 +453,8 @@ pub struct Fact {
     pub id: FactId,
     /// The type of fact and its associated data
     pub fact_type: FactType,
+    /// Human-readable message describing this fact
+    pub message: String,
     /// Source location where this fact was found
     pub location: SourceLocation,
     /// Provenance information (extractor, version, confidence)
@@ -458,9 +470,44 @@ impl Fact {
     /// * `location` - The source location
     /// * `provenance` - The provenance information
     pub fn new(fact_type: FactType, location: SourceLocation, provenance: Provenance) -> Self {
+        let message = match &fact_type {
+            FactType::TaintSource { var, .. } => format!("Taint source: {}", var.0),
+            FactType::TaintSink { func, .. } => format!("Taint sink in function: {}", func.0),
+            FactType::Function { name, .. } => format!("Function: {}", name.0),
+            FactType::Variable { name, .. } => format!("Variable: {}", name.0),
+            FactType::Vulnerability { description, .. } => description.clone(),
+            FactType::CodeSmell { smell_type, .. } => format!("Code smell: {}", smell_type),
+            FactType::Custom { discriminant, .. } => format!("Custom fact: {}", discriminant),
+            _ => format!("{:?}", fact_type),
+        };
+
         Self {
             id: FactId::new(),
             fact_type,
+            message,
+            location,
+            provenance,
+        }
+    }
+
+    /// Create a new fact with a custom message
+    ///
+    /// # Arguments
+    ///
+    /// * `fact_type` - The type of fact
+    /// * `message` - Human-readable message
+    /// * `location` - The source location
+    /// * `provenance` - The provenance information
+    pub fn new_with_message(
+        fact_type: FactType,
+        message: String,
+        location: SourceLocation,
+        provenance: Provenance,
+    ) -> Self {
+        Self {
+            id: FactId::new(),
+            fact_type,
+            message,
             location,
             provenance,
         }
@@ -490,6 +537,17 @@ impl IntermediateRepresentation {
             metadata,
             schema_version: "3.3.0".to_string(),
         }
+    }
+
+    /// Create a new intermediate representation with facts
+    ///
+    /// # Arguments
+    ///
+    /// * `metadata` - Project metadata
+    /// * `facts` - Initial facts
+    pub fn with_facts(mut self, facts: Vec<Fact>) -> Self {
+        self.facts = facts;
+        self
     }
 
     /// Add a fact to the representation

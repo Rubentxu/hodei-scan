@@ -313,8 +313,10 @@ mod tests {
     }
 
     fn create_test_fact(fact_type: FactType) -> Fact {
-        Fact::new(
+        let message = "Test finding".to_string();
+        Fact::new_with_message(
             fact_type,
+            message,
             create_test_source_location(),
             Provenance::new(
                 ExtractorId::TreeSitter,

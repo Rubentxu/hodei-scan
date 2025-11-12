@@ -469,7 +469,7 @@ mod tests {
             None,
         );
 
-        Fact::new(
+        Fact::new_with_message(
             FactType::CodeSmell {
                 smell_type: "TODO".to_string(),
                 severity: Severity::Minor,

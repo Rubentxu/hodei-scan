@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
-use tracing::{warn, info};
+use tracing::{info, warn};
 
 /// Rate limiter using token bucket algorithm
 pub struct RateLimiter {
@@ -29,16 +29,18 @@ impl RateLimiter {
     /// Check if request is allowed for the given key
     pub async fn check_limit(&self, key: &str) -> Result<(), RateLimitError> {
         let mut buckets = self.buckets.write().await;
-        let bucket = buckets.entry(key.to_string()).or_insert_with(|| TokenBucket {
-            tokens: self.requests_per_minute,
-            last_refill: SystemTime::now(),
-        });
+        let bucket = buckets
+            .entry(key.to_string())
+            .or_insert_with(|| TokenBucket {
+                tokens: self.requests_per_minute,
+                last_refill: SystemTime::now(),
+            });
 
         // Refill tokens based on time passed
         let now = SystemTime::now();
         let elapsed = now.duration_since(bucket.last_refill).unwrap_or_default();
         let tokens_to_add = elapsed.as_secs() / 60 * self.requests_per_minute;
-        
+
         if tokens_to_add > 0 {
             bucket.tokens = (bucket.tokens + tokens_to_add).min(self.requests_per_minute);
             bucket.last_refill = now;
@@ -60,15 +62,16 @@ impl RateLimiter {
     pub async fn cleanup_old_buckets(&self) {
         let mut buckets = self.buckets.write().await;
         let now = SystemTime::now();
-        
+
         // Remove buckets inactive for more than 1 hour
         let cutoff = now - Duration::from_secs(3600);
-        
-        buckets.retain(|_, bucket| {
-            bucket.last_refill > cutoff
-        });
-        
-        info!("Rate limiter: cleaned up buckets, active: {}", buckets.len());
+
+        buckets.retain(|_, bucket| bucket.last_refill > cutoff);
+
+        info!(
+            "Rate limiter: cleaned up buckets, active: {}",
+            buckets.len()
+        );
     }
 }
 
@@ -76,10 +79,7 @@ impl RateLimiter {
 #[derive(Debug, thiserror::Error)]
 pub enum RateLimitError {
     #[error("Rate limit exceeded: {limit} requests per {window:?}")]
-    TooManyRequests {
-        limit: u64,
-        window: Duration,
-    },
+    TooManyRequests { limit: u64, window: Duration },
 }
 
 impl RateLimitError {
@@ -105,7 +105,7 @@ struct RetentionPolicy {
 impl Default for RetentionPolicy {
     fn default() -> Self {
         Self {
-            retention_days: 365, // Keep for 1 year
+            retention_days: 365,    // Keep for 1 year
             archive_after_days: 90, // Archive after 90 days
         }
     }
@@ -122,7 +122,8 @@ impl RetentionManager {
     /// Get retention policy for a project
     pub async fn get_policy(&self, project_id: &str) -> RetentionPolicy {
         let policies = self.project_policies.read().await;
-        policies.get(project_id)
+        policies
+            .get(project_id)
             .cloned()
             .unwrap_or_else(|| RetentionPolicy {
                 retention_days: self.default_retention_days,
@@ -134,7 +135,10 @@ impl RetentionManager {
     pub async fn set_policy(&self, project_id: &str, policy: RetentionPolicy) {
         let mut policies = self.project_policies.write().await;
         policies.insert(project_id.to_string(), policy);
-        info!("Set retention policy for project {}: {} days", project_id, policy.retention_days);
+        info!(
+            "Set retention policy for project {}: {} days",
+            project_id, policy.retention_days
+        );
     }
 
     /// Get analyses older than retention period
@@ -144,13 +148,16 @@ impl RetentionManager {
     ) -> Result<Vec<String>, crate::modules::error::ServerError> {
         // TODO: Implement actual database query
         // This would query analyses older than retention period
-        
+
         let policy = self.get_policy("default").await;
         let cutoff = SystemTime::now() - Duration::from_secs(policy.retention_days * 24 * 60 * 60);
         let cutoff_unix = cutoff.duration_since(UNIX_EPOCH).unwrap().as_secs();
-        
-        warn!("Retention: Would delete analyses older than {} days", policy.retention_days);
-        
+
+        warn!(
+            "Retention: Would delete analyses older than {} days",
+            policy.retention_days
+        );
+
         // Mock implementation - return empty list
         Ok(vec![])
     }
@@ -161,12 +168,12 @@ impl RetentionManager {
         database: &crate::modules::database::DatabaseConnection,
     ) -> Result<CleanupSummary, crate::modules::error::ServerError> {
         info!("Starting data retention cleanup");
-        
+
         let expired_analysis_ids = self.get_expired_analyses(database).await?;
-        
+
         let mut deleted_analyses = 0;
         let mut deleted_findings = 0;
-        
+
         // TODO: Implement actual deletion from database
         for analysis_id in &expired_analysis_ids {
             // Find all findings for this analysis
@@ -175,16 +182,19 @@ impl RetentionManager {
             deleted_findings += 100; // Mock
             deleted_analyses += 1;
         }
-        
+
         let summary = CleanupSummary {
             analyses_deleted: deleted_analyses,
             findings_deleted: deleted_findings,
-            cutoff_date: SystemTime::now() - Duration::from_secs(self.default_retention_days * 24 * 60 * 60),
+            cutoff_date: SystemTime::now()
+                - Duration::from_secs(self.default_retention_days * 24 * 60 * 60),
         };
-        
-        info!("Cleanup completed: {} analyses, {} findings deleted", 
-              summary.analyses_deleted, summary.findings_deleted);
-        
+
+        info!(
+            "Cleanup completed: {} analyses, {} findings deleted",
+            summary.analyses_deleted, summary.findings_deleted
+        );
+
         Ok(summary)
     }
 }
@@ -219,16 +229,25 @@ impl CleanupTask {
     /// Start the background cleanup task
     pub async fn run(self) {
         let mut interval = tokio::time::interval(self.interval);
-        
-        info!("Started data retention cleanup task, interval: {} hours", 
-              self.interval.as_secs() / 3600);
-        
+
+        info!(
+            "Started data retention cleanup task, interval: {} hours",
+            self.interval.as_secs() / 3600
+        );
+
         loop {
             interval.tick().await;
-            
-            match self.retention_manager.cleanup_expired_analyses(&self.database).await {
+
+            match self
+                .retention_manager
+                .cleanup_expired_analyses(&self.database)
+                .await
+            {
                 Ok(summary) => {
-                    info!("Retention cleanup completed: {} analyses deleted", summary.analyses_deleted);
+                    info!(
+                        "Retention cleanup completed: {} analyses deleted",
+                        summary.analyses_deleted
+                    );
                 }
                 Err(e) => {
                     warn!("Retention cleanup failed: {}", e);
@@ -245,8 +264,8 @@ pub fn create_analysis_summary(
     new_findings: u32,
     resolved_findings: u32,
 ) -> crate::modules::types::PublishResponse {
-    use crate::modules::types::{PublishResponse, TrendDirection, Severity};
-    
+    use crate::modules::types::{PublishResponse, Severity, TrendDirection};
+
     let total_findings = findings_count;
     let trend = if new_findings > resolved_findings {
         TrendDirection::Degrading
@@ -255,7 +274,7 @@ pub fn create_analysis_summary(
     } else {
         TrendDirection::Stable
     };
-    
+
     PublishResponse {
         analysis_id,
         new_findings,

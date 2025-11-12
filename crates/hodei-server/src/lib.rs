@@ -2,10 +2,7 @@
 pub mod modules;
 
 pub use modules::{
-    auth::AuthService,
-    config::ServerConfig,
-    database::DatabaseConnection,
-    server::HodeiServer,
+    auth::AuthService, config::ServerConfig, database::DatabaseConnection, server::HodeiServer,
     types::*,
 };
 

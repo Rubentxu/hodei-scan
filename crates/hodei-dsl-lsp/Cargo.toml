@@ -1,0 +1,37 @@
+[package]
+name = "hodei-dsl-lsp"
+version = "0.1.0"
+edition = "2024"
+description = "Language Server Protocol (LSP) implementation for hodei-scan DSL"
+license = "MIT"
+repository = "https://github.com/hodei-scan/hodei-scan"
+
+[dependencies]
+hodei-dsl = { path = "../hodei-dsl" }
+hodei-ir = { path = "../hodei-ir" }
+hodei-engine = { path = "../hodei-engine" }
+
+# LSP Implementation - Using compatible versions
+tower-lsp = "0.20"
+lsp-types = "0.94"
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+
+# Text processing
+unicode-segmentation = "1.11"
+url = "2.5"
+
+# Async utilities
+futures = "0.3"
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tracing-futures = "0.2"
+async-trait = "0.1"
+
+# Time handling
+chrono = { workspace = true }
+
+# Error handling
+anyhow = "1.0"

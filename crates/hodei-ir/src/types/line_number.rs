@@ -1,9 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct LineNumber(u32);
 
 impl LineNumber {

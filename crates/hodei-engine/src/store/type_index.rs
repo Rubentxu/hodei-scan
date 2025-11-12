@@ -106,16 +106,18 @@ mod tests {
 
         // Create 1000 facts of different types
         for i in 0..1000 {
-            let fact = Fact {
-                id: FactId::new(),
-                fact_type: if i % 3 == 0 {
+            let (fact_type, message) = if i % 3 == 0 {
+                (
                     FactType::TaintSource {
                         var: hodei_ir::VariableName(format!("var{}", i)),
                         flow_id: hodei_ir::FlowId::new_uuid(),
                         source_type: "user_input".to_string(),
                         confidence: Confidence::HIGH,
-                    }
-                } else if i % 3 == 1 {
+                    },
+                    format!("Taint source {}", i),
+                )
+            } else if i % 3 == 1 {
+                (
                     FactType::Vulnerability {
                         cwe_id: Some(format!("CWE-{}", i)),
                         owasp_category: None,
@@ -123,27 +125,36 @@ mod tests {
                         cvss_score: Some(8.5),
                         description: format!("Vuln {}", i),
                         confidence: Confidence::MEDIUM,
-                    }
-                } else {
+                    },
+                    format!("Vulnerability {}", i),
+                )
+            } else {
+                (
                     FactType::Function {
                         name: hodei_ir::FunctionName(format!("func{}", i)),
                         complexity: 5,
                         lines_of_code: 50,
-                    }
-                },
-                location: SourceLocation::new(
+                    },
+                    format!("Function {}", i),
+                )
+            };
+
+            let fact = Fact::new_with_message(
+                fact_type,
+                message,
+                SourceLocation::new(
                     hodei_ir::ProjectPath::new(std::path::PathBuf::from("test.rs")),
                     hodei_ir::LineNumber::new(1).unwrap(),
                     None,
                     hodei_ir::LineNumber::new(10).unwrap(),
                     None,
                 ),
-                provenance: Provenance::new(
+                Provenance::new(
                     ExtractorId::TreeSitter,
                     "1.0.0".to_string(),
                     Confidence::MEDIUM,
                 ),
-            };
+            );
             facts.push(fact);
         }
 

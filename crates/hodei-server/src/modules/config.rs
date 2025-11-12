@@ -49,8 +49,9 @@ impl ServerConfig {
                 .unwrap_or_else(|_| "0.0.0.0:8080".to_string())
                 .parse()
                 .unwrap_or_default(),
-            database_url: std::env::var("HODEI_DATABASE_URL")
-                .unwrap_or_else(|_| "postgres://hodei:password@localhost:5432/hodei_db".to_string()),
+            database_url: std::env::var("HODEI_DATABASE_URL").unwrap_or_else(|_| {
+                "postgres://hodei:password@localhost:5432/hodei_db".to_string()
+            }),
             jwt_secret: std::env::var("HODEI_JWT_SECRET")
                 .unwrap_or_else(|_| "your-secret-key-change-in-production".to_string()),
             jwt_expiration_hours: std::env::var("HODEI_JWT_EXPIRATION")

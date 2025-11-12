@@ -1,11 +1,18 @@
-/// WebSocket support for real-time dashboard updates - US-13.04
-use axum::{
-    extract::{ws::{WebSocket, WebSocketUpgrade}, State},
-    response::IntoResponse,
-};
+use crate::modules::diff::DiffSummary;
 use crate::modules::error::Result;
 use crate::modules::server::AppState;
-use serde::{Serialize, Deserialize};
+use crate::modules::types::TrendMetrics;
+/// WebSocket support for real-time dashboard updates - US-13.04
+use axum::{
+    extract::{
+        ws::{WebSocket, WebSocketUpgrade},
+        State,
+    },
+    response::IntoResponse,
+};
+use chrono::Utc;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::interval;
 use tokio_stream::{wrappers::IntervalStream, StreamExt};
@@ -41,10 +48,7 @@ pub enum DashboardEvent {
         analysis_id: String,
     },
     /// Server health status
-    HealthStatus {
-        status: String,
-        uptime_seconds: u64,
-    },
+    HealthStatus { status: String, uptime_seconds: u64 },
 }
 
 /// Extended trend metrics for dashboard
@@ -118,9 +122,11 @@ impl WebSocketManager {
         project_id: Option<String>,
     ) -> impl IntoResponse {
         let client_id = uuid::Uuid::new_v4();
-        
-        info!("New WebSocket connection: client_id={}, project_id={:?}", 
-              client_id, project_id);
+
+        info!(
+            "New WebSocket connection: client_id={}, project_id={:?}",
+            client_id, project_id
+        );
 
         ws.on_upgrade(move |socket| self.handle_socket(socket, client_id, project_id, state))
     }
@@ -135,20 +141,22 @@ impl WebSocketManager {
     ) {
         // Register client
         if let Some(project) = &project_id {
-            let project_clients = self.clients.entry(project.clone()).or_insert_with(dashmap::DashSet::new);
+            let project_clients = self
+                .clients
+                .entry(project.clone())
+                .or_insert_with(dashmap::DashSet::new);
             project_clients.insert(client_id);
         }
-        
+
         self.all_clients.insert(client_id, socket);
 
         // Start sending periodic updates
-        let mut interval_stream = IntervalStream::new(interval(Duration::from_secs(30))).filter_map(|_| async { 
-            Some(())
-        });
+        let mut interval_stream = IntervalStream::new(interval(Duration::from_secs(30)))
+            .filter_map(|_| async { Some(()) });
 
         // Track if client is still connected
         let (mut sender, mut receiver) = self.all_clients.get(&client_id).unwrap().split();
-        
+
         // Send periodic health status
         let health_interval = interval(Duration::from_secs(10));
         tokio::pin!(health_interval);
@@ -158,7 +166,7 @@ impl WebSocketManager {
                 _ = health_interval.tick() => {
                     // Send health status update
                     if let Err(e) = self.send_to_client(
-                        &client_id, 
+                        &client_id,
                         &DashboardEvent::HealthStatus {
                             status: "healthy".to_string(),
                             uptime_seconds: 3600, // TODO: Calculate actual uptime
@@ -210,8 +218,9 @@ impl WebSocketManager {
         if let Some(mut socket) = self.all_clients.get_mut(client_id) {
             let message = serde_json::to_string(event)
                 .map_err(|e| crate::modules::error::ServerError::Serialization(e))?;
-            
-            socket.send(axum::extract::ws::Message::Text(message))
+
+            socket
+                .send(axum::extract::ws::Message::Text(message))
                 .await
                 .map_err(|e| crate::modules::error::ServerError::Internal(e.to_string()))?;
         }
@@ -227,10 +236,13 @@ impl WebSocketManager {
         if let Some(project_clients) = self.clients.get(project_id) {
             let message = serde_json::to_string(event)
                 .map_err(|e| crate::modules::error::ServerError::Serialization(e))?;
-            
+
             for client_id in project_clients.value().iter() {
                 if let Some(mut socket) = self.all_clients.get_mut(client_id) {
-                    if let Err(e) = socket.send(axum::extract::ws::Message::Text(message.clone())).await {
+                    if let Err(e) = socket
+                        .send(axum::extract::ws::Message::Text(message.clone()))
+                        .await
+                    {
                         warn!("Failed to send to client {}: {}", client_id, e);
                     }
                 }
@@ -243,15 +255,16 @@ impl WebSocketManager {
     async fn send_metrics_update(&self, project_id: &str) -> Result<()> {
         // Get enhanced trend metrics
         let metrics = self.get_enhanced_metrics(project_id).await?;
-        
+
         self.broadcast_to_project(
             project_id,
             &DashboardEvent::TrendUpdated {
                 project_id: project_id.to_string(),
                 metrics,
-            }
-        ).await?;
-        
+            },
+        )
+        .await?;
+
         Ok(())
     }
 
@@ -263,7 +276,8 @@ impl WebSocketManager {
         let start = end - chrono::Duration::days(30);
 
         // Get basic metrics
-        let basic_metrics = self.database
+        let basic_metrics = self
+            .database
             .get_trend_metrics(project_id, start, end)
             .await?;
 
@@ -293,7 +307,11 @@ impl WebSocketManager {
     }
 
     /// Generate daily breakdown (mock implementation)
-    fn generate_daily_breakdown(&self, start: chrono::DateTime<Utc>, end: chrono::DateTime<Utc>) -> Vec<DailyFindingCount> {
+    fn generate_daily_breakdown(
+        &self,
+        start: chrono::DateTime<Utc>,
+        end: chrono::DateTime<Utc>,
+    ) -> Vec<DailyFindingCount> {
         let mut breakdown = vec![];
         let mut current = start.date().and_hms(0, 0, 0);
         let end_date = end.date().and_hms(0, 0, 0);
@@ -327,7 +345,9 @@ impl WebSocketManager {
                 branch: "develop".to_string(),
                 findings_count: 120,
                 trend: "stable".to_string(),
-                last_analysis: (Utc::now() - chrono::Duration::hours(2)).format("%Y-%m-%d %H:%M").to_string(),
+                last_analysis: (Utc::now() - chrono::Duration::hours(2))
+                    .format("%Y-%m-%d %H:%M")
+                    .to_string(),
             },
         ])
     }
@@ -378,7 +398,8 @@ impl WebSocketManager {
 
     /// Get number of clients for a project
     pub fn project_client_count(&self, project_id: &str) -> usize {
-        self.clients.get(project_id)
+        self.clients
+            .get(project_id)
             .map(|entry| entry.len())
             .unwrap_or(0)
     }
@@ -409,16 +430,4 @@ impl From<crate::modules::diff::DiffSummary> for DiffSummary {
             },
         }
     }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct DiffSummary {
-    pub total_changes: usize,
-    pub new_findings_count: usize,
-    pub resolved_findings_count: usize,
-    pub severity_increased_count: usize,
-    pub severity_decreased_count: usize,
-    pub net_change: isize,
-    pub severity_score: isize,
-    pub trend: String,
 }

@@ -3,10 +3,13 @@
 
 fn main() {
     // Only run if capnp tool is available
-    if let Ok(output) = std::process::Command::new("capnp").arg("--version").output() {
+    if let Ok(output) = std::process::Command::new("capnp")
+        .arg("--version")
+        .output()
+    {
         if output.status.success() {
             println!("cargo:rerun-if-changed=schemas/");
-            
+
             match capnpc::CompilerCommand::new()
                 .src_prefix("schemas")
                 .file("schemas/extractor_protocol.capnp")

@@ -398,7 +398,11 @@ mod tests {
             confidence: Confidence::new(0.8).unwrap(),
         };
 
-        let facts = vec![Fact::new(fact_type, location, provenance)];
+        let message = "Vulnerability detected".to_string();
+
+        let facts = vec![Fact::new_with_message(
+            fact_type, message, location, provenance,
+        )];
 
         let extractor = SarifExtractor::default();
         let serialized = extractor.serialize_facts(&facts).unwrap();
@@ -439,7 +443,11 @@ mod tests {
             confidence: Confidence::new(0.8).unwrap(),
         };
 
-        let facts = vec![Fact::new(fact_type, location, provenance)];
+        let message = "Vulnerability detected in SARIF file".to_string();
+
+        let facts = vec![Fact::new_with_message(
+            fact_type, message, location, provenance,
+        )];
 
         let extractor = SarifExtractor::default();
         let tool = extractor.detect_tool(&facts);

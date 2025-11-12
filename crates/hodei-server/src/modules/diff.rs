@@ -1,9 +1,7 @@
 /// Diff Analysis Engine - US-13.03
 /// Compares analyses to identify changes (new findings, resolved, severity changes)
 use crate::modules::error::{Result, ServerError};
-use crate::modules::types::{
-    Finding, Severity, StoredAnalysis, AnalysisDiff, ProjectId,
-};
+use crate::modules::types::{AnalysisDiff, Finding, ProjectId, Severity, StoredAnalysis};
 use std::collections::{HashMap, HashSet};
 
 /// Diff calculation engine
@@ -30,23 +28,24 @@ impl DiffEngine {
         baseline: &[Finding],
     ) -> Result<AnalysisDiff> {
         // Create fingerprints for efficient comparison
-        let current_fingerprints: HashSet<&str> = current.iter()
-            .map(|f| f.fingerprint.as_str())
-            .collect();
-        
-        let baseline_fingerprints: HashSet<&str> = baseline.iter()
-            .map(|f| f.fingerprint.as_str())
-            .collect();
+        let current_fingerprints: HashSet<&str> =
+            current.iter().map(|f| f.fingerprint.as_str()).collect();
+
+        let baseline_fingerprints: HashSet<&str> =
+            baseline.iter().map(|f| f.fingerprint.as_str()).collect();
 
         // Find new findings (in current but not in baseline)
-        let new_findings: Vec<Finding> = self.find_new_findings(current, &current_fingerprints, &baseline_fingerprints);
-        
+        let new_findings: Vec<Finding> =
+            self.find_new_findings(current, &current_fingerprints, &baseline_fingerprints);
+
         // Find resolved findings (in baseline but not in current)
-        let resolved_findings: Vec<Finding> = self.find_resolved_findings(baseline, &current_fingerprints, &baseline_fingerprints);
-        
+        let resolved_findings: Vec<Finding> =
+            self.find_resolved_findings(baseline, &current_fingerprints, &baseline_fingerprints);
+
         // Find severity changes (same finding but different severity)
-        let (severity_increased, severity_decreased) = self.find_severity_changes(current, baseline)?;
-        
+        let (severity_increased, severity_decreased) =
+            self.find_severity_changes(current, baseline)?;
+
         // Find status changes (TODO: when baseline status tracking is implemented)
         let wont_fix_changed = vec![];
 
@@ -96,7 +95,8 @@ impl DiffEngine {
         baseline: &[Finding],
     ) -> Result<(Vec<Finding>, Vec<Finding>)> {
         // Create a map of fingerprint -> severity for baseline
-        let baseline_severities: HashMap<&str, Severity> = baseline.iter()
+        let baseline_severities: HashMap<&str, Severity> = baseline
+            .iter()
             .map(|f| (f.fingerprint.as_str(), f.severity.clone()))
             .collect();
 
@@ -104,10 +104,12 @@ impl DiffEngine {
         let mut severity_decreased = vec![];
 
         for finding in current {
-            if let Some(&baseline_severity) = baseline_severities.get(finding.fingerprint.as_str()) {
+            if let Some(&baseline_severity) = baseline_severities.get(finding.fingerprint.as_str())
+            {
                 if finding.severity != baseline_severity {
-                    let severity_increase = finding.severity.to_level() > baseline_severity.to_level();
-                    
+                    let severity_increase =
+                        finding.severity.to_level() > baseline_severity.to_level();
+
                     if severity_increase {
                         severity_increased.push(finding.clone());
                     } else {
@@ -161,7 +163,7 @@ impl DiffEngine {
 
         // Calculate diff
         let mut diff = self.calculate_diff(&head_findings, &base_findings)?;
-        
+
         // Populate analysis references
         diff.base_analysis = base_analysis;
         diff.head_analysis = head_analysis;
@@ -179,9 +181,10 @@ impl DiffEngine {
     ) -> Result<AnalysisDiff> {
         // TODO: Implement commit-based diff
         // This would query analyses by commit hash instead of branch
-        
+
         // For now, delegate to branch-based diff
-        self.calculate_branch_diff(project_id, base_commit, head_commit, database).await
+        self.calculate_branch_diff(project_id, base_commit, head_commit, database)
+            .await
     }
 
     /// Optimize diff calculation for large datasets
@@ -205,11 +208,13 @@ impl DiffEngine {
         baseline: &[Finding],
     ) -> Result<AnalysisDiff> {
         // Create fingerprint maps
-        let current_map: HashMap<&str, &Finding> = current.iter()
+        let current_map: HashMap<&str, &Finding> = current
+            .iter()
             .map(|f| (f.fingerprint.as_str(), f))
             .collect();
-        
-        let baseline_map: HashMap<&str, &Finding> = baseline.iter()
+
+        let baseline_map: HashMap<&str, &Finding> = baseline
+            .iter()
             .map(|f| (f.fingerprint.as_str(), f))
             .collect();
 
@@ -246,8 +251,9 @@ impl DiffEngine {
         for (fp, finding) in &current_map {
             if let Some(&baseline_finding) = baseline_map.get(fp) {
                 if finding.severity != baseline_finding.severity {
-                    let severity_increase = finding.severity.to_level() > baseline_finding.severity.to_level();
-                    
+                    let severity_increase =
+                        finding.severity.to_level() > baseline_finding.severity.to_level();
+
                     if severity_increase {
                         severity_increased.push(finding.clone());
                     } else {
@@ -270,16 +276,23 @@ impl DiffEngine {
 
     /// Calculate summary statistics for diff
     pub fn calculate_diff_summary(&self, diff: &AnalysisDiff) -> DiffSummary {
-        let total_changes = diff.new_findings.len() + diff.resolved_findings.len() 
-            + diff.severity_increased.len() + diff.severity_decreased.len();
-        
+        let total_changes = diff.new_findings.len()
+            + diff.resolved_findings.len()
+            + diff.severity_increased.len()
+            + diff.severity_decreased.len();
+
         let net_change = diff.new_findings.len() as isize - diff.resolved_findings.len() as isize;
-        
-        let severity_score = diff.severity_increased.iter()
+
+        let severity_score = diff
+            .severity_increased
+            .iter()
             .map(|f| f.severity.to_level() as isize)
-            .sum::<isize>() - diff.severity_decreased.iter()
-            .map(|f| f.severity.to_level() as isize)
-            .sum::<isize>();
+            .sum::<isize>()
+            - diff
+                .severity_decreased
+                .iter()
+                .map(|f| f.severity.to_level() as isize)
+                .sum::<isize>();
 
         let trend = if net_change > 0 {
             crate::modules::types::TrendDirection::Degrading
@@ -357,18 +370,16 @@ mod tests {
     #[test]
     fn test_calculate_diff_new_findings() {
         let engine = DiffEngine::new();
-        
+
         let current = vec![
             create_test_finding("fp1", Severity::Critical),
             create_test_finding("fp2", Severity::Major),
         ];
-        
-        let baseline = vec![
-            create_test_finding("fp1", Severity::Critical),
-        ];
+
+        let baseline = vec![create_test_finding("fp1", Severity::Critical)];
 
         let diff = engine.calculate_diff(&current, &baseline).unwrap();
-        
+
         assert_eq!(diff.new_findings.len(), 1);
         assert_eq!(diff.new_findings[0].fingerprint, "fp2");
         assert_eq!(diff.resolved_findings.len(), 0);
@@ -377,18 +388,16 @@ mod tests {
     #[test]
     fn test_calculate_diff_resolved_findings() {
         let engine = DiffEngine::new();
-        
-        let current = vec![
-            create_test_finding("fp1", Severity::Critical),
-        ];
-        
+
+        let current = vec![create_test_finding("fp1", Severity::Critical)];
+
         let baseline = vec![
             create_test_finding("fp1", Severity::Critical),
             create_test_finding("fp2", Severity::Major),
         ];
 
         let diff = engine.calculate_diff(&current, &baseline).unwrap();
-        
+
         assert_eq!(diff.new_findings.len(), 0);
         assert_eq!(diff.resolved_findings.len(), 1);
         assert_eq!(diff.resolved_findings[0].fingerprint, "fp2");
@@ -397,17 +406,13 @@ mod tests {
     #[test]
     fn test_calculate_diff_severity_changes() {
         let engine = DiffEngine::new();
-        
-        let current = vec![
-            create_test_finding("fp1", Severity::Major),
-        ];
-        
-        let baseline = vec![
-            create_test_finding("fp1", Severity::Minor),
-        ];
+
+        let current = vec![create_test_finding("fp1", Severity::Major)];
+
+        let baseline = vec![create_test_finding("fp1", Severity::Minor)];
 
         let diff = engine.calculate_diff(&current, &baseline).unwrap();
-        
+
         assert_eq!(diff.new_findings.len(), 0);
         assert_eq!(diff.resolved_findings.len(), 0);
         assert_eq!(diff.severity_increased.len(), 1);

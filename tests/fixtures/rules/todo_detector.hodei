@@ -1,0 +1,53 @@
+rule "TODO Comment Detector" {
+    description: "Detects TODO comments in code"
+    severity: "Minor"
+    tags: ["maintenance", "documentation"]
+
+    match {
+        pattern: Comment {
+            text contains "TODO"
+        }
+    }
+
+    emit CodeSmell {
+        type: "todo_comment",
+        message: "TODO comment found - needs attention",
+        severity: "Minor"
+    }
+}
+
+rule "FIXME Comment Detector" {
+    description: "Detects FIXME comments in code"
+    severity: "Major"
+    tags: ["maintenance", "bug"]
+
+    match {
+        pattern: Comment {
+            text contains "FIXME"
+        }
+    }
+
+    emit Vulnerability {
+        type: "fixme_comment",
+        message: "FIXME comment found - known issue",
+        severity: "Major"
+    }
+}
+
+rule "System.out.println Detector" {
+    description: "Detects System.out.println usage in production code"
+    severity: "Major"
+    tags: ["logging", "production"]
+
+    match {
+        pattern: MethodCall {
+            target contains "System.out.println"
+        }
+    }
+
+    emit CodeSmell {
+        type: "print_statement",
+        message: "System.out.println should not be in production code",
+        severity: "Major"
+    }
+}

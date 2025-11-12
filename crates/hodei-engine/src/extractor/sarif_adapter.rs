@@ -114,7 +114,6 @@ impl SarifAdapter {
                 Some("warning") => FactType::CodeSmell {
                     smell_type: "warning".to_string(),
                     severity: Severity::Major,
-                    message: result.message.clone(),
                 },
                 _ => FactType::Vulnerability {
                     cwe_id: result.rule_id,
@@ -132,7 +131,12 @@ impl SarifAdapter {
                 Confidence::new(0.8).unwrap(),
             );
 
-            facts.push(Fact::new(fact, source_location, provenance));
+            facts.push(Fact::new_with_message(
+                fact,
+                "SARIF finding".to_string(),
+                source_location,
+                provenance,
+            ));
         }
 
         Ok(facts)

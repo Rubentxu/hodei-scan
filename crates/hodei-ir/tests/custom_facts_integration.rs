@@ -46,7 +46,7 @@ fn test_end_to_end_custom_fact_workflow() {
             FactValue::String("public".to_string()),
             FactValue::String("unencrypted".to_string()),
         ]),
-);
+    );
 
     let custom_fact = FactType::Custom {
         discriminant: "terraform::aws::insecure_s3_bucket".to_string(),
@@ -74,7 +74,12 @@ fn test_end_to_end_custom_fact_workflow() {
         Confidence::HIGH,
     );
 
-    let fact = Fact::new(custom_fact.clone(), location, provenance);
+    let fact = Fact::new(
+        custom_fact.clone(),
+        "Insecure S3 bucket detected".to_string(),
+        location,
+        provenance,
+    );
 
     let metadata = ProjectMetadata::new(
         "terraform-project".to_string(),
@@ -158,7 +163,7 @@ fn test_multiple_plugin_schemas() {
                 FactValue::String("default".to_string()),
             ),
         ]),
-};
+    };
 
     assert!(registry.validate_custom_fact(&terraform_fact).is_ok());
     assert!(registry.validate_custom_fact(&k8s_fact).is_ok());
@@ -400,7 +405,7 @@ fn test_terraform_plugin_scenario() {
             "IAM policy grants excessive permissions",
             None,
         ),
-];
+    ];
 
     let mut ir_facts = Vec::new();
 
@@ -427,14 +432,14 @@ fn test_terraform_plugin_scenario() {
         data.insert(
             "description".to_string(),
             FactValue::String(desc.to_string()),
-);
+        );
 
         if let Some(rem) = remediation {
             data.insert(
                 "remediation".to_string(),
                 FactValue::String(rem.to_string()),
             );
-}
+        }
 
         let custom_fact = FactType::Custom {
             discriminant: format!("terraform::security::{}", rule_id.to_lowercase()),

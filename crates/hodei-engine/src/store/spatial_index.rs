@@ -122,20 +122,20 @@ mod tests {
             Some(ColumnNumber::new(100).unwrap()),
         );
 
-        let fact = Fact {
-            id: hodei_ir::FactId::new(),
-            fact_type: FactType::Function {
+        let fact = Fact::new_with_message(
+            FactType::Function {
                 name: hodei_ir::FunctionName("test".to_string()),
                 complexity: 1,
                 lines_of_code: 10,
             },
+            "Function".to_string(),
             location,
-            provenance: Provenance::new(
+            Provenance::new(
                 ExtractorId::TreeSitter,
                 "1.0.0".to_string(),
                 Confidence::MEDIUM,
             ),
-        };
+        );
 
         let index = SpatialIndex::build(&[&fact]);
         let results = index.query("test.rs", 5, 15);

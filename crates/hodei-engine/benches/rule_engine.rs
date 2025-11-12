@@ -154,7 +154,7 @@ fn create_fact_with_complexity(complexity: u32) -> Fact {
         None,
     );
 
-    Fact::new(
+    Fact::new_with_message(
         FactType::Function {
             name: VariableName::new(format!("func_{}", complexity)),
             complexity,

@@ -25,7 +25,7 @@ fn create_test_fact() -> Fact {
         None,
     );
 
-    Fact::new(
+    Fact::new_with_message(
         FactType::CodeSmell {
             smell_type: "TODO".to_string(),
             severity: Severity::Minor,
@@ -55,7 +55,7 @@ fn create_test_facts(count: usize) -> Vec<Fact> {
 
     (0..count)
         .map(|i| {
-            Fact::new(
+            Fact::new_with_message(
                 FactType::CodeSmell {
                     smell_type: format!("CodeSmell{}", i),
                     severity: Severity::Minor,

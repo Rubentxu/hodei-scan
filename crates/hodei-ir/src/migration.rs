@@ -138,12 +138,12 @@ mod tests {
             crate::Confidence::HIGH,
         );
 
-        let fact = crate::Fact::new(
+        let fact = crate::Fact::new_with_message(
             crate::FactType::CodeSmell {
                 smell_type: "test_smell".to_string(),
                 severity: crate::Severity::Minor,
-                message: "test message".to_string(),
             },
+            "Test code smell".to_string(),
             location,
             provenance,
         );

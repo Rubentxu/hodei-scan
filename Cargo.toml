@@ -19,6 +19,9 @@ members = [
     "crates/hodei-config",
     "crates/hodei-pattern-engine",
     "crates/hodei-server",
+    "crates/hodei-dsl-lsp",
+    "crates/hodei-test",
+    "crates/ir-dump",
 ]
 resolver = "2"
 

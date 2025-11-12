@@ -10,17 +10,14 @@ mod diff_tests {
     #[tokio::test]
     async fn test_branch_diff_calculation() {
         let engine = DiffEngine::new();
-        
+
         // Mock database and project
         // TODO: Implement actual test with real database
-        
-        let result = engine.calculate_branch_diff(
-            "test-project",
-            "main",
-            "feature-branch",
-            &mock_database(),
-        ).await;
-        
+
+        let result = engine
+            .calculate_branch_diff("test-project", "main", "feature-branch", &mock_database())
+            .await;
+
         // TODO: Uncomment when implementation is complete
         // assert!(result.is_ok(), "Branch diff should succeed");
     }
@@ -29,14 +26,11 @@ mod diff_tests {
     #[tokio::test]
     async fn test_commit_diff_calculation() {
         let engine = DiffEngine::new();
-        
-        let result = engine.calculate_commit_diff(
-            "test-project",
-            "abc123",
-            "def456",
-            &mock_database(),
-        ).await;
-        
+
+        let result = engine
+            .calculate_commit_diff("test-project", "abc123", "def456", &mock_database())
+            .await;
+
         // TODO: Uncomment when implementation is complete
         // assert!(result.is_ok(), "Commit diff should succeed");
     }
@@ -45,20 +39,18 @@ mod diff_tests {
     #[tokio::test]
     fn test_diff_summary() {
         let engine = DiffEngine::new();
-        
+
         // Create mock diff
         let mut diff = create_mock_diff();
         diff.new_findings = vec![
             create_test_finding("fp1", Severity::Critical),
             create_test_finding("fp2", Severity::Major),
         ];
-        
-        diff.resolved_findings = vec![
-            create_test_finding("fp3", Severity::Minor),
-        ];
-        
+
+        diff.resolved_findings = vec![create_test_finding("fp3", Severity::Minor)];
+
         let summary = engine.calculate_diff_summary(&diff);
-        
+
         // TODO: Uncomment when implementation is complete
         // assert_eq!(summary.new_findings_count, 2);
         // assert_eq!(summary.resolved_findings_count, 1);
@@ -69,23 +61,30 @@ mod diff_tests {
     #[tokio::test]
     fn test_large_dataset_diff() {
         let engine = DiffEngine::new();
-        
+
         // Create 10,000 findings
-        let current: Vec<Finding> = (0..10000).map(|i| {
-            create_test_finding(&format!("fp{}", i), match i % 4 {
-                0 => Severity::Critical,
-                1 => Severity::Major,
-                2 => Severity::Minor,
-                _ => Severity::Info,
+        let current: Vec<Finding> = (0..10000)
+            .map(|i| {
+                create_test_finding(
+                    &format!("fp{}", i),
+                    match i % 4 {
+                        0 => Severity::Critical,
+                        1 => Severity::Major,
+                        2 => Severity::Minor,
+                        _ => Severity::Info,
+                    },
+                )
             })
-        }).collect();
-        
-        let baseline: Vec<Finding> = (5000..15000).map(|i| {
-            create_test_finding(&format!("fp{}", i), Severity::Info)
-        }).collect();
-        
-        let diff = engine.calculate_diff_optimized(&current, &baseline).unwrap();
-        
+            .collect();
+
+        let baseline: Vec<Finding> = (5000..15000)
+            .map(|i| create_test_finding(&format!("fp{}", i), Severity::Info))
+            .collect();
+
+        let diff = engine
+            .calculate_diff_optimized(&current, &baseline)
+            .unwrap();
+
         // TODO: Uncomment when optimized implementation is complete
         // assert!(diff.new_findings.len() > 0);
         // assert!(diff.resolved_findings.len() > 0);
@@ -104,17 +103,13 @@ mod diff_tests {
     #[tokio::test]
     fn test_severity_change_detection() {
         let engine = DiffEngine::new();
-        
-        let current = vec![
-            create_test_finding("fp1", Severity::Major),
-        ];
-        
-        let baseline = vec![
-            create_test_finding("fp1", Severity::Minor),
-        ];
-        
+
+        let current = vec![create_test_finding("fp1", Severity::Major)];
+
+        let baseline = vec![create_test_finding("fp1", Severity::Minor)];
+
         let diff = engine.calculate_diff(&current, &baseline).unwrap();
-        
+
         // TODO: Uncomment when implementation is complete
         // assert_eq!(diff.severity_increased.len(), 1);
         // assert_eq!(diff.severity_increased[0].fingerprint, "fp1");

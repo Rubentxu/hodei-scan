@@ -1,0 +1,46 @@
+[package]
+name = "hodei-test"
+version = "0.1.0"
+edition = "2024"
+description = "Rule testing framework for hodei-scan"
+license = "MIT"
+repository = "https://github.com/hodei-scan/hodei-scan"
+
+[dependencies]
+hodei-dsl = { path = "../hodei-dsl" }
+hodei-ir = { path = "../hodei-ir" }
+hodei-engine = { path = "../hodei-engine" }
+
+# YAML parsing (replacement for deprecated serde_yaml)
+serde_yml = "0.0.12"
+
+# Test and assertion framework
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+anyhow = "1.0"
+
+# Async support
+tokio = { workspace = true, features = ["full"] }
+futures = "0.3"
+async-trait = "0.1"
+
+# File system operations
+walkdir = "2.4"
+tempfile = "3.23"
+fs-err = "2.10"
+
+# Diff and comparison
+diff = "0.1"
+similar = "2.4"
+
+# Reporting
+pretty_assertions = "1.4"
+console = "0.16"
+
+# Tracing and logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }

@@ -243,8 +243,13 @@ impl RuffAdapter {
             // Create provenance
             let provenance = Provenance::new(ExtractorId::RuffAdapter, version.clone(), confidence);
 
-            // Create fact using Fact::new()
-            let fact = Fact::new(fact_type, source_location, provenance);
+            // Create fact using Fact::new_with_message()
+            let fact = Fact::new_with_message(
+                fact_type.clone(),
+                "Ruff diagnostic".to_string(),
+                source_location,
+                provenance,
+            );
 
             facts.push(fact);
         }

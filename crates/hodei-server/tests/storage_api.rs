@@ -1,10 +1,10 @@
 //! Historical Storage API tests - US-13.02
-use hodei_server::modules::types::{
-    AnalysisMetadata, Finding, FindingLocation, PublishRequest, Severity, ProjectId,
-};
 use hodei_server::modules::error::ServerError;
-use uuid::Uuid;
+use hodei_server::modules::types::{
+    AnalysisMetadata, Finding, FindingLocation, ProjectId, PublishRequest, Severity,
+};
 use std::time::SystemTime;
+use uuid::Uuid;
 
 #[cfg(test)]
 mod storage_tests {
@@ -14,29 +14,27 @@ mod storage_tests {
     #[tokio::test]
     async fn test_publish_analysis_validates_payload() {
         let server = setup_test_server().await;
-        
+
         // Valid request
         let payload = PublishRequest {
             project_id: "my-app".to_string(),
             branch: "main".to_string(),
             commit: "abc123".to_string(),
-            findings: vec![
-                Finding {
-                    fact_type: "Vulnerability".to_string(),
-                    severity: Severity::Critical,
-                    location: FindingLocation {
-                        file: "src/auth.rs".to_string(),
-                        line: 42,
-                        column: 10,
-                        end_line: None,
-                        end_column: None,
-                    },
-                    message: "SQL Injection risk".to_string(),
-                    metadata: Some(serde_json::json!({"cvss": 9.8})),
-                    tags: vec!["security".to_string()],
-                    fingerprint: "vuln-123".to_string(),
-                }
-            ],
+            findings: vec![Finding {
+                fact_type: "Vulnerability".to_string(),
+                severity: Severity::Critical,
+                location: FindingLocation {
+                    file: "src/auth.rs".to_string(),
+                    line: 42,
+                    column: 10,
+                    end_line: None,
+                    end_column: None,
+                },
+                message: "SQL Injection risk".to_string(),
+                metadata: Some(serde_json::json!({"cvss": 9.8})),
+                tags: vec!["security".to_string()],
+                fingerprint: "vuln-123".to_string(),
+            }],
             metadata: AnalysisMetadata {
                 build_url: Some("https://ci.example.com/build/123".to_string()),
                 author: Some("Test User".to_string()),
@@ -45,7 +43,7 @@ mod storage_tests {
                 rule_version: Some("1.0.0".to_string()),
             },
         };
-        
+
         let result = server.publish_analysis("my-app", payload).await;
         // TODO: Uncomment when implementation is complete
         // assert!(result.is_ok(), "Valid payload should succeed");
@@ -55,9 +53,9 @@ mod storage_tests {
     #[tokio::test]
     async fn test_publish_analysis_rejects_invalid_project() {
         let server = setup_test_server().await;
-        
+
         let payload = create_valid_payload();
-        
+
         let result = server.publish_analysis("", payload).await;
         // TODO: Uncomment when validation is implemented
         // assert!(result.is_err(), "Empty project ID should fail");
@@ -68,10 +66,10 @@ mod storage_tests {
     #[tokio::test]
     async fn test_publish_analysis_rejects_invalid_branch() {
         let server = setup_test_server().await;
-        
+
         let mut payload = create_valid_payload();
         payload.branch = "".to_string(); // Empty branch should fail
-        
+
         let result = server.publish_analysis("my-app", payload).await;
         // TODO: Uncomment when validation is implemented
         // assert!(result.is_err(), "Empty branch should fail");
@@ -81,10 +79,10 @@ mod storage_tests {
     #[tokio::test]
     async fn test_publish_analysis_accepts_empty_findings() {
         let server = setup_test_server().await;
-        
+
         let mut payload = create_valid_payload();
         payload.findings = vec![]; // Empty findings
-        
+
         let result = server.publish_analysis("my-app", payload).await;
         // TODO: Uncomment when implementation is complete
         // assert!(result.is_ok(), "Empty findings should be valid");
@@ -94,32 +92,34 @@ mod storage_tests {
     #[tokio::test]
     async fn test_publish_analysis_handles_large_batch() {
         let server = setup_test_server().await;
-        
+
         // Create 10,000 findings
-        let findings: Vec<Finding> = (0..10000).map(|i| Finding {
-            fact_type: format!("Type-{}", i % 10),
-            severity: match i % 4 {
-                0 => Severity::Critical,
-                1 => Severity::Major,
-                2 => Severity::Minor,
-                _ => Severity::Info,
-            },
-            location: FindingLocation {
-                file: format!("src/file{}.rs", i % 100),
-                line: (i % 1000) as u32,
-                column: (i % 100) as u32,
-                end_line: None,
-                end_column: None,
-            },
-            message: format!("Finding {}", i),
-            metadata: None,
-            tags: vec![],
-            fingerprint: format!("fp-{}", i),
-        }).collect();
-        
+        let findings: Vec<Finding> = (0..10000)
+            .map(|i| Finding {
+                fact_type: format!("Type-{}", i % 10),
+                severity: match i % 4 {
+                    0 => Severity::Critical,
+                    1 => Severity::Major,
+                    2 => Severity::Minor,
+                    _ => Severity::Info,
+                },
+                location: FindingLocation {
+                    file: format!("src/file{}.rs", i % 100),
+                    line: (i % 1000) as u32,
+                    column: (i % 100) as u32,
+                    end_line: None,
+                    end_column: None,
+                },
+                message: format!("Finding {}", i),
+                metadata: None,
+                tags: vec![],
+                fingerprint: format!("fp-{}", i),
+            })
+            .collect();
+
         let mut payload = create_valid_payload();
         payload.findings = findings;
-        
+
         let result = server.publish_analysis("my-app", payload).await;
         // TODO: Uncomment when batch processing is optimized
         // assert!(result.is_ok(), "Large batch should be handled efficiently");
@@ -129,10 +129,10 @@ mod storage_tests {
     #[tokio::test]
     async fn test_publish_analysis_validates_required_fields() {
         let server = setup_test_server().await;
-        
+
         let mut payload = create_valid_payload();
         payload.commit = "".to_string(); // Empty commit
-        
+
         let result = server.publish_analysis("my-app", payload).await;
         // TODO: Uncomment when validation is implemented
         // assert!(result.is_err(), "Empty commit should fail validation");
@@ -142,17 +142,19 @@ mod storage_tests {
     #[tokio::test]
     async fn test_publish_analysis_returns_analysis_id() {
         let server = setup_test_server().await;
-        
+
         let payload = create_valid_payload();
-        
+
         let result = server.publish_analysis("my-app", payload).await;
         // TODO: Uncomment when implementation is complete
         match result {
             Ok(response) => {
                 // assert!(!response.analysis_id.to_string().is_empty(), "analysis_id should not be empty");
                 // Verify it's a valid UUID
-                assert!(Uuid::parse_str(&response.analysis_id.to_string()).is_ok(), 
-                    "analysis_id should be a valid UUID");
+                assert!(
+                    Uuid::parse_str(&response.analysis_id.to_string()).is_ok(),
+                    "analysis_id should be a valid UUID"
+                );
             }
             Err(_) => {
                 // For now, we expect this to fail until full implementation
@@ -165,18 +167,18 @@ mod storage_tests {
     #[tokio::test]
     async fn test_rate_limiting_enforced() {
         let server = setup_test_server().await;
-        
+
         // Send multiple requests rapidly
         for i in 0..100 {
             let payload = create_valid_payload();
             let result = server.publish_analysis("my-app", payload).await;
-            
+
             // TODO: Uncomment when rate limiting is implemented
             // First N should succeed, rest should be rate limited
             // if i < 10 {
             //     assert!(result.is_ok(), "First requests should succeed");
             // } else {
-            //     assert!(matches!(result, Err(ServerError::RateLimit(_))), 
+            //     assert!(matches!(result, Err(ServerError::RateLimit(_))),
             //         "Rate limit should trigger after threshold");
             // }
         }
@@ -198,23 +200,21 @@ mod storage_tests {
             project_id: "test-project".to_string(),
             branch: "main".to_string(),
             commit: "abc123".to_string(),
-            findings: vec![
-                Finding {
-                    fact_type: "CodeSmell".to_string(),
-                    severity: Severity::Major,
-                    location: FindingLocation {
-                        file: "src/main.rs".to_string(),
-                        line: 1,
-                        column: 1,
-                        end_line: None,
-                        end_column: None,
-                    },
-                    message: "Long function".to_string(),
-                    metadata: None,
-                    tags: vec!["maintainability".to_string()],
-                    fingerprint: "code-001".to_string(),
-                }
-            ],
+            findings: vec![Finding {
+                fact_type: "CodeSmell".to_string(),
+                severity: Severity::Major,
+                location: FindingLocation {
+                    file: "src/main.rs".to_string(),
+                    line: 1,
+                    column: 1,
+                    end_line: None,
+                    end_column: None,
+                },
+                message: "Long function".to_string(),
+                metadata: None,
+                tags: vec!["maintainability".to_string()],
+                fingerprint: "code-001".to_string(),
+            }],
             metadata: AnalysisMetadata {
                 build_url: Some("https://ci.example.com/build/123".to_string()),
                 author: Some("Test User".to_string()),
@@ -227,7 +227,7 @@ mod storage_tests {
 
     /// Mock server for testing (will be replaced with real implementation)
     async fn setup_test_server() -> TestServer {
-        // This is a placeholder - in real implementation, 
+        // This is a placeholder - in real implementation,
         // this would setup a test database and server
         TestServer::new().await
     }
@@ -245,7 +245,7 @@ impl TestServer {
             database: None, // TODO: Setup test database
         }
     }
-    
+
     async fn publish_analysis(
         &self,
         project_id: &str,
@@ -253,22 +253,28 @@ impl TestServer {
     ) -> Result<hodei_server::modules::types::PublishResponse, ServerError> {
         // TODO: Implement actual validation and storage for US-13.02
         // For now, return a mock response
-        
+
         // Validate project_id
         if project_id.trim().is_empty() {
-            return Err(ServerError::Validation("Project ID cannot be empty".to_string()));
+            return Err(ServerError::Validation(
+                "Project ID cannot be empty".to_string(),
+            ));
         }
-        
+
         // Validate branch
         if request.branch.trim().is_empty() {
-            return Err(ServerError::Validation("Branch cannot be empty".to_string()));
+            return Err(ServerError::Validation(
+                "Branch cannot be empty".to_string(),
+            ));
         }
-        
+
         // Validate commit
         if request.commit.trim().is_empty() {
-            return Err(ServerError::Validation("Commit hash cannot be empty".to_string()));
+            return Err(ServerError::Validation(
+                "Commit hash cannot be empty".to_string(),
+            ));
         }
-        
+
         // Mock successful response
         Ok(hodei_server::modules::types::PublishResponse {
             analysis_id: uuid::Uuid::new_v4(),
@@ -285,7 +291,7 @@ impl TestServer {
     pub fn retention_manager(&self) -> &hodei_server::modules::policies::RetentionManager {
         unimplemented!("Mock implementation")
     }
-    
+
     pub fn database(&self) -> &hodei_server::modules::database::DatabaseConnection {
         unimplemented!("Mock implementation")
     }

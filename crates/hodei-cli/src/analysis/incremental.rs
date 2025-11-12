@@ -174,12 +174,12 @@ impl FactExtractor for MockExtractor {
                 for (i, line) in content.lines().enumerate() {
                     if line.contains("TODO") {
                         let line_num = (i + 1) as u32;
-                        let fact = Fact::new(
+                        let fact = Fact::new_with_message(
                             FactType::CodeSmell {
                                 smell_type: "TODO".to_string(),
                                 severity: hodei_ir::Severity::Minor,
-                                message: format!("TODO found at line {}", line_num),
                             },
+                            format!("TODO found at line {}", line_num),
                             hodei_ir::SourceLocation::new(
                                 hodei_ir::ProjectPath::new(file_path.to_path_buf()),
                                 hodei_ir::LineNumber::new(line_num).unwrap(),

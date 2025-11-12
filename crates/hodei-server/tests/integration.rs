@@ -1,8 +1,8 @@
 //! Integration tests for hodei-server
+use hodei_server::load_config;
 use hodei_server::modules::types::{
     AnalysisMetadata, Finding, FindingLocation, PublishRequest, Severity,
 };
-use hodei_server::load_config;
 use hodei_server::HodeiServer;
 use std::net::SocketAddr;
 use tempfile::TempDir;
@@ -103,23 +103,21 @@ mod tests {
     /// Test publish request creation
     #[tokio::test]
     fn test_publish_request_creation() {
-        let findings = vec![
-            Finding {
-                fact_type: "CodeSmell".to_string(),
-                severity: Severity::Major,
-                location: FindingLocation {
-                    file: "src/main.rs".to_string(),
-                    line: 1,
-                    column: 1,
-                    end_line: None,
-                    end_column: None,
-                },
-                message: "Long function".to_string(),
-                metadata: None,
-                tags: vec!["maintainability".to_string()],
-                fingerprint: "code-001".to_string(),
-            }
-        ];
+        let findings = vec![Finding {
+            fact_type: "CodeSmell".to_string(),
+            severity: Severity::Major,
+            location: FindingLocation {
+                file: "src/main.rs".to_string(),
+                line: 1,
+                column: 1,
+                end_line: None,
+                end_column: None,
+            },
+            message: "Long function".to_string(),
+            metadata: None,
+            tags: vec!["maintainability".to_string()],
+            fingerprint: "code-001".to_string(),
+        }];
 
         let request = PublishRequest {
             project_id: "test-project".to_string(),
@@ -152,8 +150,14 @@ mod tests {
     #[tokio::test]
     async fn test_config_from_env() {
         // Set environment variables
-        std::env::set_var("HODEI_DATABASE_URL", "postgresql://test:test@localhost:5432/test");
-        std::env::set_var("HODEI_JWT_SECRET", "test-secret-key-for-environment-testing");
+        std::env::set_var(
+            "HODEI_DATABASE_URL",
+            "postgresql://test:test@localhost:5432/test",
+        );
+        std::env::set_var(
+            "HODEI_JWT_SECRET",
+            "test-secret-key-for-environment-testing",
+        );
         std::env::set_var("HODEI_DB_POOL_SIZE", "20");
 
         let config = hodei_server::modules::config::ServerConfig::from_env();
@@ -206,7 +210,7 @@ mod tests {
     fn test_analysis_id_generation() {
         let id1 = Uuid::new_v4();
         let id2 = Uuid::new_v4();
-        
+
         assert_ne!(id1, id2);
         assert_eq!(id1.to_string().len(), 36); // UUID string length
         assert_eq!(id2.to_string().len(), 36);

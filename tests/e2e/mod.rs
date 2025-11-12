@@ -1,75 +1,17 @@
-//! Simple E2E tests to verify complete workflows
+//! End-to-End tests for complete workflows
+//!
+//! These tests verify the integration of all EPIC-14 tools
 
-#[cfg(test)]
-mod basic_e2e {
-    use std::process::Command;
-
-    #[test]
-    fn test_full_build() {
-        // Test that the entire project can be built
-        let output = Command::new("cargo")
-            .args(&["build", "--all"])
-            .output()
-            .expect("Failed to build project");
-
-        assert!(output.status.success(), "Project should build successfully");
-    }
-
-    #[test]
-    fn test_all_tests_run() {
-        // Simple smoke test: verify the project structure is valid
-        // We don't actually run the tests since they're slow and already tested in CI
-
-        // Just verify that cargo can at least parse the manifests
-        let output = Command::new("cargo")
-            .args(&["metadata", "--format-version", "1"])
-            .output()
-            .expect("Failed to get project metadata");
-
-        assert!(
-            output.status.success(),
-            "Project metadata should be accessible"
-        );
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("packages"), "Project should have packages");
-    }
-
-    #[test]
-    fn test_petclinic_example_exists() {
-        use std::path::Path;
-
-        // Verify PetClinic example exists
-        let example_dir = Path::new("examples/petclinic-scan");
-        assert!(example_dir.exists(), "PetClinic example should exist");
-
-        let readme = example_dir.join("README.md");
-        assert!(readme.exists(), "README should exist");
-    }
-
-    #[test]
-    fn test_integration_works() {
-        use hodei_dsl::parse_rule_file;
-        use hodei_engine::{EngineConfig, RuleEngine};
-        use hodei_extractors::RegexExtractor;
-        use hodei_ir::{ExtractorId, FactType, Severity};
-
-        // Create all components
-        let _extractor = RegexExtractor::new(ExtractorId::Custom, "1.0.0", vec![]);
-        let _engine = RuleEngine::new(EngineConfig::default());
-        let _rules = parse_rule_file("");
-        let _fact = FactType::CodeSmell {
-            smell_type: "test".to_string(),
-            severity: Severity::Minor,
-            message: "test".to_string(),
-        };
-
-        // If we get here, the full stack works
-        assert!(true);
-    }
-}
-
-#[cfg(test)]
-mod real_world_tests;
-
-#[cfg(test)]
+mod full_workflow;
+mod ir_workflow;
+mod lsp_workflow;
 mod quality_gates;
+mod real_world_tests;
+mod test_workflow;
+
+pub use full_workflow::*;
+pub use ir_workflow::*;
+pub use lsp_workflow::*;
+pub use quality_gates::*;
+pub use real_world_tests::*;
+pub use test_workflow::*;

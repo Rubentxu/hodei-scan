@@ -1,6 +1,6 @@
 /// Core hodei-server implementation with REST API
 use crate::modules::auth::AuthService;
-use crate::modules::baseline::{BaselineManager, BulkUpdateSummary};
+use crate::modules::baseline::{BaselineManager, BaselineStatusUpdate, BulkUpdateSummary};
 use crate::modules::config::ServerConfig;
 use crate::modules::database::DatabaseConnection;
 use crate::modules::diff::{DiffEngine, DiffSummary};

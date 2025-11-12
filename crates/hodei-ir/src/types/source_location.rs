@@ -13,6 +13,32 @@ pub struct SourceLocation {
     pub end_column: Option<ColumnNumber>,
 }
 
+impl std::fmt::Display for SourceLocation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let col_start = self
+            .start_column
+            .map(|c| format!(":{}", c.get()))
+            .unwrap_or_else(|| "".to_string());
+        let col_end = self
+            .end_column
+            .map(|c| format!(":{}", c.get()))
+            .unwrap_or_else(|| "".to_string());
+
+        write!(
+            f,
+            "{}:{}-{}{}",
+            self.file.as_str(),
+            self.start_line.get(),
+            self.end_line.get(),
+            if col_start == col_end {
+                col_start
+            } else {
+                format!("{}{}", col_start, col_end)
+            }
+        )
+    }
+}
+
 impl SourceLocation {
     pub fn new(
         file: ProjectPath,
@@ -44,17 +70,5 @@ impl Default for SourceLocation {
             end_line: LineNumber::new(1).unwrap(),
             end_column: None,
         }
-    }
-}
-
-impl fmt::Display for SourceLocation {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}:{}:{}",
-            self.file.as_str(),
-            self.start_line.get(),
-            self.start_column.map(|c| c.get()).unwrap_or(0)
-        )
     }
 }

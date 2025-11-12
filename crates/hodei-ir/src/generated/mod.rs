@@ -7,7 +7,7 @@
 mod actual;
 
 #[cfg(feature = "capnp")]
-pub use actual::*;
+pub use actual::ir_capnp;
 
 /// Stub types used when Cap'n Proto compiler is not available
 #[cfg(not(feature = "capnp"))]

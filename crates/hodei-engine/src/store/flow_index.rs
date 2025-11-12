@@ -142,37 +142,37 @@ mod tests {
     #[test]
     fn test_reachable_from() {
         // Create test facts with flow relationships
-        let fact1 = Fact {
-            id: hodei_ir::FactId::new(),
-            fact_type: FactType::TaintSource {
+        let fact1 = Fact::new_with_message(
+            FactType::TaintSource {
                 var: hodei_ir::VariableName("user_input".to_string()),
                 flow_id: FlowId::new_uuid(),
                 source_type: "http".to_string(),
                 confidence: Confidence::MEDIUM,
             },
-            location: create_test_location("test.rs", 1, 1, 1, 10),
-            provenance: Provenance::new(
+            "Taint source".to_string(),
+            create_test_location("test.rs", 1, 1, 1, 10),
+            Provenance::new(
                 ExtractorId::TreeSitter,
                 "1.0.0".to_string(),
                 Confidence::MEDIUM,
             ),
-        };
+        );
 
-        let fact2 = Fact {
-            id: hodei_ir::FactId::new(),
-            fact_type: FactType::TaintSink {
+        let fact2 = Fact::new_with_message(
+            FactType::TaintSink {
                 func: hodei_ir::FunctionName("write".to_string()),
                 consumes_flow: FlowId::new_uuid(),
                 category: "write".to_string(),
                 severity: hodei_ir::Severity::Major,
             },
-            location: create_test_location("test.rs", 10, 10, 1, 10),
-            provenance: Provenance::new(
+            "Taint sink".to_string(),
+            create_test_location("test.rs", 10, 10, 1, 10),
+            Provenance::new(
                 ExtractorId::TreeSitter,
                 "1.0.0".to_string(),
                 Confidence::MEDIUM,
             ),
-        };
+        );
 
         let index = FlowIndex::build(&[&fact1, &fact2]);
         let reachable = index.reachable_from(fact1.id);
