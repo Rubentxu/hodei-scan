@@ -5,6 +5,62 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2025-11-12
+
+### Added
+
+#### EPIC-15 Fase 2: Declarative Extractors System
+A comprehensive system for creating and executing security analysis rules using a declarative YAML DSL with multi-language tree-sitter parsing.
+
+- **US-15.1**: Multi-language Tree-sitter Parser
+  - 8 language support (Python, JavaScript, TypeScript, Rust, Go, Java, C, C++)
+  - Async parsing with caching and performance metrics
+  - AST node extraction with source positions
+
+- **US-15.2**: YAML Rule Loader & Validator
+  - Parse and validate Hodei DSL rules from YAML
+  - Required field validation (id, patterns, languages)
+  - Multi-language rule set management
+
+- **US-15.3**: Pattern Matcher with Metavariables
+  - Match patterns against AST nodes
+  - Metavariable capture ($X, $VAR, $FUNC, $CLASS)
+  - Generate IR Facts from matches with confidence
+
+- **US-15.4**: Semi-automatic Semgrep Rule Translator
+  - Convert Semgrep YAML rules to Hodei format
+  - Translation warnings for unsupported features
+  - Language mapping (python→python, js→javascript)
+
+- **US-15.6**: Rule Testing Framework
+  - Pytest-style test execution
+  - Positive and negative test cases
+  - Detailed test reports with timing
+
+- **US-15.7**: OWASP Top 10 2021 Rule Library
+  - Complete A01-A10 security categories
+  - Production-ready security rules
+  - Each rule includes patterns, metadata, tests, and fix suggestions
+
+- **US-15.5**: Language Server Protocol for DSL
+  - Code completion with snippets for YAML DSL
+  - Real-time validation diagnostics
+  - Hover help for metadata, patterns, and languages
+  - Document symbols for rule outline
+  - Code actions for quick fixes
+  - Rule templates for OWASP Top 10 and common patterns
+
+### Test Coverage
+- 46 comprehensive tests passing in hodei-declarative-extractors
+- TDD approach with Red-Green-Refactor cycle
+- Integration tests for all components
+
+### Technical Details
+- Modular architecture with clear separation of concerns
+- Support for 8 programming languages
+- Rule DSL version 1.0.0
+- Full LSP server implementation
+
 ## [0.1.0] - 2025-11-10
 
 ### Added
