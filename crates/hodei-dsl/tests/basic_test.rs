@@ -8,8 +8,8 @@ mod tests {
     fn test_basic_types() {
         // Test that basic types compile
         let _string = String::from("test");
-        let _vec = Vec::new();
-        let _hashmap = std::collections::HashMap::new();
+        let _vec: Vec<i32> = Vec::new();
+        let _hashmap: std::collections::HashMap<String, String> = std::collections::HashMap::new();
     }
 
     #[test]

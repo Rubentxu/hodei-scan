@@ -29,19 +29,15 @@ mod basic_integration {
 
     #[test]
     fn test_extractor_exists() {
-        use hodei_extractors::{ExtractorDefinition, ExtractorMetadata};
+        use hodei_extractors::ExtractorDefinition;
         use hodei_ir::ExtractorId;
 
         let _r = ExtractorDefinition {
             id: "test".to_string(),
             command: "echo".to_string(),
+            enabled: true,
+            timeout_seconds: 60,
             config: serde_json::Value::Null,
-            metadata: ExtractorMetadata {
-                id: "test".to_string(),
-                name: "Test".to_string(),
-                version: "1.0.0".to_string(),
-                description: "Test extractor".to_string(),
-            },
         };
         assert!(true);
     }
@@ -75,16 +71,12 @@ mod basic_integration {
         let extractor = ExtractorDefinition {
             id: "test".to_string(),
             command: "echo".to_string(),
+            enabled: true,
+            timeout_seconds: 60,
             config: serde_json::Value::Null,
-            metadata: hodei_extractors::ExtractorMetadata {
-                id: "test".to_string(),
-                name: "Test".to_string(),
-                version: "1.0.0".to_string(),
-                description: "Test extractor".to_string(),
-            },
         };
         let engine = RuleEngine::new(EngineConfig::default());
-        let rules = parse_rule_file("");
+        let _rules = parse_rule_file("");
 
         // Create a fact
         let fact = FactType::CodeSmell {

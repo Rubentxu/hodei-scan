@@ -105,6 +105,11 @@ hodei-ir = { path = "crates/hodei-ir" }
 hodei-extractors = { path = "crates/hodei-extractors" }
 hodei-engine = { path = "crates/hodei-engine" }
 hodei-dsl = { path = "crates/hodei-dsl" }
+hodei-test = { path = "crates/hodei-test" }
+ir-dump = { path = "crates/ir-dump" }
+hodei-dsl-lsp = { path = "crates/hodei-dsl-lsp" }
+serde_json = "1.0"
+lsp-types = "0.95"
 uuid = { version = "1.18", features = ["v4"] }
 tokio = { version = "1.40", features = ["full"] }
 tempfile = "3.10"

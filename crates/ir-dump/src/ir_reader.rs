@@ -30,14 +30,54 @@ impl IRReader {
 
     async fn read_json(&self, path: &Path) -> Result<FindingSet> {
         let content = tokio::fs::read_to_string(path).await?;
-        let finding_set: FindingSet = serde_json::from_str(&content)?;
-        Ok(finding_set)
+
+        // Try to parse as array first (old format)
+        if let Ok(finding_set) = serde_json::from_str::<FindingSet>(&content) {
+            return Ok(finding_set);
+        }
+
+        // Try to parse as object with schema (new format)
+        #[derive(serde::Deserialize)]
+        struct IRWrapper {
+            facts: Option<FindingSet>,
+            findings: Option<FindingSet>,
+            #[allow(dead_code)]
+            schema_version: Option<String>,
+            #[allow(dead_code)]
+            metadata: Option<serde_json::Value>,
+        }
+
+        let wrapper: IRWrapper = serde_json::from_str(&content)
+            .context("Failed to parse IR as array or object format")?;
+
+        wrapper.facts.or(wrapper.findings)
+            .ok_or_else(|| anyhow::anyhow!("No facts or findings field found in IR object"))
     }
 
     async fn read_yaml(&self, path: &Path) -> Result<FindingSet> {
         let content = tokio::fs::read_to_string(path).await?;
-        let finding_set: FindingSet = serde_yml::from_str(&content)?;
-        Ok(finding_set)
+
+        // Try to parse as array first (old format)
+        if let Ok(finding_set) = serde_yml::from_str::<FindingSet>(&content) {
+            return Ok(finding_set);
+        }
+
+        // Try to parse as object with schema (new format)
+        #[derive(serde::Deserialize)]
+        struct IRWrapper {
+            facts: Option<FindingSet>,
+            findings: Option<FindingSet>,
+            #[allow(dead_code)]
+            schema_version: Option<String>,
+            #[allow(dead_code)]
+            metadata: Option<serde_json::Value>,
+        }
+
+        let wrapper: IRWrapper = serde_yml::from_str(&content)
+            .context("Failed to parse IR as array or object format")?;
+
+        wrapper.facts.or(wrapper.findings)
+            .ok_or_else(|| anyhow::anyhow!("No facts or findings field found in IR object"))
     }
 
     async fn read_capnp(&self, _path: &Path) -> Result<FindingSet> {

@@ -1,5 +1,7 @@
 //! End-to-End tests for LSP workflow
 
+// TODO: Re-enable these tests when LSP server implementation is complete
+/*
 use hodei_dsl_lsp::{
     domain::models::{CompletionContext, CursorPosition, Document},
     infrastructure::adapters::{HodeiCompletionProvider, HodeiHoverProvider},
@@ -7,8 +9,6 @@ use hodei_dsl_lsp::{
 use lsp_types::Url;
 use std::str::FromStr;
 
-// TODO: Re-enable these tests when LSP server implementation is complete
-/*
 #[tokio::test]
 async fn test_complete_rule_authoring_workflow() {
     // Simulate a developer writing a complete rule

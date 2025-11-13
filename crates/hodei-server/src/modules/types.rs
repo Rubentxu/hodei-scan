@@ -195,7 +195,7 @@ pub struct Project {
 /// Baseline status for a finding
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BaselineStatus {
-    pub finding_id: i32,
+    pub finding_id: i64,
     pub status: FindingStatus,
     pub reason: Option<String>,
     pub expires_at: Option<DateTime<Utc>>,

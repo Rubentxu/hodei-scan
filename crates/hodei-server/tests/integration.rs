@@ -9,7 +9,7 @@ use uuid::Uuid;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::time::{Duration, sleep};
+    use tokio;
 
     /// Test server startup - TDD Red
     #[tokio::test]
@@ -209,7 +209,7 @@ mod tests {
 
     /// Test UUID generation for analysis IDs
     #[tokio::test]
-    fn test_analysis_id_generation() {
+    async fn test_analysis_id_generation() {
         let id1 = Uuid::new_v4();
         let id2 = Uuid::new_v4();
 
@@ -220,7 +220,7 @@ mod tests {
 
     /// Test finding location validation
     #[tokio::test]
-    fn test_finding_location() {
+    async fn test_finding_location() {
         let location = FindingLocation {
             file: "src/test.rs".to_string(),
             line: 100,
@@ -229,8 +229,10 @@ mod tests {
             end_column: Some(10),
         };
 
-        assert!(location.line > 0);
-        assert!(location.column > 0);
-        assert!(location.end_line.is_none() || location.end_line.unwrap() >= location.line);
+        assert_eq!(location.file, "src/test.rs");
+        assert_eq!(location.line, 100);
+        assert_eq!(location.column, 50);
+        assert!(location.end_line.is_some());
+        assert!(location.end_column.is_some());
     }
 }

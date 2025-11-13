@@ -7,9 +7,9 @@ use std::path::PathBuf;
 mod tests {
     use super::*;
 
-    /// Helper to get bash command with script path
-    fn bash_script_command(script_path: &PathBuf) -> String {
-        format!("bash {}", script_path.to_string_lossy())
+    /// Helper to get bash command with script path and extractor ID
+    fn bash_script_command(script_path: &PathBuf, extractor_id: &str) -> String {
+        format!("bash {} {}", script_path.to_string_lossy(), extractor_id)
     }
 
     /// Helper to create a test directory with necessary files
@@ -56,7 +56,7 @@ mod tests {
             },
             vec![ExtractorDefinition {
                 id: "mock-extractor".to_string(),
-                command: bash_script_command(&fixture_path),
+                command: bash_script_command(&fixture_path, "mock-extractor"),
                 enabled: true,
                 timeout_seconds: 300,
                 config: serde_json::json!({}),
@@ -91,21 +91,21 @@ mod tests {
         let extractors = vec![
             ExtractorDefinition {
                 id: "extractor-1".to_string(),
-                command: bash_script_command(&fixture_path),
+                command: bash_script_command(&fixture_path, "extractor-1"),
                 enabled: true,
                 timeout_seconds: 300,
                 config: serde_json::json!({}),
             },
             ExtractorDefinition {
                 id: "extractor-2".to_string(),
-                command: bash_script_command(&fixture_path),
+                command: bash_script_command(&fixture_path, "extractor-2"),
                 enabled: true,
                 timeout_seconds: 300,
                 config: serde_json::json!({}),
             },
             ExtractorDefinition {
                 id: "extractor-3".to_string(),
-                command: bash_script_command(&fixture_path),
+                command: bash_script_command(&fixture_path, "extractor-3"),
                 enabled: true,
                 timeout_seconds: 300,
                 config: serde_json::json!({}),
@@ -144,7 +144,7 @@ mod tests {
         let extractors = vec![
             ExtractorDefinition {
                 id: "good-extractor-1".to_string(),
-                command: bash_script_command(&fixture_path),
+                command: bash_script_command(&fixture_path, "mock-extractor"),
                 enabled: true,
                 timeout_seconds: 300,
                 config: serde_json::json!({}),
@@ -158,7 +158,7 @@ mod tests {
             },
             ExtractorDefinition {
                 id: "good-extractor-2".to_string(),
-                command: bash_script_command(&fixture_path),
+                command: bash_script_command(&fixture_path, "mock-extractor"),
                 enabled: true,
                 timeout_seconds: 300,
                 config: serde_json::json!({}),
@@ -214,7 +214,7 @@ echo '{}'
             },
             vec![ExtractorDefinition {
                 id: "slow-extractor".to_string(),
-                command: bash_script_command(&slow_extractor_path),
+                command: bash_script_command(&slow_extractor_path, "slow-extractor"),
                 enabled: true,
                 timeout_seconds: 1,
                 config: serde_json::json!({}),
@@ -255,7 +255,7 @@ echo 'invalid json {'
             },
             vec![ExtractorDefinition {
                 id: "invalid-extractor".to_string(),
-                command: bash_script_command(&invalid_extractor_path),
+                command: bash_script_command(&invalid_extractor_path, "invalid-extractor"),
                 enabled: true,
                 timeout_seconds: 300,
                 config: serde_json::json!({}),
@@ -282,14 +282,14 @@ echo 'invalid json {'
         let extractors = vec![
             ExtractorDefinition {
                 id: "extractor-1".to_string(),
-                command: bash_script_command(&fixture_path),
+                command: bash_script_command(&fixture_path, "mock-extractor"),
                 enabled: true,
                 timeout_seconds: 300,
                 config: serde_json::json!({}),
             },
             ExtractorDefinition {
                 id: "extractor-2".to_string(),
-                command: bash_script_command(&fixture_path),
+                command: bash_script_command(&fixture_path, "mock-extractor"),
                 enabled: true,
                 timeout_seconds: 300,
                 config: serde_json::json!({}),
@@ -328,21 +328,21 @@ echo 'invalid json {'
         let extractors = vec![
             ExtractorDefinition {
                 id: "ruff".to_string(),
-                command: bash_script_command(&fixture_path),
+                command: bash_script_command(&fixture_path, "ruff"),
                 enabled: true,
                 timeout_seconds: 300,
                 config: serde_json::json!({}),
             },
             ExtractorDefinition {
                 id: "eslint".to_string(),
-                command: bash_script_command(&fixture_path),
+                command: bash_script_command(&fixture_path, "eslint"),
                 enabled: true,
                 timeout_seconds: 300,
                 config: serde_json::json!({}),
             },
             ExtractorDefinition {
                 id: "clippy".to_string(),
-                command: bash_script_command(&fixture_path),
+                command: bash_script_command(&fixture_path, "clippy"),
                 enabled: true,
                 timeout_seconds: 300,
                 config: serde_json::json!({}),
@@ -363,7 +363,11 @@ echo 'invalid json {'
 
         let results = orchestrator.run_all(&temp_dir).await;
 
-        assert!(results.is_ok(), "Full integration test should succeed");
+        assert!(
+            results.is_ok(),
+            "Full integration test should succeed: {:?}",
+            results.err()
+        );
         let aggregated_ir = results.unwrap();
 
         assert!(!aggregated_ir.facts.is_empty());

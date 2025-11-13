@@ -27,6 +27,21 @@ impl DatabaseConnection {
         Ok(Self { pool })
     }
 
+    /// Create a test database connection for unit tests
+    pub async fn new_test_connection() -> Result<Self> {
+        // For baseline tests, we need to return a proper DatabaseConnection
+        // Since baseline tests only need baseline_status table operations,
+        // we'll create a minimal mock implementation
+
+        // This is a temporary solution - in production, you'd want to use
+        // testcontainers with a real PostgreSQL instance
+
+        // For now, we'll return an error that explains the situation
+        Err(ServerError::Internal(
+            "Baseline tests require PostgreSQL database setup. Please configure testcontainers or use a real PostgreSQL instance for testing.".to_string()
+        ))
+    }
+
     /// Get the underlying pool
     pub fn pool(&self) -> &PgPool {
         &self.pool

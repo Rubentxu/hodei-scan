@@ -10,7 +10,7 @@ mod tests {
     #[test]
     fn test_string() {
         let s = "hodei-scan";
-        assert_eq!(s.len(), 11);
+        assert_eq!(s.len(), 10);
     }
 
     #[test]

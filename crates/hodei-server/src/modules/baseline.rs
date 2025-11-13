@@ -73,7 +73,7 @@ impl BaselineManager {
         .await
         .map_err(ServerError::Database)
         .map(|row| BaselineStatus {
-            finding_id: row.get::<i32, _>("id").into(),
+            finding_id: row.get::<i64, _>("id").into(),
             status: self.status_from_string(&row.get::<String, _>("status")).unwrap_or(FindingStatus::Active),
             reason: row.get("reason"),
             expires_at: row.get("expires_at"),
@@ -186,7 +186,7 @@ impl BaselineManager {
         let mut statuses = HashMap::new();
         for row in rows {
             let status = BaselineStatus {
-                finding_id: row.get::<i32, _>("id").into(),
+                finding_id: row.get::<i64, _>("id").into(),
                 status: self
                     .status_from_string(&row.get::<String, _>("status"))
                     .unwrap_or(FindingStatus::Active),
@@ -863,10 +863,180 @@ mod tests {
         // Success count depends on actual database state
     }
 
-    // Helper function to create a test database using testcontainers
-    // TODO: Fix testcontainers API compatibility
+    // Helper function to create a test database for baseline operations
+    // This creates a working test environment for baseline functionality
     async fn create_test_database() -> crate::modules::database::DatabaseConnection {
-        unimplemented!("Test database creation requires testcontainers setup")
+        // Try multiple approaches to create a working test database
+
+        // 1. Try environment variable first
+        if let Ok(test_url) = std::env::var("TEST_DATABASE_URL") {
+            let conn = crate::modules::database::DatabaseConnection::new(&test_url, 5)
+                .await
+                .expect("Failed to connect to test database");
+
+            // Create test project to satisfy foreign key constraints
+            if let Err(e) = sqlx::query(
+                r#"
+                INSERT INTO projects (id, name, description, default_branch)
+                VALUES ('test-project', 'Test Project', 'Test project for baseline tests', 'main')
+                ON CONFLICT (id) DO NOTHING
+                "#
+            )
+            .execute(conn.pool())
+            .await {
+                println!("Warning: Failed to create test project: {}", e);
+            }
+
+            return conn;
+        }
+
+        // 2. Try common PostgreSQL configurations
+        let postgres_urls = vec![
+            "postgres://postgres:postgres@localhost:5432/hodei_test",
+            "postgres://postgres:postgres@127.0.0.1:5432/hodei_test",
+            "postgres://postgres:postgres@postgres:5432/hodei_test",
+        ];
+
+        for url in postgres_urls {
+            match crate::modules::database::DatabaseConnection::new(url, 5).await {
+                Ok(conn) => {
+                    println!("Connected to test database: {}", url);
+
+                    // Create test project to satisfy foreign key constraints
+                    if let Err(e) = sqlx::query(
+                        r#"
+                        INSERT INTO projects (id, name, description, default_branch)
+                        VALUES ('test-project', 'Test Project', 'Test project for baseline tests', 'main')
+                        ON CONFLICT (id) DO NOTHING
+                        "#
+                    )
+                    .execute(conn.pool())
+                    .await {
+                        println!("Warning: Failed to create test project: {}", e);
+                    }
+
+                    return conn;
+                }
+                Err(e) => {
+                    println!("Failed to connect to {}: {}", url, e);
+                }
+            }
+        }
+
+        // 3. Start a PostgreSQL container using Docker
+        println!("No existing PostgreSQL found. Starting PostgreSQL container...");
+        start_postgres_container().await
+    }
+
+    // Start a PostgreSQL container for testing
+    async fn start_postgres_container() -> crate::modules::database::DatabaseConnection {
+        use std::process::Command;
+
+        // Check if Docker is available
+        let docker_check = Command::new("docker")
+            .args(&["--version"])
+            .output();
+
+        if docker_check.is_err() {
+            panic!("Docker is not available. Please install Docker or PostgreSQL to run baseline tests.");
+        }
+
+        // Use a unique container name to avoid conflicts
+        use std::sync::atomic::{AtomicU64, Ordering};
+        use std::process;
+
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let counter = COUNTER.fetch_add(1, Ordering::SeqCst);
+        let pid = process::id();
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+
+        let container_name = format!("hodei-test-postgres-{}-{}-{}", pid, timestamp, counter);
+
+        // First, clean up any existing test containers (be careful not to remove production ones)
+        println!("Cleaning up existing test containers...");
+        let cleanup_output = Command::new("docker")
+            .args(&["ps", "-a", "--filter", "name=hodei-test-postgres-", "--format", "{{.Names}}"])
+            .output()
+            .expect("Failed to check for existing test containers");
+
+        let existing_test_containers = String::from_utf8_lossy(&cleanup_output.stdout);
+        for container in existing_test_containers.lines() {
+            if container.starts_with("hodei-test-postgres-") {
+                println!("Removing old test container: {}", container);
+                Command::new("docker")
+                    .args(&["rm", "-f", container.trim()])
+                    .output()
+                    .ok(); // Ignore errors for cleanup
+            }
+        }
+
+        // Create new container with unique name
+        println!("Starting PostgreSQL container for testing: {}...", container_name);
+        let output = Command::new("docker")
+            .args(&[
+                "run", "-d",
+                "--name", &container_name,
+                "-e", "POSTGRES_PASSWORD=postgres",
+                "-e", "POSTGRES_DB=hodei_test",
+                "-p", "5433:5432",  // Use port 5433 to avoid conflicts
+                "postgres:15-alpine"
+            ])
+            .output()
+            .expect("Failed to start PostgreSQL container");
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            panic!("Failed to start PostgreSQL container: {}", stderr);
+        }
+
+        // Wait for PostgreSQL to be ready
+        println!("Waiting for PostgreSQL to be ready...");
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+
+        // Try to connect to the container
+        let test_url = "postgres://postgres:postgres@localhost:5433/hodei_test";
+
+        // Retry connection a few times with longer delays
+        for i in 0..15 {
+            match crate::modules::database::DatabaseConnection::new(test_url, 5).await {
+                Ok(conn) => {
+                    println!("Successfully connected to PostgreSQL container");
+
+                    // Initialize database schema
+                    println!("Initializing database schema...");
+                    if let Err(e) = conn.initialize_schema().await {
+                        println!("Warning: Failed to initialize schema: {}", e);
+                    }
+
+                    // Create test project to satisfy foreign key constraints
+                    println!("Creating test project...");
+                    if let Err(e) = sqlx::query(
+                        r#"
+                        INSERT INTO projects (id, name, description, default_branch)
+                        VALUES ('test-project', 'Test Project', 'Test project for baseline tests', 'main')
+                        ON CONFLICT (id) DO NOTHING
+                        "#
+                    )
+                    .execute(conn.pool())
+                    .await {
+                        println!("Warning: Failed to create test project: {}", e);
+                    }
+
+                    return conn;
+                }
+                Err(e) => {
+                    println!("Attempt {} failed: {}", i + 1, e);
+                    if i < 14 {
+                        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+                    }
+                }
+            }
+        }
+
+        panic!("Failed to connect to PostgreSQL container after multiple attempts");
     }
 
     // async fn run_migrations(database_url: &str) {

@@ -37,7 +37,7 @@ mod diff_tests {
 
     /// Test TDD Red: Diff summary calculation
     #[tokio::test]
-    fn test_diff_summary() {
+    async fn test_diff_summary() {
         let engine = DiffEngine::new();
 
         // Create mock diff
@@ -59,7 +59,7 @@ mod diff_tests {
 
     /// Test TDD Red: Large dataset diff optimization
     #[tokio::test]
-    fn test_large_dataset_diff() {
+    async fn test_large_dataset_diff() {
         let engine = DiffEngine::new();
 
         // Create 10,000 findings
@@ -101,7 +101,7 @@ mod diff_tests {
 
     /// Test TDD Red: Severity change detection
     #[tokio::test]
-    fn test_severity_change_detection() {
+    async fn test_severity_change_detection() {
         let engine = DiffEngine::new();
 
         let current = vec![create_test_finding("fp1", Severity::Major)];

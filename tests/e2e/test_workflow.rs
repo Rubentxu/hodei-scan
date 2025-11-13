@@ -1,7 +1,9 @@
 //! End-to-End tests for test framework workflow
 
 use hodei_test::domain::models::TestConfig;
-use hodei_test::{FileSystemSnapshotRepository, HodeiTestRunner, YamlTestConfigParser};
+use hodei_test::domain::ports::{TestConfigParser, SnapshotRepository};
+use hodei_test::infrastructure::yaml_parser::YamlTestConfigParser;
+use hodei_test::infrastructure::file_system_snapshot_repo::FileSystemSnapshotRepository;
 use std::path::Path;
 use tempfile::TempDir;
 
@@ -76,7 +78,7 @@ cases:
     tokio::fs::create_dir_all(&snapshot_dir).await.unwrap();
 
     // Create snapshot repository
-    let repo = FileSystemSnapshotRepository::new(snapshot_dir);
+    let repo = FileSystemSnapshotRepository::new(snapshot_dir.clone());
 
     // Parse test file
     let parser = YamlTestConfigParser::new();
@@ -89,23 +91,24 @@ cases:
             name: case.name.clone(),
             passed: !case.expected_findings.is_empty(),
             assertions: Vec::new(),
+            findings: Vec::new(),
         };
         results.add_result(result);
     }
 
     // Update snapshots
-    let snapshot_manager =
-        hodei_test::application::snapshot::SnapshotManager::new(repo, snapshot_dir);
+    let snapshot_manager = hodei_test::application::snapshot::SnapshotManager::new(repo, snapshot_dir.clone());
     snapshot_manager.update_snapshots(&results).await.unwrap();
 
     // Verify snapshot was created
-    let snapshot_files: Vec<_> = tokio::fs::read_dir(&snapshot_dir)
-        .await
-        .unwrap()
-        .filter_map(|entry| entry.ok())
-        .map(|entry| entry.file_name().to_string_lossy().to_string())
-        .filter(|name| name.ends_with(".snap"))
-        .collect();
+    let mut dir = tokio::fs::read_dir(&snapshot_dir).await.unwrap();
+    let mut snapshot_files: Vec<String> = Vec::new();
+    while let Some(entry) = dir.next_entry().await.unwrap() {
+        let name = entry.file_name().to_string_lossy().to_string();
+        if name.ends_with(".snap") {
+            snapshot_files.push(name);
+        }
+    }
 
     assert!(!snapshot_files.is_empty());
 

@@ -32,20 +32,16 @@ mod cli_integration_tests {
 
     #[test]
     fn test_integration_with_extractors() {
-        use hodei_extractors::{ExtractorDefinition, ExtractorMetadata};
+        use hodei_extractors::ExtractorDefinition;
         use hodei_ir::ExtractorId;
 
         // Test that CLI dependencies work
         let _extractor = ExtractorDefinition {
             id: "test".to_string(),
             command: "echo".to_string(),
+            enabled: true,
+            timeout_seconds: 60,
             config: serde_json::Value::Null,
-            metadata: ExtractorMetadata {
-                id: "test".to_string(),
-                name: "Test".to_string(),
-                version: "1.0.0".to_string(),
-                description: "Test extractor".to_string(),
-            },
         };
         assert!(true);
     }

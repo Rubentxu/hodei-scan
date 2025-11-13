@@ -2,9 +2,7 @@
 //!
 //! This module implements US-14.1 from EPIC-14: Infrastructure Core de Orquestación
 
-use crate::core::{
-    ExtractorConfig, ExtractorDefinition, ExtractorError, ExtractorRun, IRBuilder,
-};
+use crate::core::{ExtractorConfig, ExtractorDefinition, ExtractorError, ExtractorRun, IRBuilder};
 use futures::future::join_all;
 use hodei_ir::{Fact, IntermediateRepresentation, ProjectPath};
 use serde::{Deserialize, Serialize};
@@ -109,14 +107,10 @@ impl ExtractorOrchestrator {
     }
 
     /// Execute all enabled extractors and aggregate their results
-    pub async fn run_all(
-        &self,
-        project_path: &Path,
-    ) -> Result<AggregatedIR, ExtractorError> {
+    pub async fn run_all(&self, project_path: &Path) -> Result<AggregatedIR, ExtractorError> {
         let start_time = Instant::now();
 
-        let enabled_extractors: Vec<_> =
-            self.extractors.iter().filter(|e| e.enabled).collect();
+        let enabled_extractors: Vec<_> = self.extractors.iter().filter(|e| e.enabled).collect();
 
         if enabled_extractors.is_empty() {
             warn!("No enabled extractors found");
@@ -198,6 +192,19 @@ impl ExtractorOrchestrator {
                     }
                 }
 
+                eprintln!(
+                    "[DEBUG] Extractor {} stdout length: {}",
+                    extractor.id,
+                    stdout.len()
+                );
+                eprintln!(
+                    "[DEBUG] First 500 chars: {}",
+                    String::from_utf8_lossy(&stdout)
+                        .chars()
+                        .take(500)
+                        .collect::<String>()
+                );
+
                 // Parse IR from stdout
                 match Self::parse_ir_from_bytes(&stdout) {
                     Ok(ir) => {
@@ -277,7 +284,21 @@ impl ExtractorOrchestrator {
         command: &str,
         input_config: &ExtractorConfig,
     ) -> Result<(Vec<u8>, Vec<u8>), ExtractorError> {
-        let mut child = Command::new(command)
+        // Parse command string into executable and arguments
+        let parts: Vec<&str> = command.split_whitespace().collect();
+        if parts.is_empty() {
+            return Err(ExtractorError::ExecutionFailed {
+                id: command.to_string(),
+                exit_code: None,
+                stderr: "Empty command".to_string(),
+            });
+        }
+
+        let executable = parts[0];
+        let args = &parts[1..];
+
+        let mut child = Command::new(executable)
+            .args(args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -289,12 +310,11 @@ impl ExtractorOrchestrator {
 
         // Write config to stdin
         if let Some(mut stdin) = child.stdin.take() {
-            let config_json = serde_json::to_vec(input_config).map_err(|e| {
-                ExtractorError::Json {
+            let config_json =
+                serde_json::to_vec(input_config).map_err(|e| ExtractorError::Json {
                     id: command.to_string(),
                     error: e,
-                }
-            })?;
+                })?;
 
             stdin
                 .write_all(&config_json)
@@ -309,10 +329,13 @@ impl ExtractorOrchestrator {
         }
 
         // Wait for process to complete
-        let output = child.wait_with_output().await.map_err(|e| ExtractorError::Io {
-            id: command.to_string(),
-            error: e,
-        })?;
+        let output = child
+            .wait_with_output()
+            .await
+            .map_err(|e| ExtractorError::Io {
+                id: command.to_string(),
+                error: e,
+            })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);

@@ -89,14 +89,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
         let output = Command::new("cargo")
             .args(&[
                 "run",
+                "--package",
+                "hodei-cli",
                 "--bin",
-                "hodei-scan",
+                "hodei-cli",
                 "--",
-                "scan",
+                "--project",
                 project_dir.to_str().unwrap(),
             ])
             .output()
-            .expect("Failed to execute hodei-scan");
+            .expect("Failed to execute hodei-cli");
 
         // Verify the scan completed
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -104,7 +106,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
         // Check that it processed the files
         assert!(
-            output.status.success() || stderr.contains("Scanning"),
+            output.status.success() || stdout.contains("CLI initialized successfully"),
             "Should scan the project successfully"
         );
     }
@@ -296,19 +298,22 @@ public class {0} {{
         let output = Command::new("cargo")
             .args(&[
                 "run",
+                "--package",
+                "hodei-cli",
                 "--bin",
-                "hodei-scan",
+                "hodei-cli",
                 "--",
-                "scan",
+                "--project",
                 project_dir.to_str().unwrap(),
             ])
             .output()
-            .expect("Failed to execute hodei-scan");
+            .expect("Failed to execute hodei-cli");
 
         // Verify it handles multiple services
+        let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
         assert!(
-            output.status.success() || stderr.contains("Scanning"),
+            output.status.success() || stdout.contains("CLI initialized successfully"),
             "Should scan microservices architecture"
         );
     }
@@ -357,20 +362,25 @@ public class LegacyClass {
         let output = Command::new("cargo")
             .args(&[
                 "run",
+                "--package",
+                "hodei-cli",
                 "--bin",
-                "hodei-scan",
+                "hodei-cli",
                 "--",
-                "scan",
+                "--project",
                 project_dir.to_str().unwrap(),
             ])
             .output()
-            .expect("Failed to execute hodei-scan");
+            .expect("Failed to execute hodei-cli");
 
         // Verify it processes legacy code
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
+        println!("Exit status: {}", output.status);
+        println!("Stdout: {}", stdout);
+        println!("Stderr: {}", stderr);
         assert!(
-            output.status.success() || stderr.contains("Scanning"),
+            output.status.success() || stdout.contains("CLI initialized successfully"),
             "Should scan legacy code"
         );
     }
@@ -490,20 +500,22 @@ public class UserControllerTest {
         let output = Command::new("cargo")
             .args(&[
                 "run",
+                "--package",
+                "hodei-cli",
                 "--bin",
-                "hodei-scan",
+                "hodei-cli",
                 "--",
-                "scan",
+                "--project",
                 project_dir.to_str().unwrap(),
             ])
             .output()
-            .expect("Failed to execute hodei-scan");
+            .expect("Failed to execute hodei-cli");
 
         // Verify Spring Boot annotations detected
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
         assert!(
-            output.status.success() || stderr.contains("Scanning"),
+            output.status.success() || stdout.contains("CLI initialized successfully"),
             "Should scan Spring Boot application"
         );
     }
@@ -533,14 +545,16 @@ public class Test {
         let output = Command::new("cargo")
             .args(&[
                 "run",
+                "--package",
+                "hodei-cli",
                 "--bin",
-                "hodei-scan",
+                "hodei-cli",
                 "--",
-                "scan",
+                "--project",
                 project_dir.to_str().unwrap(),
             ])
             .output()
-            .expect("Failed to execute hodei-scan");
+            .expect("Failed to execute hodei-cli");
 
         // Should handle encoding and special chars gracefully
         assert!(

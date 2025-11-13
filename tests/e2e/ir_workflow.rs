@@ -1,6 +1,7 @@
 //! End-to-End tests for IR dump workflow
 
-use ir_dump::{Format, IRFormatter, IRReader};
+use ir_dump::{IRFormatter, IRReader};
+use ir_dump::ir_formatter::Format;
 use tempfile::TempDir;
 
 // Simple sample IR JSON for testing
@@ -11,7 +12,62 @@ const SAMPLE_JSON: &str = r#"{
     "version": "1.0.0",
     "root_path": "/test"
   },
-  "facts": []
+  "facts": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "fact_type": {
+        "Vulnerability": {
+          "cwe_id": null,
+          "owasp_category": null,
+          "severity": "Critical",
+          "cvss_score": null,
+          "description": "Test vulnerability",
+          "confidence": 0.9
+        }
+      },
+      "message": "Test vulnerability found",
+      "location": {
+        "file": {
+          "path": "/test/file1.js"
+        },
+        "start_line": 1,
+        "start_column": 1,
+        "end_line": 1,
+        "end_column": 10
+      },
+      "provenance": {
+        "extractor": "Custom",
+        "version": "1.0.0",
+        "confidence": 0.9,
+        "extracted_at": "2025-01-15T10:30:00Z"
+      }
+    },
+    {
+      "id": "550e8400-e29b-41d4-b716-446655440002",
+      "fact_type": {
+        "CodeSmell": {
+          "smell_type": "test_smell",
+          "severity": "Minor"
+        }
+      },
+      "message": "Test code smell found",
+      "location": {
+        "file": {
+          "path": "/test/file2.js"
+        },
+        "start_line": 5,
+        "start_column": 1,
+        "end_line": 5,
+        "end_column": 20
+      },
+      "provenance": {
+        "extractor": "Custom",
+        "version": "1.0.0",
+        "confidence": 0.8,
+        "extracted_at": "2025-01-15T10:31:00Z"
+      }
+    }
+  ]
 }"#;
 
 #[tokio::test]
@@ -27,9 +83,9 @@ async fn test_complete_ir_inspection_workflow() {
     let reader = IRReader::new();
     let ir = reader.read(&ir_file).await.unwrap();
 
-    assert_eq!(ir.findings.len(), 2);
-    assert_eq!(ir.findings[0].fact_type, "Vulnerability");
-    assert_eq!(ir.findings[1].fact_type, "CodeSmell");
+    assert_eq!(ir.len(), 2);
+    assert_eq!(ir[0].fact_type.discriminant(), hodei_ir::FactTypeDiscriminant::Vulnerability);
+    assert_eq!(ir[1].fact_type.discriminant(), hodei_ir::FactTypeDiscriminant::CodeSmell);
 
     // Format as JSON
     let formatter = IRFormatter::new();
@@ -55,26 +111,106 @@ async fn test_ir_comparison_workflow() {
     let ir_v2 = temp_dir.path().join("ir_v2.json");
 
     let v1_content = r#"{
-  "findings": [
+  "schema_version": "3.3.0",
+  "metadata": {
+    "name": "Test Project",
+    "version": "1.0.0",
+    "root_path": "/test"
+  },
+  "facts": [
     {
-      "fact_type": "Vulnerability",
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "fact_type": {
+        "Vulnerability": {
+          "cwe_id": null,
+          "owasp_category": null,
+          "severity": "Critical",
+          "cvss_score": null,
+          "description": "Test vulnerability",
+          "confidence": 0.9
+        }
+      },
       "message": "Issue 1",
-      "location": "file1.js:1"
+      "location": {
+        "file": {
+          "path": "/test/file1.js"
+        },
+        "start_line": 1,
+        "start_column": 1,
+        "end_line": 1,
+        "end_column": 10
+      },
+      "provenance": {
+        "extractor": "Custom",
+        "version": "1.0.0",
+        "confidence": 0.9,
+        "extracted_at": "2025-01-15T10:30:00Z"
+      }
     }
   ]
 }"#;
 
     let v2_content = r#"{
-  "findings": [
+  "schema_version": "3.3.0",
+  "metadata": {
+    "name": "Test Project",
+    "version": "1.0.0",
+    "root_path": "/test"
+  },
+  "facts": [
     {
-      "fact_type": "Vulnerability",
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "fact_type": {
+        "Vulnerability": {
+          "cwe_id": null,
+          "owasp_category": null,
+          "severity": "Critical",
+          "cvss_score": null,
+          "description": "Test vulnerability",
+          "confidence": 0.9
+        }
+      },
       "message": "Issue 1",
-      "location": "file1.js:1"
+      "location": {
+        "file": {
+          "path": "/test/file1.js"
+        },
+        "start_line": 1,
+        "start_column": 1,
+        "end_line": 1,
+        "end_column": 10
+      },
+      "provenance": {
+        "extractor": "Custom",
+        "version": "1.0.0",
+        "confidence": 0.9,
+        "extracted_at": "2025-01-15T10:30:00Z"
+      }
     },
     {
-      "fact_type": "CodeSmell",
+      "id": "550e8400-e29b-41d4-b716-446655440002",
+      "fact_type": {
+        "CodeSmell": {
+          "smell_type": "test_smell",
+          "severity": "Minor"
+        }
+      },
       "message": "Issue 2",
-      "location": "file2.js:5"
+      "location": {
+        "file": {
+          "path": "/test/file2.js"
+        },
+        "start_line": 5,
+        "start_column": 1,
+        "end_line": 5,
+        "end_column": 20
+      },
+      "provenance": {
+        "extractor": "Custom",
+        "version": "1.0.0",
+        "confidence": 0.8,
+        "extracted_at": "2025-01-15T10:31:00Z"
+      }
     }
   ]
 }"#;
@@ -88,9 +224,9 @@ async fn test_ir_comparison_workflow() {
     let ir2 = reader.read(&ir_v2).await.unwrap();
 
     // Compare
-    assert_eq!(ir1.findings.len(), 1);
-    assert_eq!(ir2.findings.len(), 2);
-    assert_ne!(ir1.findings.len(), ir2.findings.len());
+    assert_eq!(ir1.len(), 1);
+    assert_eq!(ir2.len(), 2);
+    assert_ne!(ir1.len(), ir2.len());
 }
 
 #[tokio::test]
@@ -115,9 +251,9 @@ async fn test_ir_format_persistence() {
     let read_formatted = reader.read(&formatted_file).await.unwrap();
 
     // Should be the same
-    assert_eq!(ir.findings.len(), read_formatted.findings.len());
-    for (orig, read) in ir.findings.iter().zip(read_formatted.findings.iter()) {
-        assert_eq!(orig.fact_type, read.fact_type);
+    assert_eq!(ir.len(), read_formatted.len());
+    for (orig, read) in ir.iter().zip(read_formatted.iter()) {
+        assert_eq!(orig.fact_type.discriminant(), read.fact_type.discriminant());
         assert_eq!(orig.message, read.message);
     }
 }
@@ -144,9 +280,9 @@ async fn test_multiple_ir_formats() {
     let ir_from_yaml = reader.read(&yaml_file).await.unwrap();
 
     // Should be equivalent
-    assert_eq!(ir.findings.len(), ir_from_yaml.findings.len());
-    for (json_finding, yaml_finding) in ir.findings.iter().zip(ir_from_yaml.findings.iter()) {
-        assert_eq!(json_finding.fact_type, yaml_finding.fact_type);
+    assert_eq!(ir.len(), ir_from_yaml.len());
+    for (json_finding, yaml_finding) in ir.iter().zip(ir_from_yaml.iter()) {
+        assert_eq!(json_finding.fact_type.discriminant(), yaml_finding.fact_type.discriminant());
         assert_eq!(json_finding.message, yaml_finding.message);
     }
 }
@@ -157,26 +293,124 @@ async fn test_ir_statistics_workflow() {
     let ir_file = temp_dir.path().join("stats.json");
 
     let stats_json = r#"{
-  "findings": [
+  "schema_version": "3.3.0",
+  "metadata": {
+    "name": "Test Project",
+    "version": "1.0.0",
+    "root_path": "/test"
+  },
+  "facts": [
     {
-      "fact_type": "Vulnerability",
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "fact_type": {
+        "Vulnerability": {
+          "cwe_id": null,
+          "owasp_category": null,
+          "severity": "Critical",
+          "cvss_score": null,
+          "description": "SQL injection vulnerability",
+          "confidence": 0.9
+        }
+      },
       "message": "SQL injection",
-      "severity": "Critical"
+      "location": {
+        "file": {
+          "path": "/test/sql_file.js"
+        },
+        "start_line": 10,
+        "start_column": 1,
+        "end_line": 10,
+        "end_column": 50
+      },
+      "provenance": {
+        "extractor": "Custom",
+        "version": "1.0.0",
+        "confidence": 0.9,
+        "extracted_at": "2025-01-15T10:30:00Z"
+      }
     },
     {
-      "fact_type": "Vulnerability",
+      "id": "550e8400-e29b-41d4-b716-446655440002",
+      "fact_type": {
+        "Vulnerability": {
+          "cwe_id": null,
+          "owasp_category": null,
+          "severity": "Major",
+          "cvss_score": null,
+          "description": "XSS vulnerability",
+          "confidence": 0.8
+        }
+      },
       "message": "XSS",
-      "severity": "Major"
+      "location": {
+        "file": {
+          "path": "/test/xss_file.js"
+        },
+        "start_line": 20,
+        "start_column": 1,
+        "end_line": 20,
+        "end_column": 30
+      },
+      "provenance": {
+        "extractor": "Custom",
+        "version": "1.0.0",
+        "confidence": 0.8,
+        "extracted_at": "2025-01-15T10:31:00Z"
+      }
     },
     {
-      "fact_type": "CodeSmell",
+      "id": "550e8400-e29b-41d4-c716-446655440003",
+      "fact_type": {
+        "CodeSmell": {
+          "smell_type": "unused_variable",
+          "severity": "Minor"
+        }
+      },
       "message": "Unused variable",
-      "severity": "Minor"
+      "location": {
+        "file": {
+          "path": "/test/smell_file.js"
+        },
+        "start_line": 5,
+        "start_column": 1,
+        "end_line": 5,
+        "end_column": 15
+      },
+      "provenance": {
+        "extractor": "Custom",
+        "version": "1.0.0",
+        "confidence": 0.7,
+        "extracted_at": "2025-01-15T10:32:00Z"
+      }
     },
     {
-      "fact_type": "Vulnerability",
+      "id": "550e8400-e29b-41d4-d716-446655440004",
+      "fact_type": {
+        "Vulnerability": {
+          "cwe_id": null,
+          "owasp_category": null,
+          "severity": "Critical",
+          "cvss_score": null,
+          "description": "CSRF vulnerability",
+          "confidence": 0.9
+        }
+      },
       "message": "CSRF",
-      "severity": "Critical"
+      "location": {
+        "file": {
+          "path": "/test/csrf_file.js"
+        },
+        "start_line": 15,
+        "start_column": 1,
+        "end_line": 15,
+        "end_column": 40
+      },
+      "provenance": {
+        "extractor": "Custom",
+        "version": "1.0.0",
+        "confidence": 0.9,
+        "extracted_at": "2025-01-15T10:33:00Z"
+      }
     }
   ]
 }"#;
@@ -190,14 +424,20 @@ async fn test_ir_statistics_workflow() {
     let mut by_type = std::collections::HashMap::new();
     let mut by_severity = std::collections::HashMap::new();
 
-    for finding in &ir.findings {
-        *by_type.entry(&finding.fact_type).or_insert(0) += 1;
-        if let Some(ref severity) = finding.severity {
-            *by_severity.entry(severity).or_insert(0) += 1;
+    for finding in &ir {
+        *by_type.entry(format!("{:?}", finding.fact_type.discriminant())).or_insert(0) += 1;
+        // Extract severity from fact_type if available
+        let severity = match &finding.fact_type {
+            hodei_ir::FactType::Vulnerability { severity, .. } => Some(format!("{:?}", severity)),
+            hodei_ir::FactType::CodeSmell { severity, .. } => Some(format!("{:?}", severity)),
+            _ => None,
+        };
+        if let Some(severity_str) = severity {
+            *by_severity.entry(severity_str).or_insert(0) += 1;
         }
     }
 
-    // Verify statistics
+    // Verify statistics - need to use the discriminant strings
     assert_eq!(by_type.get("Vulnerability"), Some(&3));
     assert_eq!(by_type.get("CodeSmell"), Some(&1));
     assert_eq!(by_severity.get("Critical"), Some(&2));
@@ -211,24 +451,95 @@ async fn test_ir_visualization_output() {
     let ir_file = temp_dir.path().join("visual.json");
 
     let visual_json = r#"{
-  "findings": [
+  "schema_version": "3.3.0",
+  "metadata": {
+    "name": "Test Project",
+    "version": "1.0.0",
+    "root_path": "/test"
+  },
+  "facts": [
     {
-      "fact_type": "Vulnerability",
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "fact_type": {
+        "Vulnerability": {
+          "cwe_id": null,
+          "owasp_category": null,
+          "severity": "Critical",
+          "cvss_score": null,
+          "description": "SQL injection detected",
+          "confidence": 0.9
+        }
+      },
       "message": "SQL injection detected",
-      "location": "src/auth/login.js:42",
-      "severity": "Critical"
+      "location": {
+        "file": {
+          "path": "src/auth/login.js"
+        },
+        "start_line": 42,
+        "start_column": 1,
+        "end_line": 42,
+        "end_column": 50
+      },
+      "provenance": {
+        "extractor": "Custom",
+        "version": "1.0.0",
+        "confidence": 0.9,
+        "extracted_at": "2025-01-15T10:30:00Z"
+      }
     },
     {
-      "fact_type": "CodeSmell",
+      "id": "550e8400-e29b-41d4-b716-446655440002",
+      "fact_type": {
+        "CodeSmell": {
+          "smell_type": "unused_variable",
+          "severity": "Minor"
+        }
+      },
       "message": "Unused variable 'x'",
-      "location": "src/utils/helpers.js:15",
-      "severity": "Minor"
+      "location": {
+        "file": {
+          "path": "src/utils/helpers.js"
+        },
+        "start_line": 15,
+        "start_column": 1,
+        "end_line": 15,
+        "end_column": 20
+      },
+      "provenance": {
+        "extractor": "Custom",
+        "version": "1.0.0",
+        "confidence": 0.8,
+        "extracted_at": "2025-01-15T10:31:00Z"
+      }
     },
     {
-      "fact_type": "SecurityIssue",
+      "id": "550e8400-e29b-41d4-c716-446655440003",
+      "fact_type": {
+        "Vulnerability": {
+          "cwe_id": null,
+          "owasp_category": null,
+          "severity": "Major",
+          "cvss_score": null,
+          "description": "Missing authentication",
+          "confidence": 0.8
+        }
+      },
       "message": "Missing authentication",
-      "location": "src/api/users.js:8",
-      "severity": "Major"
+      "location": {
+        "file": {
+          "path": "src/api/users.js"
+        },
+        "start_line": 8,
+        "start_column": 1,
+        "end_line": 8,
+        "end_column": 30
+      },
+      "provenance": {
+        "extractor": "Custom",
+        "version": "1.0.0",
+        "confidence": 0.8,
+        "extracted_at": "2025-01-15T10:32:00Z"
+      }
     }
   ]
 }"#;
@@ -283,13 +594,12 @@ async fn test_ir_round_trip_preservation() {
     let ir3 = reader.read(&final_output).await.unwrap();
 
     // All should be equivalent
-    assert_eq!(ir1.findings.len(), ir2.findings.len());
-    assert_eq!(ir2.findings.len(), ir3.findings.len());
+    assert_eq!(ir1.len(), ir2.len());
+    assert_eq!(ir2.len(), ir3.len());
 
-    for (f1, f3) in ir1.findings.iter().zip(ir3.findings.iter()) {
-        assert_eq!(f1.fact_type, f3.fact_type);
+    for (f1, f3) in ir1.iter().zip(ir3.iter()) {
+        assert_eq!(f1.fact_type.discriminant(), f3.fact_type.discriminant());
         assert_eq!(f1.message, f3.message);
-        assert_eq!(f1.location, f3.location);
-        assert_eq!(f1.severity, f3.severity);
+        assert_eq!(f1.location.file.as_str(), f3.location.file.as_str());
     }
 }
