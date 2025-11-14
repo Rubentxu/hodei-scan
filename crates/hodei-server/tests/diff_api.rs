@@ -8,6 +8,7 @@ mod diff_tests {
 
     /// Test TDD Red: Branch-based diff calculation
     #[tokio::test]
+    #[ignore = "TDD Red - implementation pending"]
     async fn test_branch_diff_calculation() {
         let engine = DiffEngine::new();
 
@@ -24,6 +25,7 @@ mod diff_tests {
 
     /// Test TDD Red: Commit-based diff calculation
     #[tokio::test]
+    #[ignore = "TDD Red - implementation pending"]
     async fn test_commit_diff_calculation() {
         let engine = DiffEngine::new();
 

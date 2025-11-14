@@ -1,0 +1,49 @@
+[package]
+name = "hodei-deep-analysis-engine"
+version = "0.1.0"
+edition = "2024"
+description = "Deep Analysis Engine for Taint Analysis and Connascence Detection"
+license = "MIT"
+repository = "https://github.com/hodei-scan/hodei-scan"
+
+[dependencies]
+# Core dependencies
+hodei-ir = { path = "../hodei-ir" }
+hodei-engine = { path = "../hodei-engine" }
+petgraph = { workspace = true }
+datafrog = "2.0.1"
+uuid = { workspace = true }
+# tree-sitter = { version = "0.23", optional = true }
+thiserror = { workspace = true }
+anyhow = "1.0"
+
+# Serialization
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+toml = "0.8"
+
+# Async
+tokio = { workspace = true, features = ["full"] }
+futures = "0.3"
+
+# Utils
+ahash = { workspace = true }
+smallvec = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["fmt"] }
+
+[features]
+default = []
+# Enable tree-sitter support (future)
+# tree-sitter = ["dep:tree-sitter"]
+
+[dev-dependencies]
+criterion = { workspace = true }
+tempfile = "3.23.0"
+proptest = { workspace = true }
+tokio-test = "0.4"
+
+# Benchmarks will be added later
+# [[bench]]
+# name = "taint_analysis_bench"
+# harness = false

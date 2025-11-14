@@ -26,7 +26,7 @@
 //!
 //! ```no_run
 //! use hodei_extractors::sarif::SarifExtractor;
-//! use hodei_extractors::core::ExtractorConfig;
+//! use hodei_extractors::core::{ExtractorConfig, Extractor};
 //! use std::path::PathBuf;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {

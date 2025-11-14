@@ -171,7 +171,87 @@ let entry = cfg.add_node(BasicBlock { id: "entry", instructions: vec![] });
 
 ---
 
-## 🏗️ 3. ARQUITECTURA PROPUESTA: hodei-deep-analysis-engine
+---
+
+## 🏗️ 3. ESTADO REAL DEL CÓDIGO (Actualizado 2025-11-13)
+
+### 3.1 Inventario de Implementaciones Existentes
+
+**PROGRESO ACTUAL CONFIRMADO:** 40-50% ya implementado
+
+#### ✅ **Lo que YA EXISTE (Verificado en el código)**
+
+1. **hodei-pattern-engine** - 100% Funcional
+   - **Ubicación:** `crates/hodei-pattern-engine/`
+   - **Código:** QueryCache con LRU, TreeSitterMatcher, YamlRuleLoader
+   - **Estado:** ✅ Completamente implementado y funcional
+   - **Reutilización:** ✅ Listo para usar como base de parsing
+
+2. **FlowIndex con petgraph** - 90% Funcional
+   - **Ubicación:** `crates/hodei-engine/src/store/flow_index.rs`
+   - **Código:** 
+   ```rust
+   pub struct FlowIndex {
+       graph: DiGraph<FactId, ()>,
+       fact_to_node: HashMap<FactId, NodeIndex>,
+       flow_to_facts: HashMap<FlowId, Vec<FactId>>,
+   }
+   
+   // Métodos ya implementados:
+   // - reachable_from(fact_id) -> Vec<FactId>
+   // - shortest_path(from, to) -> Option<Vec<FactId>>
+   // - Algoritmos: astar, dijkstra
+   ```
+   - **Estado:** ✅ petgraph integrado, grafos, algoritmos implementados
+   - **Reutilización:** ✅ Base perfecta para Taint Analysis
+
+3. **IR Schema (Cap'n Proto)** - 100% Completo
+   - **Ubicación:** `crates/hodei-ir/schema/facts.capnp`
+   - **Código:** 
+   ```capnp
+   struct TaintSource {
+     var @0 :VariableName;
+     flowId @1 :FlowId;
+     sourceType @2 :Text;
+     confidence @3 :Confidence;
+   }
+   
+   struct TaintSink {
+     func @4 :FunctionName;
+     consumesFlow @5 :FlowId;
+     category @6 :Text;
+     severity @7 :Severity;
+   }
+   ```
+   - **Estado:** ✅ Tipos para Taint ya definidos (TaintSource, TaintSink, Sanitization)
+   - **Reutilización:** ✅ Schema perfecto para usar
+
+4. **hodei-declarative-extractors** - 30% Base
+   - **Ubicación:** `crates/hodei-declarative-extractors/src/tree_sitter.rs`
+   - **Código:** MultiLanguageParser con ASTNode, Language enum
+   - **Estado:** ⚠️ Estructura lista, pero usa AST stub (no tree-sitter real)
+   - **Reutilización:** ⚠️ Solo estructura, necesita conexión tree-sitter real
+
+5. **hodei-pattern-engine tree_sitter** - Implementado
+   - **Ubicación:** `crates/hodei-pattern-engine/src/tree_sitter.rs`
+   - **Código:** QueryCache con LRU, TreeSitterMatcher
+   - **Estado:** ✅ Tree-sitter real ya integrado con cache
+   - **Reutilización:** ✅ Ya usa tree-sitter real con Python, Java, Rust
+
+### 3.2 Componentes Faltantes (Verificados como NO implementados)
+
+| Componente | Estado | Ubicación Esperada |
+|------------|--------|---------------------|
+| **hodei-deep-analysis-engine** | ❌ No existe | `crates/hodei-deep-analysis-engine/` |
+| **datafrog integration** | ❌ No existe | Dependencia nueva necesaria |
+| **TaintPropagator** | ❌ No existe | Usando FlowIndex sin datafrog |
+| **ConnascenceAnalyzer** | ❌ No existe | Módulo nuevo necesario |
+| **SemanticModel** | ❌ No existe | Usando ASTNode básico |
+| **Policy TOML** | ❌ No existe | Parser por implementar |
+
+---
+
+## 🏗️ 4. ARQUITECTURA PROPUESTA: hodei-deep-analysis-engine (Optimizada)
 
 ### 3.1 Visión General
 
@@ -791,16 +871,72 @@ impl FlowIdFactory {
 
 ---
 
-## 🎯 7. PRÓXIMOS PASOS
+## 🎯 7. PLAN DE IMPLEMENTACIÓN REVISADO
 
-### 7.1 Sprint 1: ConnascenceAnalyzer (Semana 1-2)
+### 7.0 **Sprint 0: Crear crate (Día 1)**
+
+**Tareas:**
+1. ✅ Crear `cargo new --lib crates/hodei-deep-analysis-engine`
+2. ✅ Añadir dependencias: `datafrog = "2.0.1"`
+3. ✅ Configurar workspace integration
+4. ✅ Crear estructura básica de módulos
+
+**Estimación:** 1 día (vs 1 semana estimado originalmente)
+
+---
+
+### 7.1 **Sprint 1: Integración datafrog + FlowIndex (Semana 1-2)**
+
+**VENTAJA:** FlowIndex ya implementa 70% del trabajo
+
+**Tareas:**
+1. ⚠️ Overlay de `datafrog` sobre FlowIndex existente
+2. ✅ Reutilizar: petgraph::DiGraph ya configurado
+3. ✅ Reutilizar: Métodos `reachable_from()`, `shortest_path()` existentes
+4. ✅ Reutilizar: Algoritmos astar, dijkstra ya implementados
+5. ⚠️ Definir reglas Datalog: `Tainted(Y) :- FlowsTo(Y, X), Tainted(X)`
+6. ⚠️ Implementar `TaintPropagator` combinando FlowIndex + datafrog
+
+**Estimación:** 1-2 semanas (vs 2-3 semanas sin reutilización)
+
+**Criterios de Aceptación:**
+- [ ] FlowIndex + datafrog integrado
+- [ ] Reglas Datalog para propagación
+- [ ] Tests de propagación básica
+- [ ] <5s para grafo de 100k nodos (FlowIndex ya optimizado)
+
+---
+
+### 7.2 **Sprint 2: Conectar tree-sitter real (Semana 2-3)**
+
+**VENTAJA:** hodei-pattern-engine ya tiene tree-sitter real
+
+**Tareas:**
+1. ⚠️ Reemplazar AST stub con tree-sitter real
+2. ✅ Reutilizar: hodei-pattern-engine/tree_sitter.rs ya implementado
+3. ✅ Reutilizar: QueryCache con LRU ya funcional
+4. ✅ Reutilizar: Language enum (Python, JS, TS, Rust, Java, etc.)
+5. ⚠️ Conectar MultiLanguageParser con tree-sitter real
+
+**Estimación:** 1 semana (vs 2-3 semanas sin reutilización)
+
+**Criterios de Aceptación:**
+- [ ] MultiLanguageParser usa tree-sitter real
+- [ ] Parsing correcto de AST
+- [ ] Performance adecuada (tree-sitter es "suficientemente rápido")
+
+---
+
+### 7.3 **Sprint 3: ConnascenceAnalyzer (Semana 3-4)**
 
 **Tareas:**
 1. ✅ Implementar tests para detección de CoP
 2. ✅ Implementar tests para detección de CoM
-3. ✅ Implementar ConnascenceAnalyzer básico
+3. ⚠️ Implementar ConnascenceAnalyzer básico
 4. ✅ Ejecutar análisis en proyecto hodei-scan
 5. ✅ Generar reporte de acoplamiento
+
+**Estimación:** 1-2 semanas (TDD desde cero)
 
 **Criterios de Aceptación:**
 - [ ] Detecta CoP en funciones con 3+ parámetros del mismo tipo
@@ -808,29 +944,21 @@ impl FlowIdFactory {
 - [ ] Genera Finding con remediation advice
 - [ ] Tests覆盖率 >90%
 
-### 7.2 Sprint 2: TaintPropagator (Semana 3-4)
+---
+
+### 7.4 **Sprint 4: SemanticModel Builder (Semana 4-5)**
+
+**VENTAJA:** petgraph disponible en workspace
 
 **Tareas:**
-1. ✅ Integrar datafrog en el proyecto
-2. ✅ Implementar TaintPropagator con datafrog
-3. ✅ Crear política TOML de ejemplo
-4. ✅ Tests de propagación básica
-5. ✅ Tests de sanitizers
+1. ⚠️ Diseñar SemanticModel struct
+2. ✅ Reutilizar: petgraph ya configurado en workspace
+3. ⚠️ Implementar CFG builder (petgraph::Graph)
+4. ⚠️ Implementar DFG builder (petgraph::Csr)
+5. ⚠️ Scope tree para resolución de símbolos
+6. ⚠️ Integración con tree-sitter AST
 
-**Criterios de Aceptación:**
-- [ ] Propaga taint desde Sources a Sinks
-- [ ] Sanitizers bloquean propagación
-- [ ] Política configurable en TOML
-- [ ] <5s para grafo de 100k nodos
-
-### 7.3 Sprint 3: SemanticModel (Semana 5-6)
-
-**Tareas:**
-1. ✅ Diseñar SemanticModel struct
-2. ✅ Implementar CFG builder (petgraph)
-3. ✅ Implementar DFG builder (petgraph CSR)
-4. ✅ Scope tree para resolución de símbolos
-5. ✅ Integración con tree-sitter existente
+**Estimación:** 1-2 semanas (vs 3-4 semanas sin reutilización)
 
 **Criterios de Aceptación:**
 - [ ] Representa CFG y DFG
@@ -838,15 +966,51 @@ impl FlowIdFactory {
 - [ ] Interoperabilidad con extractores tree-sitter
 - [ ] <5s construcción de modelo
 
-### 7.4 Entregable Final: hodei-deep-analysis-engine
+---
+
+### 7.5 **Sprint 5: Policy TOML + Integración (Semana 5-6)**
+
+**Tareas:**
+1. ⚠️ Implementar parser TOML para políticas
+2. ⚠️ Definir SourceDefinition, SinkDefinition
+3. ⚠️ Integrar ConnascenceAnalyzer + TaintPropagator
+4. ✅ Reutilizar: IR Schema ya define FactTypes
+5. ✅ Reutilizar: hodei-pattern-engine para rules
+
+**Estimación:** 1-2 semanas
+
+**Criterios de Aceptación:**
+- [ ] Política configurable en TOML
+- [ ] Motor integrado end-to-end
+- [ ] Librería reusable >80%
+- [ ] Documentación completa con ejemplos
+
+---
+
+### 📊 **Estimación Total Revisada**
+
+| Métrica | Estimación Original | Estimación Revisada | Ahorro |
+|---------|---------------------|---------------------|---------|
+| **Tiempo total** | 12-16 semanas | **5-6 semanas** | 60-65% |
+| **Sprints** | 8-10 sprints | **5 sprints** | 50% |
+| **Código nuevo** | 100% | **50-60%** | 40-50% |
+| **Tests nuevos** | 100% | **50-60%** | 40-50% |
+| **Riesgo** | Alto | **Bajo** | Significativo |
+
+**FACTOR DE REUTILIZACIÓN:** 40-50% del trabajo ya hecho
+
+---
+
+### ✅ **Entregable Final: hodei-deep-analysis-engine**
 
 **Criterios de Éxito:**
-- [ ] Librería reusable >80%
-- [ ] Motor de Taint Analysis funcional
-- [ ] Detección de 4+ tipos de Connascence
-- [ ] Rendimiento: 100k nodos <5s
-- [ ] Política de vulnerabilidades sin recompilar
+- [ ] Librería reusable >80% (reutilizando componentes existentes)
+- [ ] Motor de Taint Analysis funcional (FlowIndex + datafrog)
+- [ ] Detección de 4+ tipos de Connascence (CoP, CoM, CoT, CoN)
+- [ ] Rendimiento: 100k nodos <5s (FlowIndex ya optimizado)
+- [ ] Política de vulnerabilidades sin recompilar (TOML)
 - [ ] Documentación completa con ejemplos
+- [ ] **5-6 semanas** de desarrollo (vs 12-16 originales)
 
 ---
 

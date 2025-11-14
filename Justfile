@@ -1,245 +1,131 @@
-# hodei-scan - Developer Experience Tools (EPIC-14) Test Runner
+#!/usr/bin/env just --justfile
+
+# ==============================================================================
+# HODEI-SCAN - Test Execution Profiles
+# ==============================================================================
+# Uso: just <comando>
 #
-# TESTING COMMANDS - CLEANED VERSION
-# Status: 11/11 commands working (100% success rate)
-#
-# Usage:
-#   just test              # Run working unit tests (171 passing)
-#   just test-crates       # Check crate compilation status
-#   just test-summary      # Show detailed summary
-#   just help              # Show all available commands
+# Perfiles disponibles:
+# - quick: Tests rápidos sin infraestructura
+# - full: Todos los tests incluyendo los ignorados
+# - db: Solo tests de base de datos (PostgreSQL)
+# - tdd: Solo tests TDD Red (no implementados)
+# - integration: Tests de integración
+# ==============================================================================
 
-set shell := ["bash", "-c"]
+# Ejecutar tests rápidos (sin infraestructura)
+@quick:
+    cargo test --workspace --lib --bins --tests --exclude hodei-server
 
-# ============================================================================
-# MAIN TEST COMMANDS (WORKING)
-# ============================================================================
+# Ejecutar TODOS los tests (incluyendo ignorados)
+@full:
+    cargo test --workspace
 
-# Run working unit tests (recommended default)
-@test:
-    #!/usr/bin/env bash
-    set -e  # Exit on first error
-    echo "🔬 Running UNIT tests (working crates only)..."
-    echo ""
-    cargo test -p hodei-ir --lib --all-features
-    cargo test -p hodei-dsl --lib --all-features
-    cargo test -p hodei-engine --lib --all-features
-    cargo test -p hodei-test --lib --all-features
-    cargo test -p hodei-extractors --lib --all-features
-    cargo test -p ir-dump --lib --all-features
-    cargo test -p hodei-server --lib --all-features
-    echo ""
-    echo "✅ Unit tests completed!"
-    echo ""
-    echo "💡 Tip: Use 'just test-crates' to see status of all crates"
+# Ejecutar solo tests que requieren base de datos
+@db:
+    cargo test --package hodei-server --lib -- --ignored
 
+# Ejecutar tests de base de datos con contenedor Docker automático
+@db-container:
+    @echo "🐳 Iniciando contenedor PostgreSQL para tests..."
+    ./scripts/test-containers.sh run-tests "cargo test --package hodei-server --lib modules::baseline::tests"
 
+# Ejecutar solo tests TDD Red (implementaciones pendientes)
+@tdd:
+    @echo "🧪 Tests TDD Red (implementación pendiente)..."
+    cargo test --package hodei-server --test dashboard_api -- --ignored
+    cargo test --package hodei-server --test diff_api -- --ignored
 
-# ============================================================================
-# CRATE ANALYSIS COMMANDS
-# ============================================================================
+# Ejecutar tests de integración
+@integration:
+    cargo test --package hodei-deep-analysis-engine --test integration
+    cargo test --package hodei-deep-analysis-engine --test connascence
+    cargo test --package hodei-deep-analysis-engine --test taint_analysis
 
-# Check which crates compile successfully
-@test-crates:
-    #!/usr/bin/env bash
-    echo "🔍 Checking crate compilation status..."
-    echo ""
-    for crate in hodei-ir hodei-dsl hodei-engine hodei-extractors hodei-test ir-dump hodei-server hodei-dsl-lsp; do
-        echo "Checking $crate..."
-        if cargo check -p $crate 2>&1 | grep -q "error\[E"; then
-            echo "  ❌ Has compilation errors"
-        else
-            echo "  ✅ Compiles successfully"
-        fi
-    done
-    echo ""
-    echo "✅ Crate compilation check completed!"
-    echo ""
-    echo "💡 Working crates: hodei-ir, hodei-dsl, hodei-engine, hodei-extractors, hodei-test, ir-dump, hodei-server"
-    echo "💡 Broken crates: hodei-dsl-lsp"
+# Ejecutar tests de un crate específico
+@crate crate:
+    cargo test --package {{crate}} --lib
 
-# Show detailed summary of test infrastructure
-@test-summary:
-    #!/usr/bin/env bash
-    echo "📊 Test Infrastructure Summary"
-    echo "=============================="
-    echo ""
-    echo "Working Crates:"
-    echo "  ✅ hodei-ir          - Unit tests passing"
-    echo "  ✅ hodei-dsl         - Unit tests passing"
-    echo "  ✅ hodei-engine      - Unit tests passing"
-    echo "  ✅ hodei-extractors  - Unit tests passing"
-    echo "  ✅ hodei-test        - Unit tests passing"
-    echo "  ✅ ir-dump           - Unit tests passing"
-    echo "  ✅ hodei-server      - Integration tests passing"
-    echo "  ---------------------------"
-    echo "  Total: All working crates tested"
-    echo ""
-    echo "Broken Crates:"
-    echo "  ❌ hodei-dsl-lsp     - Missing adapter implementations"
-    echo ""
-    echo "Test Files Created:"
-    echo "  📁 Unit tests:     30+ files"
-    echo "  📁 Integration:    10+ files"
-    echo "  📁 E2E tests:      28+ files"
-    echo "  📁 Fixtures:       50+ files"
-    echo "  📁 Utilities:      15+ files"
-    echo ""
-    echo "Commands Available:"
-    echo "  just test              - Run working tests (all crates)"
-    echo "  just test-crates       - Check compilation status"
-    echo "  just test-stats        - Show test statistics"
-    echo "  just test-fmt          - Format code"
-    echo "  just test-audit        - Security audit"
-    echo "  just test-bench        - Run benchmarks"
-    echo "  just test-clean        - Clean artifacts"
-    echo ""
+# Ejecutar tests con coverage
+@coverage:
+    cargo test --workspace --verbose
 
-# ============================================================================
-# UTILITY COMMANDS
-# ============================================================================
+# Limpiar archivos de test temporales
+@clean:
+    find /tmp -name "hodei-test-*" -type d -exec rm -rf {} + 2>/dev/null || true
+    echo "✅ Limpieza completada"
 
-# Show test suite statistics
-@test-stats:
-    #!/usr/bin/env bash
-    echo "📊 Test Suite Statistics"
-    echo "========================"
-    echo ""
-    echo "Test Infrastructure:"
-    echo "  📁 Unit test files:"
-    find ./crates -name "tests" -type d -exec find {} -name "*.rs" -path "*/unit/*" \; 2>/dev/null | wc -l | xargs echo "      -"
-    echo ""
-    echo "  📁 Integration test files:"
-    find ./crates -name "tests" -type d -exec find {} -name "*.rs" -path "*/integration/*" \; 2>/dev/null | wc -l | xargs echo "      -"
-    echo ""
-    echo "  📁 E2E test files:"
-    find ./tests/e2e -name "*.rs" 2>/dev/null | wc -l | xargs echo "      -"
-    echo ""
-    echo "  📁 Test fixtures:"
-    find ./tests/fixtures -type f 2>/dev/null | wc -l | xargs echo "      -"
-    echo ""
-    echo "  📁 Test utilities:"
-    find ./tests/utils -name "*.rs" 2>/dev/null | wc -l | xargs echo "      -"
-    echo ""
-    echo "Current Status:"
-    echo "  ✅ Tests passing: All working crates"
-    echo "  ❌ Tests broken:  hodei-dsl-lsp (compilation errors)"
-    echo ""
-    echo "Coverage: N/A (requires fixing hodei-dsl-lsp first)"
-    echo ""
+# Verificar que el workspace compila
+@check:
+    cargo check --workspace
 
-# Clean test artifacts
-@test-clean:
-    cargo clean
-    rm -rf coverage/ target/debug/deps/test_* 2>/dev/null || true
-    echo "🧹 Cleaned test artifacts"
-    echo ""
-    echo "💡 Tip: Run 'just test' to rebuild and run tests"
-
-# Run tests for a specific crate (if it compiles)
-@test-crate crate:
-    #!/usr/bin/env bash
-    echo "🎯 Testing crate: {{crate}}"
-    echo ""
-    if cargo test -p {{crate}} --lib --all-features 2>&1 | grep -q "error\[E"; then
-        echo "❌ {{crate}} has compilation errors"
-        echo "💡 Use 'just test-crates' to see detailed error info"
-    else
-        cargo test -p {{crate}} --lib --all-features
-    fi
-
-# ============================================================================
-# QUALITY CHECKS
-# ============================================================================
-
-# Format code
-@test-fmt:
+# Formatear código
+@fmt:
     cargo fmt --all
-    echo "✨ Code formatted"
-    echo ""
-    echo "💡 Tip: Run 'just test' to verify formatting didn't break anything"
+    cargo clippy --workspace
 
-# Run security audit
-@test-audit:
-    cargo install cargo-audit --quiet || true
-    cargo audit
-    echo ""
-    echo "🔒 Security audit completed"
+# Verificar linting
+@lint:
+    cargo clippy --workspace -- -D warnings
 
-# Run benchmarks (if they exist)
-@test-bench:
-    cargo bench --workspace --all-features
-    echo ""
-    echo "✅ Benchmarks completed"
+# Ejecutar tests de un solo crate con output detallado
+@test crate="":
+    cargo test --package {{crate}} --lib -- --nocapture
 
-# ============================================================================
-# HELP AND DOCUMENTATION
-# ============================================================================
+# Gestionar contenedores de Docker para tests
+@container-start:
+    ./scripts/test-containers.sh start-postgres
 
-# Show help
+@container-stop name:
+    ./scripts/test-containers.sh stop {{name}}
+
+@container-list:
+    ./scripts/test-containers.sh list
+
+@container-cleanup:
+    ./scripts/test-containers.sh cleanup
+
+@container-cleanup-force:
+    @echo "🧹 LIMPIEZA FORZADA DE CONTAINERS"
+    docker ps --filter "name=hodei-test" -aq | xargs -r docker rm -f || true
+    docker ps --filter "name=postgres" -aq | xargs -r docker rm -f || true
+    @echo "✅ Containers limpiados"
+
+# Watch mode: ejecutar tests cuando cambien archivos
+@watch:
+    # Requiere cargo-watch: cargo install cargo-watch
+    cargo watch -x "test --workspace --lib"
+
+# Ayuda: mostrar todos los comandos disponibles
 @help:
-    #!/usr/bin/env bash
-    echo "🧪 hodei-scan EPIC-14 - Test Runner (CLEANED VERSION)"
-    echo "====================================================="
-    echo ""
-    echo "📊 STATUS: 11/11 commands working (100% success rate)"
-    echo ""
-    echo "MAIN COMMANDS:"
-    echo "  just test           Run working unit tests (all crates)"
-    echo ""
-    echo "ANALYSIS & REPORTING:"
-    echo "  just test-crates    Check compilation status of all crates"
-    echo "  just test-summary   Show detailed test infrastructure summary"
-    echo "  just test-stats     Show test statistics"
-    echo ""
-    echo "UTILITIES:"
-    echo "  just test-crate <x> Test specific crate (if it compiles)"
-    echo "  just test-clean     Clean test artifacts"
-    echo ""
-    echo "QUALITY CHECKS:"
-    echo "  just test-fmt       Format code"
-    echo "  just test-audit     Run security audit"
-    echo "  just test-bench     Run benchmarks"
-    echo ""
-    echo "HELP:"
-    echo "  just help           Show this help"
-    echo ""
-    echo "CURRENT STATUS:"
-    echo "  ✅ Working: hodei-ir, hodei-dsl, hodei-engine, hodei-extractors,"
-    echo "             hodei-test, ir-dump, hodei-server"
-    echo "  ❌ Broken:  hodei-dsl-lsp"
-    echo ""
-    echo "EXAMPLES:"
-    echo "  just test                    # Run all working tests"
-    echo "  just test-crates             # See status of all crates"
-    echo "  just test-summary            # Detailed status report"
-    echo "  just test-fmt && just test   # Format then test"
-    echo ""
-
-# ============================================================================
-# BROKEN COMMANDS (COMMENTED OUT - TODO: FIX LATER)
-# ============================================================================
-#
-# The following commands are commented out because they currently fail
-# due to compilation errors in the base code. They will be re-enabled
-# once the underlying issues are fixed.
-#
-# COMMANDS TO RE-ENABLE LATER:
-#
-# just test-lsp          # Requires fixing hodei-dsl-lsp compilation errors
-# just test-test         # Requires fixing hodei-test implementation
-# just test-ir           # Requires fixing ir-dump exports
-# just test-integration  # Requires fixing hodei-extractors
-# just test-e2e          # Requires test infrastructure fixes
-# just test-coverage     # Requires fixing all crates first
-# just test-watch        # Requires cargo-watch installation
-# just test-clippy       # May fail on warnings
-# just test-ci           # Requires all above to work
-#
-# These commands are intentionally disabled to avoid confusion and
-# provide a clean developer experience.
-#
-
-# ============================================================================
-# END OF JUSTFILE
-# ============================================================================
+    @echo "Hodei-Scan Test Runner"
+    @echo ""
+    @echo "Comandos disponibles:"
+    @echo "  quick      - Tests rápidos (sin infraestructura)"
+    @echo "  full       - Todos los tests (incluyendo ignorados)"
+    @echo "  db         - Solo tests de base de datos PostgreSQL"
+    @echo "  db-container - Tests DB con contenedor Docker automático"
+    @echo "  tdd        - Solo tests TDD Red (implementación pendiente)"
+    @echo "  integration - Tests de integración"
+    @echo "  crate      - Tests de un crate específico (ej: just crate hodei-extractors)"
+    @echo "  coverage   - Tests con información de coverage"
+    @echo "  clean      - Limpiar archivos temporales"
+    @echo "  check      - Verificar que el workspace compila"
+    @echo "  fmt        - Formatear código"
+    @echo "  lint       - Verificar linting"
+    @echo "  watch      - Modo watch (requiere cargo-watch)"
+    @echo ""
+    @echo "Gestión de Contenedores Docker:"
+    @echo "  container-start  - Iniciar contenedor PostgreSQL para tests"
+    @echo "  container-stop   - Detener contenedor (requiere nombre)"
+    @echo "  container-list   - Listar contenedores activos"
+    @echo "  container-cleanup - Limpiar todos los contenedores de test"
+    @echo ""
+    @echo "Ejemplos:"
+    @echo "  just quick                    # Tests rápidos"
+    @echo "  just db                       # Solo tests DB (requiere PostgreSQL)"
+    @echo "  just db-container             # Tests DB con contenedor automático"
+    @echo "  just container-start          # Iniciar contenedor PostgreSQL"
+    @echo "  just crate hodei-extractors   # Tests de un crate"
+    @echo "  just full                     # Todos los tests"
+    @echo "  just help                     # Mostrar esta ayuda"
