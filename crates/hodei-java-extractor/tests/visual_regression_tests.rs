@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod visual_regression_tests {
+    use serde_yaml::Value;
     use std::fs;
     use std::path::{Path, PathBuf};
     use tempfile::TempDir;
@@ -540,19 +541,16 @@ mod visual_regression_tests {
     /// Tests YAML format snapshots
     #[test]
     fn test_yaml_snapshot() {
-        let yaml_data = serde_yaml::Value::Mapping(vec![
+        let yaml_data = Value::Mapping(vec![
             (
-                yaml::Value::String("project".into()),
-                yaml::Value::String("test-project".into()),
+                Value::String("project".into()),
+                Value::String("test-project".into()),
             ),
             (
-                yaml::Value::String("version".into()),
-                yaml::Value::String("1.0.0".into()),
+                Value::String("version".into()),
+                Value::String("1.0.0".into()),
             ),
-            (
-                yaml::Value::String("build".into()),
-                yaml::Value::Number(42.into()),
-            ),
+            (Value::String("build".into()), Value::Number(42.into())),
         ]);
 
         insta::assert_yaml_snapshot!(yaml_data);
