@@ -15,6 +15,10 @@ impl ProjectPath {
     pub fn as_str(&self) -> &str {
         self.path.to_str().unwrap_or("")
     }
+
+    pub fn to_string(&self) -> String {
+        self.path.to_string_lossy().to_string()
+    }
 }
 
 impl fmt::Display for ProjectPath {

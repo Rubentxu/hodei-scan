@@ -21,6 +21,7 @@ futures = "0.3"
 tracing = "0.1"
 async-trait = "0.1"
 serde-sarif = "0.5"
+quick-xml = { version = "0.36", features = ["serialize"] }
 
 [dev-dependencies]
 criterion = { workspace = true }

@@ -55,6 +55,7 @@
 
 pub mod core;
 pub mod deduplication;
+pub mod jacoco;
 pub mod orchestrator;
 pub mod sarif;
 
@@ -70,6 +71,7 @@ pub use core::{
     ExtractorRun, FileFilters, IRBuilder,
 };
 pub use deduplication::FactDeduplicator;
+pub use jacoco::JacocoExtractor;
 pub use orchestrator::{
     AggregatedIR, AggregationMetadata, ExtractorOrchestrator, OrchestratorConfig,
 };

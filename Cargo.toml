@@ -24,6 +24,7 @@ members = [
     "crates/ir-dump",
     "crates/hodei-declarative-extractors",
     "crates/hodei-deep-analysis-engine",
+    "crates/hodei-java-extractor",
 ]
 resolver = "2"
 

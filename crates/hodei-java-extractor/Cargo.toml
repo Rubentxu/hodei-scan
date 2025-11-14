@@ -1,0 +1,70 @@
+[package]
+name = "hodei-java-extractor"
+version = "0.1.0"
+edition = "2024"
+description = "Java Extractor following Hexagonal Architecture - Levels 1, 2, and 3"
+license = "MIT"
+repository = "https://github.com/hodei-scan/hodei-scan"
+
+[dependencies]
+# ========================================================================
+# DOMAIN LAYER - Pure Rust, no external dependencies
+# ========================================================================
+# Core domain types from other hodei crates
+hodei-ir = { path = "../hodei-ir" }
+hodei-deep-analysis-engine = { path = "../hodei-deep-analysis-engine" }
+hodei-pattern-engine = { path = "../hodei-pattern-engine" }
+
+# Domain layer dependencies (pure business logic)
+thiserror = { workspace = true }
+anyhow = "1.0"
+serde = { workspace = true, features = ["derive"] }
+uuid = { workspace = true, features = ["v4"] }
+async-trait = "0.1"
+
+# ========================================================================
+# APPLICATION LAYER - Use cases and orchestration
+# ========================================================================
+# Application services
+tokio = { workspace = true, features = ["full"] }
+futures = "0.3"
+
+# ========================================================================
+# INFRASTRUCTURE LAYER - Adapters and external integrations
+# ========================================================================
+# CLI and process management
+clap = { version = "4.0", features = ["derive"] }
+subprocess = "0.2"
+
+# External tool integrations
+serde_json = { workspace = true }
+toml = "0.8"
+quick-xml = "0.36"
+
+# Observability
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["fmt"] }
+
+# Java tool interfaces
+tree-sitter = "0.22"
+# tree-sitter-java = "0.23"
+
+[build-dependencies]
+tonic-build = "0.10"
+
+[package.metadata.docs.rs]
+all-features = true
+
+[dev-dependencies]
+tempfile = "3.23.0"
+tokio-test = "0.4"
+criterion = { version = "0.5", features = ["html_reports"] }
+proptest = "1.4"
+testcontainers = "0.16"
+insta = "1.39"
+chrono = { version = "0.4", features = ["serde"] }
+wiremock = "0.6"
+
+[[bench]]
+name = "benchmarks"
+harness = false

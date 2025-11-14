@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<report name="JaCoCo Report">
+  <sessioninfo id="test-session" start="123456789" dump="123456790"/>
+  <package name="com/example">
+    <class name="com/example/UserController" sourcefilename="UserController.java">
+      <method name="login" desc="(Ljava/lang/String;Ljava/lang/String;)V" line="10">
+        <line nr="10" mi="0" ci="5" mb="0" cb="2"/>
+        <line nr="11" mi="0" ci="3" mb="0" cb="2"/>
+        <line nr="12" mi="5" ci="0" mb="2" cb="0"/>
+        <line nr="13" mi="0" ci="0" mb="0" cb="0"/>
+      </method>
+    </class>
+  </package>
+</report>
