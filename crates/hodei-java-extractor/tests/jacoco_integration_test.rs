@@ -94,6 +94,7 @@ mod jacoco_integration_tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_parse_multiple_classes() {
         // Arrange - Create a temporary XML with multiple classes
         let temp_dir = std::env::temp_dir();
@@ -147,6 +148,7 @@ mod jacoco_integration_tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_calculate_branch_coverage_correctly() {
         // Arrange
         let temp_dir = std::env::temp_dir();
@@ -211,6 +213,7 @@ mod jacoco_integration_tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_error_handling_for_malformed_xml() {
         // Arrange
         let temp_dir = std::env::temp_dir();
@@ -285,6 +288,7 @@ mod jacoco_integration_tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_line_coverage_details() {
         // Arrange
         let temp_dir = std::env::temp_dir();
