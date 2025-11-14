@@ -1983,7 +1983,6 @@ dependencies = [
  "quick-xml",
  "serde",
  "serde_json",
- "serde_yaml",
  "subprocess",
  "tempfile",
  "testcontainers",
